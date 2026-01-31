@@ -45,10 +45,6 @@ app.*.map.json
 /.fvm
 lib/page/settings_page/cpfeedback_key.dart
 
-# BASS libraries
-BASS/bass_fx.dll
-bass_fx.dll
-
 # Local Environment & AI
 .trae/
 .vscode/
@@ -62,4 +58,3 @@ target/
 *.dll
 *.obj
 *.pdb
-BASS/
