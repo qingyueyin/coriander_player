@@ -58,6 +58,15 @@ if ($LASTEXITCODE -ne 0) {
 $buildDir = "build\windows\x64\runner\$BuildMode"
 
 Write-Host "Preparing Output Directory: $finalOutputDir..." -ForegroundColor Cyan
+
+# Check for running instance and kill it
+$processName = "coriander_player"
+if (Get-Process $processName -ErrorAction SilentlyContinue) {
+    Write-Host "Stopping running instance of $processName..." -ForegroundColor Yellow
+    Stop-Process -Name $processName -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 1 # Wait for file locks to release
+}
+
 if (Test-Path $finalOutputDir) {
     Remove-Item -Path $finalOutputDir -Recurse -Force
 }

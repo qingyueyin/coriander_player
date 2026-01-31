@@ -1,9 +1,35 @@
+import 'dart:async';
+
 import 'package:coriander_player/play_service/play_service.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-class NowPlayingPitchControl extends StatelessWidget {
+class NowPlayingPitchControl extends StatefulWidget {
   const NowPlayingPitchControl({super.key});
+
+  @override
+  State<NowPlayingPitchControl> createState() => _NowPlayingPitchControlState();
+}
+
+class _NowPlayingPitchControlState extends State<NowPlayingPitchControl> {
+  Timer? _indicatorTimer;
+  bool _showCustomIndicator = false;
+
+  void _triggerIndicator() {
+    setState(() => _showCustomIndicator = true);
+    _indicatorTimer?.cancel();
+    _indicatorTimer = Timer(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        setState(() => _showCustomIndicator = false);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _indicatorTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +77,7 @@ class NowPlayingPitchControl extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("音调", style: TextStyle(color: scheme.onSurface)),
+                    Text("音调(半音)", style: TextStyle(color: scheme.onSurface)),
                     IconButton(
                       icon: const Icon(Symbols.restart_alt, size: 16),
                       onPressed: () => playbackService.setPitch(0.0),
@@ -75,6 +101,7 @@ class NowPlayingPitchControl extends StatelessWidget {
                                   final newValue =
                                       (pitchValue - 1.0).clamp(-12.0, 12.0);
                                   playbackService.setPitch(newValue);
+                                  _triggerIndicator();
                                 }
                               : null,
                           icon: const Icon(Symbols.remove),
@@ -83,22 +110,54 @@ class NowPlayingPitchControl extends StatelessWidget {
                           constraints: const BoxConstraints(),
                         ),
                         Expanded(
-                          child: Slider(
-                            thumbColor: scheme.primary,
-                            activeColor: scheme.primary,
-                            inactiveColor: scheme.outline,
-                            min: -12.0,
-                            max: 12.0,
-                            divisions: 24,
-                            value: pitchValue,
-                            label:
-                                "${pitchValue > 0 ? '+' : ''}${pitchValue.toInt()}",
-                            onChanged: playbackService.isBassFxLoaded
-                                ? (value) {
-                                    playbackService.setPitch(value);
-                                  }
-                                : null,
-                          ),
+                          child: LayoutBuilder(builder: (context, constraints) {
+                            // Slider default padding is 24.0 on each side for overlay
+                            const double padding = 24.0;
+                            final double trackWidth =
+                                constraints.maxWidth - (padding * 2);
+                            const double min = -12.0;
+                            const double max = 12.0;
+                            final double percent =
+                                (pitchValue - min) / (max - min);
+                            final double leftOffset =
+                                padding + (trackWidth * percent);
+
+                            return Stack(
+                              clipBehavior: Clip.none,
+                              alignment: Alignment.centerLeft,
+                              children: [
+                                Slider(
+                                  thumbColor: scheme.primary,
+                                  activeColor: scheme.primary,
+                                  inactiveColor: scheme.outline,
+                                  min: min,
+                                  max: max,
+                                  divisions: 24,
+                                  value: pitchValue,
+                                  label:
+                                      "${pitchValue > 0 ? '+' : ''}${pitchValue.toInt()}",
+                                  onChanged: playbackService.isBassFxLoaded
+                                      ? (value) {
+                                          playbackService.setPitch(value);
+                                        }
+                                      : null,
+                                ),
+                                if (_showCustomIndicator)
+                                  Positioned(
+                                    left: leftOffset -
+                                        24.0, // Center the bubble (width 48)
+                                    top: -40,
+                                    child: IgnorePointer(
+                                      child: _CustomValueIndicator(
+                                        value: pitchValue,
+                                        color: scheme.primary,
+                                        textColor: scheme.onPrimary,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          }),
                         ),
                         IconButton(
                           onPressed: playbackService.isBassFxLoaded
@@ -106,6 +165,7 @@ class NowPlayingPitchControl extends StatelessWidget {
                                   final newValue =
                                       (pitchValue + 1.0).clamp(-12.0, 12.0);
                                   playbackService.setPitch(newValue);
+                                  _triggerIndicator();
                                 }
                               : null,
                           icon: const Icon(Symbols.add),
@@ -124,4 +184,70 @@ class NowPlayingPitchControl extends StatelessWidget {
       ],
     );
   }
+}
+
+class _CustomValueIndicator extends StatelessWidget {
+  final double value;
+  final Color color;
+  final Color textColor;
+
+  const _CustomValueIndicator({
+    required this.value,
+    required this.color,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 48,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            "${value > 0 ? '+' : ''}${value.toInt()}",
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ),
+        CustomPaint(
+          size: const Size(12, 6),
+          painter: _TrianglePainter(color),
+        ),
+      ],
+    );
+  }
+}
+
+class _TrianglePainter extends CustomPainter {
+  final Color color;
+
+  _TrianglePainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    path.moveTo(0, 0);
+    path.lineTo(size.width / 2, size.height);
+    path.lineTo(size.width, 0);
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

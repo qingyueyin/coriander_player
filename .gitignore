@@ -3,6 +3,7 @@
 *.log
 *.pyc
 *.swp
+.DS_Store
 .atom/
 .buildlog/
 .history
@@ -15,6 +16,11 @@ migrate_working_dir/
 *.iws
 .idea/
 
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
@@ -25,17 +31,6 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
-build/
-
-# Build outputs (should never commit these)
-*.exe
-*.dll
-/build/windows/
-/build/linux/
-/build/macos/
-/build/android/
-/build/ios/
-/build/web/
 
 # Symbolication related
 app.*.symbols
@@ -44,6 +39,9 @@ app.*.symbols
 app.*.map.json
 
 # Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
 /.fvm
 lib/page/settings_page/cpfeedback_key.dart
 
@@ -72,3 +70,7 @@ Thumbs.db
 # IDE temporary files
 *.sublime-workspace
 *.sublime-project
+
+# Build artifacts
+output/
+*.zip
