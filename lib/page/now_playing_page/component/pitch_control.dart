@@ -69,7 +69,19 @@ class NowPlayingPitchControl extends StatelessWidget {
                     valueListenable: playbackService.pitch,
                     builder: (context, pitchValue, _) => Row(
                       children: [
-                        Text("-", style: TextStyle(color: scheme.onSurface)),
+                        IconButton(
+                          onPressed: playbackService.isBassFxLoaded
+                              ? () {
+                                  final newValue =
+                                      (pitchValue - 1.0).clamp(-12.0, 12.0);
+                                  playbackService.setPitch(newValue);
+                                }
+                              : null,
+                          icon: const Icon(Symbols.remove),
+                          color: scheme.onSurface,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
                         Expanded(
                           child: Slider(
                             thumbColor: scheme.primary,
@@ -88,7 +100,19 @@ class NowPlayingPitchControl extends StatelessWidget {
                                 : null,
                           ),
                         ),
-                        Text("+", style: TextStyle(color: scheme.onSurface)),
+                        IconButton(
+                          onPressed: playbackService.isBassFxLoaded
+                              ? () {
+                                  final newValue =
+                                      (pitchValue + 1.0).clamp(-12.0, 12.0);
+                                  playbackService.setPitch(newValue);
+                                }
+                              : null,
+                          icon: const Icon(Symbols.add),
+                          color: scheme.onSurface,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
                       ],
                     ),
                   ),
