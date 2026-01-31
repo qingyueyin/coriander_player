@@ -44,3 +44,22 @@ app.*.map.json
 /android/app/release
 /.fvm
 lib/page/settings_page/cpfeedback_key.dart
+
+# BASS libraries
+BASS/bass_fx.dll
+bass_fx.dll
+
+# Local Environment & AI
+.trae/
+.vscode/
+
+# Rust
+target/
+**/*.rs.bk
+
+# Windows/Binaries
+*.exe
+*.dll
+*.obj
+*.pdb
+BASS/

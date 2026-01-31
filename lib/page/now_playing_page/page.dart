@@ -4,11 +4,13 @@ import 'dart:ui';
 
 import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/component/title_bar.dart';
+import 'package:coriander_player/enums.dart';
 import 'package:coriander_player/utils.dart';
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
 import 'package:coriander_player/page/now_playing_page/component/current_playlist_view.dart';
 import 'package:coriander_player/page/now_playing_page/component/filled_icon_button_style.dart';
+import 'package:coriander_player/page/now_playing_page/component/pitch_control.dart';
 import 'package:coriander_player/page/now_playing_page/component/vertical_lyric_view.dart';
 import 'package:coriander_player/app_paths.dart' as app_paths;
 import 'package:coriander_player/play_service/play_service.dart';
@@ -22,19 +24,6 @@ import 'package:window_manager/window_manager.dart';
 
 part 'small_page.dart';
 part 'large_page.dart';
-
-enum NowPlayingViewMode {
-  onlyMain,
-  withLyric,
-  withPlaylist;
-
-  static NowPlayingViewMode? fromString(String nowPlayingViewMode) {
-    for (var value in NowPlayingViewMode.values) {
-      if (value.name == nowPlayingViewMode) return value;
-    }
-    return null;
-  }
-}
 
 final NOW_PLAYING_VIEW_MODE = ValueNotifier(
   AppPreference.instance.nowPlayingPagePref.nowPlayingViewMode,
@@ -617,10 +606,16 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
     final nowPlaying = playbackService.nowPlaying;
 
     final placeholder = FittedBox(
-      child: Icon(
-        Symbols.broken_image,
-        size: 400.0,
-        color: scheme.onSecondaryContainer,
+      child: Image.asset(
+        'app_icon.ico',
+        width: 400.0,
+        height: 400.0,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => Icon(
+          Symbols.broken_image,
+          size: 400.0,
+          color: scheme.onSecondaryContainer,
+        ),
       ),
     );
 

@@ -2,10 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/page/now_playing_page/component/lyric_view_controls.dart';
-import 'package:coriander_player/page/now_playing_page/page.dart';
-import 'package:coriander_player/page/uni_page.dart';
-import 'package:coriander_player/play_service/playback_service.dart';
+import 'package:coriander_player/enums.dart';
 import 'package:coriander_player/utils.dart';
 
 class PagePreference {

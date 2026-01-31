@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:coriander_player/app_preference.dart';
+import 'package:coriander_player/enums.dart';
 import 'package:coriander_player/page/uni_page_components.dart';
 import 'package:coriander_player/page/page_scaffold.dart';
 import 'package:flutter/material.dart';
@@ -20,30 +21,6 @@ class SortMethodDesc<T> {
     required this.name,
     required this.method,
   });
-}
-
-enum SortOrder {
-  ascending,
-  decending;
-
-  static SortOrder? fromString(String sortOrder) {
-    for (var value in SortOrder.values) {
-      if (value.name == sortOrder) return value;
-    }
-    return null;
-  }
-}
-
-enum ContentView {
-  list,
-  table;
-
-  static ContentView? fromString(String contentView) {
-    for (var value in ContentView.values) {
-      if (value.name == contentView) return value;
-    }
-    return null;
-  }
 }
 
 const gridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(

@@ -1,21 +1,9 @@
 import 'package:coriander_player/app_preference.dart';
+import 'package:coriander_player/enums.dart';
 import 'package:coriander_player/page/now_playing_page/component/lyric_source_view.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
-
-enum LyricTextAlign {
-  left,
-  center,
-  right;
-
-  static LyricTextAlign? fromString(String lyricTextAlign) {
-    for (var value in LyricTextAlign.values) {
-      if (value.name == lyricTextAlign) return value;
-    }
-    return null;
-  }
-}
 
 class LyricViewController extends ChangeNotifier {
   final nowPlayingPagePref = AppPreference.instance.nowPlayingPagePref;
@@ -61,17 +49,17 @@ class LyricViewControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(8.0),
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          SetLyricSourceBtn(),
-          SizedBox(height: 8.0),
-          _LyricAlignSwitchBtn(),
-          SizedBox(height: 8.0),
-          Row(
+          const SetLyricSourceBtn(),
+          const SizedBox(height: 8.0),
+          const _LyricAlignSwitchBtn(),
+          const SizedBox(height: 8.0),
+          const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               _IncreaseFontSizeBtn(),

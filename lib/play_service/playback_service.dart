@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:coriander_player/app_preference.dart';
+import 'package:coriander_player/enums.dart';
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/play_service/play_service.dart';
 import 'package:coriander_player/src/bass/bass_player.dart';
@@ -8,24 +9,6 @@ import 'package:coriander_player/src/rust/api/smtc_flutter.dart';
 import 'package:coriander_player/theme_provider.dart';
 import 'package:coriander_player/utils.dart';
 import 'package:flutter/foundation.dart';
-
-enum PlayMode {
-  /// 顺序播放到播放列表结尾
-  forward,
-
-  /// 循环整个播放列表
-  loop,
-
-  /// 循环播放单曲
-  singleLoop;
-
-  static PlayMode? fromString(String playMode) {
-    for (var value in PlayMode.values) {
-      if (value.name == playMode) return value;
-    }
-    return null;
-  }
-}
 
 /// 只通知 now playing 变更
 class PlaybackService extends ChangeNotifier {
@@ -68,6 +51,8 @@ class PlaybackService extends ChangeNotifier {
   final _smtc = SmtcFlutter();
   final _pref = AppPreference.instance.playbackPref;
 
+  bool get isBassFxLoaded => _player.isBassFxLoaded;
+
   late final _wasapiExclusive = ValueNotifier(_player.wasapiExclusive);
   ValueNotifier<bool> get wasapiExclusive => _wasapiExclusive;
 
@@ -92,6 +77,22 @@ class PlaybackService extends ChangeNotifier {
   void setPlayMode(PlayMode playMode) {
     this.playMode.value = playMode;
     _pref.playMode = playMode;
+  }
+
+  late final _pitch = ValueNotifier(0.0);
+  ValueNotifier<double> get pitch => _pitch;
+
+  void setPitch(double value) {
+    _pitch.value = value;
+    _player.setPitch(value);
+  }
+
+  late final _rate = ValueNotifier(1.0);
+  ValueNotifier<double> get rate => _rate;
+
+  void setRate(double value) {
+    _rate.value = value;
+    _player.setRate(value);
   }
 
   late final _shuffle = ValueNotifier(false);
@@ -147,8 +148,9 @@ class PlaybackService extends ChangeNotifier {
       playService.desktopLyricService.canSendMessage.then((canSend) {
         if (!canSend) return;
 
-        playService.desktopLyricService
-            .sendPlayerStateMessage(playerState == PlayerState.playing);
+        playService.desktopLyricService.sendPlayerStateMessage(
+          playerState == PlayerState.playing,
+        );
         playService.desktopLyricService.sendNowPlayingMessage(nowPlaying!);
       });
     } catch (err) {

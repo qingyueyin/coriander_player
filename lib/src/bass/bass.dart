@@ -60,6 +60,8 @@ const int BASS_ACTIVE_PAUSED_DEVICE = 4;
 
 const int BASS_ACTIVE_STALLED = 2;
 
+const int BASS_ATTRIB_FREQ = 1;
+
 const int BASS_ATTRIB_VOLDSP = 19;
 
 const int BASS_DEVICE_REINIT = 128;
@@ -99,39 +101,36 @@ typedef HWND = ffi.Pointer<HWND__>;
 class Bass {
   /// Holds the symbol lookup function.
   final ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName)
-      _lookup;
+  _lookup;
 
   /// The symbols are looked up in [dynamicLibrary].
   Bass(ffi.DynamicLibrary dynamicLibrary) : _lookup = dynamicLibrary.lookup;
 
   /// The symbols are looked up with [lookup].
   Bass.fromLookup(
-      ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName)
-          lookup)
-      : _lookup = lookup;
+    ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName) lookup,
+  ) : _lookup = lookup;
 
   int BASS_Start() {
     return _BASS_Start();
   }
 
-  late final _BASS_StartPtr =
-      _lookup<ffi.NativeFunction<BOOL Function()>>('BASS_Start');
+  late final _BASS_StartPtr = _lookup<ffi.NativeFunction<BOOL Function()>>(
+    'BASS_Start',
+  );
   late final _BASS_Start = _BASS_StartPtr.asFunction<int Function()>();
 
   int BASS_Free() {
     return _BASS_Free();
   }
 
-  late final _BASS_FreePtr =
-      _lookup<ffi.NativeFunction<BOOL Function()>>('BASS_Free');
+  late final _BASS_FreePtr = _lookup<ffi.NativeFunction<BOOL Function()>>(
+    'BASS_Free',
+  );
   late final _BASS_Free = _BASS_FreePtr.asFunction<int Function()>();
 
-  int BASS_PluginFree(
-    int handle,
-  ) {
-    return _BASS_PluginFree(
-      handle,
-    );
+  int BASS_PluginFree(int handle) {
+    return _BASS_PluginFree(handle);
   }
 
   late final _BASS_PluginFreePtr =
@@ -139,12 +138,8 @@ class Bass {
   late final _BASS_PluginFree =
       _BASS_PluginFreePtr.asFunction<int Function(int)>();
 
-  int BASS_StreamFree(
-    int handle,
-  ) {
-    return _BASS_StreamFree(
-      handle,
-    );
+  int BASS_StreamFree(int handle) {
+    return _BASS_StreamFree(handle);
   }
 
   late final _BASS_StreamFreePtr =
@@ -152,46 +147,30 @@ class Bass {
   late final _BASS_StreamFree =
       _BASS_StreamFreePtr.asFunction<int Function(int)>();
 
-  int BASS_ChannelSeconds2Bytes(
-    int handle,
-    double pos,
-  ) {
-    return _BASS_ChannelSeconds2Bytes(
-      handle,
-      pos,
-    );
+  int BASS_ChannelSeconds2Bytes(int handle, double pos) {
+    return _BASS_ChannelSeconds2Bytes(handle, pos);
   }
 
   late final _BASS_ChannelSeconds2BytesPtr =
       _lookup<ffi.NativeFunction<QWORD Function(DWORD, ffi.Double)>>(
-          'BASS_ChannelSeconds2Bytes');
+        'BASS_ChannelSeconds2Bytes',
+      );
   late final _BASS_ChannelSeconds2Bytes =
       _BASS_ChannelSeconds2BytesPtr.asFunction<int Function(int, double)>();
 
-  int BASS_ChannelSetPosition(
-    int handle,
-    int pos,
-    int mode,
-  ) {
-    return _BASS_ChannelSetPosition(
-      handle,
-      pos,
-      mode,
-    );
+  int BASS_ChannelSetPosition(int handle, int pos, int mode) {
+    return _BASS_ChannelSetPosition(handle, pos, mode);
   }
 
   late final _BASS_ChannelSetPositionPtr =
       _lookup<ffi.NativeFunction<BOOL Function(DWORD, QWORD, DWORD)>>(
-          'BASS_ChannelSetPosition');
+        'BASS_ChannelSetPosition',
+      );
   late final _BASS_ChannelSetPosition =
       _BASS_ChannelSetPositionPtr.asFunction<int Function(int, int, int)>();
 
-  int BASS_ChannelStop(
-    int handle,
-  ) {
-    return _BASS_ChannelStop(
-      handle,
-    );
+  int BASS_ChannelStop(int handle) {
+    return _BASS_ChannelStop(handle);
   }
 
   late final _BASS_ChannelStopPtr =
@@ -199,12 +178,8 @@ class Bass {
   late final _BASS_ChannelStop =
       _BASS_ChannelStopPtr.asFunction<int Function(int)>();
 
-  int BASS_ChannelPause(
-    int handle,
-  ) {
-    return _BASS_ChannelPause(
-      handle,
-    );
+  int BASS_ChannelPause(int handle) {
+    return _BASS_ChannelPause(handle);
   }
 
   late final _BASS_ChannelPausePtr =
@@ -212,12 +187,8 @@ class Bass {
   late final _BASS_ChannelPause =
       _BASS_ChannelPausePtr.asFunction<int Function(int)>();
 
-  int BASS_ChannelStart(
-    int handle,
-  ) {
-    return _BASS_ChannelStart(
-      handle,
-    );
+  int BASS_ChannelStart(int handle) {
+    return _BASS_ChannelStart(handle);
   }
 
   late final _BASS_ChannelStartPtr =
@@ -225,21 +196,14 @@ class Bass {
   late final _BASS_ChannelStart =
       _BASS_ChannelStartPtr.asFunction<int Function(int)>();
 
-  int BASS_ChannelSetAttribute(
-    int handle,
-    int attrib,
-    double value,
-  ) {
-    return _BASS_ChannelSetAttribute(
-      handle,
-      attrib,
-      value,
-    );
+  int BASS_ChannelSetAttribute(int handle, int attrib, double value) {
+    return _BASS_ChannelSetAttribute(handle, attrib, value);
   }
 
   late final _BASS_ChannelSetAttributePtr =
       _lookup<ffi.NativeFunction<BOOL Function(DWORD, DWORD, ffi.Float)>>(
-          'BASS_ChannelSetAttribute');
+        'BASS_ChannelSetAttribute',
+      );
   late final _BASS_ChannelSetAttribute =
       _BASS_ChannelSetAttributePtr.asFunction<int Function(int, int, double)>();
 
@@ -250,37 +214,32 @@ class Bass {
     int length,
     int flags,
   ) {
-    return _BASS_StreamCreateFile(
-      mem,
-      file,
-      offset,
-      length,
-      flags,
-    );
+    return _BASS_StreamCreateFile(mem, file, offset, length, flags);
   }
 
-  late final _BASS_StreamCreateFilePtr = _lookup<
-      ffi.NativeFunction<
-          HSTREAM Function(BOOL, ffi.Pointer<ffi.Void>, QWORD, QWORD,
-              DWORD)>>('BASS_StreamCreateFile');
-  late final _BASS_StreamCreateFile = _BASS_StreamCreateFilePtr.asFunction<
-      int Function(int, ffi.Pointer<ffi.Void>, int, int, int)>();
+  late final _BASS_StreamCreateFilePtr =
+      _lookup<
+        ffi.NativeFunction<
+          HSTREAM Function(BOOL, ffi.Pointer<ffi.Void>, QWORD, QWORD, DWORD)
+        >
+      >('BASS_StreamCreateFile');
+  late final _BASS_StreamCreateFile =
+      _BASS_StreamCreateFilePtr.asFunction<
+        int Function(int, ffi.Pointer<ffi.Void>, int, int, int)
+      >();
 
-  int BASS_PluginLoad(
-    ffi.Pointer<ffi.Char> file,
-    int flags,
-  ) {
-    return _BASS_PluginLoad(
-      file,
-      flags,
-    );
+  int BASS_PluginLoad(ffi.Pointer<ffi.Char> file, int flags) {
+    return _BASS_PluginLoad(file, flags);
   }
 
-  late final _BASS_PluginLoadPtr = _lookup<
-          ffi.NativeFunction<HPLUGIN Function(ffi.Pointer<ffi.Char>, DWORD)>>(
-      'BASS_PluginLoad');
-  late final _BASS_PluginLoad = _BASS_PluginLoadPtr.asFunction<
-      int Function(ffi.Pointer<ffi.Char>, int)>();
+  late final _BASS_PluginLoadPtr =
+      _lookup<
+        ffi.NativeFunction<HPLUGIN Function(ffi.Pointer<ffi.Char>, DWORD)>
+      >('BASS_PluginLoad');
+  late final _BASS_PluginLoad =
+      _BASS_PluginLoadPtr.asFunction<
+        int Function(ffi.Pointer<ffi.Char>, int)
+      >();
 
   int BASS_ErrorGetCode() {
     return _BASS_ErrorGetCode();
@@ -298,100 +257,78 @@ class Bass {
     HWND win,
     ffi.Pointer<ffi.Void> dsguid,
   ) {
-    return _BASS_Init(
-      device,
-      freq,
-      flags,
-      win,
-      dsguid,
-    );
+    return _BASS_Init(device, freq, flags, win, dsguid);
   }
 
-  late final _BASS_InitPtr = _lookup<
-      ffi.NativeFunction<
-          BOOL Function(ffi.Int, DWORD, DWORD, HWND,
-              ffi.Pointer<ffi.Void>)>>('BASS_Init');
-  late final _BASS_Init = _BASS_InitPtr.asFunction<
-      int Function(int, int, int, HWND, ffi.Pointer<ffi.Void>)>();
+  late final _BASS_InitPtr =
+      _lookup<
+        ffi.NativeFunction<
+          BOOL Function(ffi.Int, DWORD, DWORD, HWND, ffi.Pointer<ffi.Void>)
+        >
+      >('BASS_Init');
+  late final _BASS_Init =
+      _BASS_InitPtr.asFunction<
+        int Function(int, int, int, HWND, ffi.Pointer<ffi.Void>)
+      >();
 
   int BASS_ChannelGetAttribute(
     int handle,
     int attrib,
     ffi.Pointer<ffi.Float> value,
   ) {
-    return _BASS_ChannelGetAttribute(
-      handle,
-      attrib,
-      value,
-    );
+    return _BASS_ChannelGetAttribute(handle, attrib, value);
   }
 
-  late final _BASS_ChannelGetAttributePtr = _lookup<
-          ffi
-          .NativeFunction<BOOL Function(DWORD, DWORD, ffi.Pointer<ffi.Float>)>>(
-      'BASS_ChannelGetAttribute');
-  late final _BASS_ChannelGetAttribute = _BASS_ChannelGetAttributePtr
-      .asFunction<int Function(int, int, ffi.Pointer<ffi.Float>)>();
+  late final _BASS_ChannelGetAttributePtr =
+      _lookup<
+        ffi.NativeFunction<BOOL Function(DWORD, DWORD, ffi.Pointer<ffi.Float>)>
+      >('BASS_ChannelGetAttribute');
+  late final _BASS_ChannelGetAttribute =
+      _BASS_ChannelGetAttributePtr.asFunction<
+        int Function(int, int, ffi.Pointer<ffi.Float>)
+      >();
 
-  int BASS_ChannelIsActive(
-    int handle,
-  ) {
-    return _BASS_ChannelIsActive(
-      handle,
-    );
+  int BASS_ChannelIsActive(int handle) {
+    return _BASS_ChannelIsActive(handle);
   }
 
   late final _BASS_ChannelIsActivePtr =
       _lookup<ffi.NativeFunction<DWORD Function(DWORD)>>(
-          'BASS_ChannelIsActive');
+        'BASS_ChannelIsActive',
+      );
   late final _BASS_ChannelIsActive =
       _BASS_ChannelIsActivePtr.asFunction<int Function(int)>();
 
-  int BASS_ChannelGetPosition(
-    int handle,
-    int mode,
-  ) {
-    return _BASS_ChannelGetPosition(
-      handle,
-      mode,
-    );
+  int BASS_ChannelGetPosition(int handle, int mode) {
+    return _BASS_ChannelGetPosition(handle, mode);
   }
 
   late final _BASS_ChannelGetPositionPtr =
       _lookup<ffi.NativeFunction<QWORD Function(DWORD, DWORD)>>(
-          'BASS_ChannelGetPosition');
+        'BASS_ChannelGetPosition',
+      );
   late final _BASS_ChannelGetPosition =
       _BASS_ChannelGetPositionPtr.asFunction<int Function(int, int)>();
 
-  int BASS_ChannelGetLength(
-    int handle,
-    int mode,
-  ) {
-    return _BASS_ChannelGetLength(
-      handle,
-      mode,
-    );
+  int BASS_ChannelGetLength(int handle, int mode) {
+    return _BASS_ChannelGetLength(handle, mode);
   }
 
   late final _BASS_ChannelGetLengthPtr =
       _lookup<ffi.NativeFunction<QWORD Function(DWORD, DWORD)>>(
-          'BASS_ChannelGetLength');
+        'BASS_ChannelGetLength',
+      );
   late final _BASS_ChannelGetLength =
       _BASS_ChannelGetLengthPtr.asFunction<int Function(int, int)>();
 
-  double BASS_ChannelBytes2Seconds(
-    int handle,
-    int pos,
-  ) {
-    return _BASS_ChannelBytes2Seconds(
-      handle,
-      pos,
-    );
+  double BASS_ChannelBytes2Seconds(int handle, int pos) {
+    return _BASS_ChannelBytes2Seconds(handle, pos);
   }
 
   late final _BASS_ChannelBytes2SecondsPtr =
       _lookup<ffi.NativeFunction<ffi.Double Function(DWORD, QWORD)>>(
-          'BASS_ChannelBytes2Seconds');
+        'BASS_ChannelBytes2Seconds',
+      );
   late final _BASS_ChannelBytes2Seconds =
       _BASS_ChannelBytes2SecondsPtr.asFunction<double Function(int, int)>();
 }

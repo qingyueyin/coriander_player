@@ -30,7 +30,12 @@ class _RectangleProgressIndicatorState
     super.initState();
     subscription =
         PlayService.instance.playbackService.positionStream.listen((event) {
-      progress.value = event / PlayService.instance.playbackService.length;
+      final len = PlayService.instance.playbackService.length;
+      if (len > 0) {
+        progress.value = (event / len).clamp(0.0, 1.0);
+      } else {
+        progress.value = 0;
+      }
     });
   }
 
@@ -75,10 +80,12 @@ class RectangleProgressPainter extends CustomPainter {
     );
 
     /// 进度
-    canvas.drawRect(
-      Rect.fromLTWH(0.0, 0.0, size.width * progress.value, size.height),
-      progressPainter,
-    );
+    if (!progress.value.isNaN && !progress.value.isInfinite) {
+      canvas.drawRect(
+        Rect.fromLTWH(0.0, 0.0, size.width * progress.value, size.height),
+        progressPainter,
+      );
+    }
   }
 
   @override
