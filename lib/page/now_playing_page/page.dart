@@ -1,5 +1,6 @@
 // ignore_for_file: camel_case_types
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:coriander_player/app_preference.dart';
@@ -269,6 +270,25 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
     AppPreference.instance.playbackPref.volumeDsp,
   );
   bool isDragging = false;
+  Timer? _indicatorTimer;
+  bool _showCustomIndicator = false;
+  bool _isHovering = false;
+
+  void _triggerIndicator() {
+    setState(() => _showCustomIndicator = true);
+    _indicatorTimer?.cancel();
+    _indicatorTimer = Timer(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        setState(() => _showCustomIndicator = false);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _indicatorTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -287,29 +307,71 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
           ),
           child: ValueListenableBuilder(
             valueListenable: dragVolDsp,
-            builder: (context, dragVolDspValue, _) => Slider(
-              thumbColor: scheme.primary,
-              activeColor: scheme.primary,
-              inactiveColor: scheme.outline,
-              min: 0.0,
-              max: 1.0,
-              value: isDragging ? dragVolDspValue : playbackService.volumeDsp,
-              label: "${(dragVolDspValue * 100).toInt()}",
-              onChangeStart: (value) {
-                isDragging = true;
-                dragVolDsp.value = value;
-                playbackService.setVolumeDsp(value);
-              },
-              onChanged: (value) {
-                dragVolDsp.value = value;
-                playbackService.setVolumeDsp(value);
-              },
-              onChangeEnd: (value) {
-                isDragging = false;
-                dragVolDsp.value = value;
-                playbackService.setVolumeDsp(value);
-              },
-            ),
+            builder: (context, dragVolDspValue, _) {
+              final currentValue =
+                  isDragging ? dragVolDspValue : playbackService.volumeDsp;
+
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  const double padding = 24.0;
+                  final double trackWidth =
+                      constraints.maxWidth - (padding * 2);
+                  const double min = 0.0;
+                  const double max = 1.0;
+                  final double percent = (currentValue - min) / (max - min);
+                  final double leftOffset = padding + (trackWidth * percent);
+
+                  return MouseRegion(
+                    onEnter: (_) => setState(() => _isHovering = true),
+                    onExit: (_) => setState(() => _isHovering = false),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        Slider(
+                          thumbColor: scheme.primary,
+                          activeColor: scheme.primary,
+                          inactiveColor: scheme.outline,
+                          min: min,
+                          max: max,
+                          value: currentValue,
+                          label: "${(currentValue * 100).toInt()}%",
+                          onChangeStart: (value) {
+                            isDragging = true;
+                            dragVolDsp.value = value;
+                            playbackService.setVolumeDsp(value);
+                            _triggerIndicator();
+                          },
+                          onChanged: (value) {
+                            dragVolDsp.value = value;
+                            playbackService.setVolumeDsp(value);
+                          },
+                          onChangeEnd: (value) {
+                            isDragging = false;
+                            dragVolDsp.value = value;
+                            playbackService.setVolumeDsp(value);
+                          },
+                        ),
+                        if (_showCustomIndicator || _isHovering)
+                          Positioned(
+                            left: leftOffset -
+                                24.0, // Center the bubble (width 48)
+                            top: -40,
+                            child: IgnorePointer(
+                              child: _CustomValueIndicator(
+                                value: currentValue * 100,
+                                suffix: "%",
+                                color: scheme.primary,
+                                textColor: scheme.onPrimary,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
           ),
         ),
       ],
@@ -327,6 +389,74 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
       ),
     );
   }
+}
+
+class _CustomValueIndicator extends StatelessWidget {
+  final double value;
+  final String suffix;
+  final Color color;
+  final Color textColor;
+
+  const _CustomValueIndicator({
+    required this.value,
+    this.suffix = "",
+    required this.color,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 48,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            "${value.toInt()}$suffix",
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ),
+        CustomPaint(
+          size: const Size(12, 6),
+          painter: _TrianglePainter(color),
+        ),
+      ],
+    );
+  }
+}
+
+class _TrianglePainter extends CustomPainter {
+  final Color color;
+
+  _TrianglePainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    path.moveTo(0, 0);
+    path.lineTo(size.width / 2, size.height);
+    path.lineTo(size.width, 0);
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _NowPlayingPlayModeSwitch extends StatelessWidget {
