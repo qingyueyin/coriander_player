@@ -1,15 +1,15 @@
 name: coriander_player
 description: A new Flutter project.
-publish_to: 'none'
+publish_to: "none"
 version: 1.5.1
 
 environment:
-  sdk: '>=3.1.4 <4.0.0'
+  sdk: ">=3.1.4 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  go_router: ^14.0.1 
+  go_router: ^14.0.1
   material_color_utilities: ^0.11.1
   window_manager: ^0.3.8
   provider: ^6.1.1
@@ -51,5 +51,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - app_icon.ico
+  assets: []
+  # app_icon.ico is embedded in exe via Runner.rc, no need to include as asset
