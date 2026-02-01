@@ -110,6 +110,7 @@ class PlaybackService extends ChangeNotifier {
   void setVolumeDsp(double volume) {
     _player.setVolumeDsp(volume);
     _pref.volumeDsp = volume;
+    notifyListeners();
   }
 
   Stream<double> get positionStream => _player.positionStream;

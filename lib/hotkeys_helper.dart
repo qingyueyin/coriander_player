@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:go_router/go_router.dart';
+import 'package:window_manager/window_manager.dart';
 
 class HotkeysHelper {
   static final Map<HotKey, void Function(HotKey)> _hotKeys = {
@@ -44,6 +45,28 @@ class HotkeysHelper {
       scope: HotKeyScope.inapp,
     ): (_) {
       PlayService.instance.playbackService.nextAudio();
+    },
+    HotKey(
+      key: PhysicalKeyboardKey.arrowUp,
+      modifiers: [HotKeyModifier.control],
+      scope: HotKeyScope.inapp,
+    ): (_) {
+      final playbackService = PlayService.instance.playbackService;
+      final next = (playbackService.volumeDsp + 0.05).clamp(0.0, 1.0);
+      playbackService.setVolumeDsp(next);
+    },
+    HotKey(
+      key: PhysicalKeyboardKey.arrowDown,
+      modifiers: [HotKeyModifier.control],
+      scope: HotKeyScope.inapp,
+    ): (_) {
+      final playbackService = PlayService.instance.playbackService;
+      final next = (playbackService.volumeDsp - 0.05).clamp(0.0, 1.0);
+      playbackService.setVolumeDsp(next);
+    },
+    HotKey(key: PhysicalKeyboardKey.f1, scope: HotKeyScope.inapp): (_) async {
+      final full = await windowManager.isFullScreen();
+      await windowManager.setFullScreen(!full);
     },
   };
 

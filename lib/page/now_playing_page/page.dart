@@ -412,7 +412,8 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
             _systemVolBoostTimer?.cancel();
             return;
           }
-          final v = await _readSystemVol(timeout: const Duration(milliseconds: 500));
+          final v =
+              await _readSystemVol(timeout: const Duration(milliseconds: 500));
           if (v != null && (v - dragSystemVol.value).abs() > 0.003) {
             dragSystemVol.value = v;
           }
@@ -723,7 +724,7 @@ class _NowPlayingPlaybackModeSwitch extends StatelessWidget {
         };
 
         return IconButton(
-          tooltip: "播放模式；现在：$modeText",
+          tooltip: "现在：$modeText",
           onPressed: () {
             if (!shuffle && playMode != PlayMode.singleLoop) {
               playbackService.useShuffle(false);
