@@ -47,12 +47,10 @@
 - [ ] **沉浸模式**：隐藏控制部件，仅显示歌名/歌手/专辑/封面/歌词
 - [ ] **输出设备单独设置**：支持指定输出设备(DIRECT-output)
 - [ ] **独占模式缓冲区大小**：支持调整独占模式缓冲区大小
-- [ ] **优化艺术家详情页**：参考 Windows 媒体播放器
+- [ ] **优化艺术家详情页**：参考 Windows 媒体播放器（todo\Windows 媒体播放器）
 - [ ] **迁移到 SQLite**
-- [ ] **增强 LRC（逐字歌词）** https://github.com/Ferry-200/coriander_player/issues/157
-- [ ] **接入 ffmpeg 读取更多标签**：如 DSF 信息显示问题https://github.com/Ferry-200/coriander_player/issues/98
-- [ ] **考虑支持 cue**
-- [ ] **支持播放 mka**：新增 BASSWebM.dll
+- [x] **支持播放 mka**：已加载 BASSWebM.dll
+- [x] **快捷键悬浮提示**：快捷键操作显示短暂提示；音量菜单内快捷键也会显示气泡
 
 ## 未完成（Bug）
 

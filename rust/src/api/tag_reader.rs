@@ -32,6 +32,7 @@ static SUPPORT_FORMAT: phf::Map<&'static str, bool> = phf::phf_map! {
     "asf" => false, "wma" => false,
     "aac" => true, "adts" => true,
     "m4a" => true,
+    "mka" => false, "webm" => false,
     "ac3" => false,
     "amr" => false, "3ga" => false,
     "flac" => true,

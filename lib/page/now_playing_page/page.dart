@@ -231,7 +231,8 @@ class _NowPlayingMoreAction extends StatelessWidget {
               (i) => MenuItemButton(
                 style: menuItemStyle,
                 onPressed: () {
-                  final added = PLAYLISTS[i].audios.containsKey(nowPlaying.path);
+                  final added =
+                      PLAYLISTS[i].audios.containsKey(nowPlaying.path);
                   if (added) {
                     showTextOnSnackBar("歌曲“${nowPlaying.title}”已存在");
                     return;
@@ -319,6 +320,8 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
 
   bool isDragging = false;
   bool isSystemDragging = false;
+  bool _isMenuOpen = false;
+  double _lastVolumeDsp = -1;
   Timer? _systemVolPollTimer;
   bool _systemVolPollBusy = false;
   Timer? _systemVolBoostTimer;
@@ -347,6 +350,16 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
   @override
   void initState() {
     super.initState();
+    _lastVolumeDsp = playbackService.volumeDsp;
+    playbackService.addListener(() {
+      if (!mounted) return;
+      final v = playbackService.volumeDsp;
+      if ((v - _lastVolumeDsp).abs() <= 0.0001) return;
+      _lastVolumeDsp = v;
+      if (_isMenuOpen && !isDragging) {
+        _triggerIndicator();
+      }
+    });
     _systemVolListener = (v) {
       if (mounted && !isSystemDragging) {
         dragSystemVol.value = v;
@@ -427,6 +440,10 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
         ),
       ),
       onOpen: () {
+        _isMenuOpen = true;
+        if (!isDragging) {
+          dragVolDsp.value = playbackService.volumeDsp;
+        }
         int ticks = 0;
         _systemVolBoostTimer?.cancel();
         _systemVolBoostTimer =
@@ -444,6 +461,7 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
         });
       },
       onClose: () {
+        _isMenuOpen = false;
         _systemVolBoostTimer?.cancel();
       },
       menuChildren: [
@@ -558,9 +576,10 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
                   data: const SliderThemeData(
                     showValueIndicator: ShowValueIndicator.never,
                   ),
-                  child: ValueListenableBuilder(
-                    valueListenable: dragVolDsp,
-                    builder: (context, dragVolDspValue, _) {
+                  child: ListenableBuilder(
+                    listenable: Listenable.merge([dragVolDsp, playbackService]),
+                    builder: (context, _) {
+                      final dragVolDspValue = dragVolDsp.value;
                       final currentValue = isDragging
                           ? dragVolDspValue
                           : playbackService.volumeDsp;
@@ -964,8 +983,12 @@ class _NowPlayingInfo extends StatefulWidget {
 class __NowPlayingInfoState extends State<_NowPlayingInfo> {
   final playbackService = PlayService.instance.playbackService;
   Future<ImageProvider<Object>?>? nowPlayingCover;
+  String? _coverPath;
 
   void updateCover() {
+    final nextPath = playbackService.nowPlaying?.path;
+    if (nextPath == _coverPath) return;
+    _coverPath = nextPath;
     setState(() {
       nowPlayingCover = playbackService.nowPlaying?.largeCover;
     });
@@ -976,6 +999,7 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
     super.initState();
     playbackService.addListener(updateCover);
     nowPlayingCover = playbackService.nowPlaying?.largeCover;
+    _coverPath = playbackService.nowPlaying?.path;
   }
 
   @override

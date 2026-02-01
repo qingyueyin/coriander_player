@@ -196,11 +196,12 @@ class _UniPageState<T> extends State<UniPage<T>> {
 
   Widget _alphaIndexBar() {
     if (currContentView != ContentView.list) return const SizedBox.shrink();
+    if (currSortMethod?.name != "标题") return const SizedBox.shrink();
     final indexMap = _buildAlphaIndexMap();
     if (indexMap.isEmpty) return const SizedBox.shrink();
 
     return Positioned(
-      right: 4.0,
+      left: 4.0,
       top: 8.0,
       bottom: 104.0,
       child: LayoutBuilder(

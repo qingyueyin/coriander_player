@@ -14,10 +14,13 @@ class HotkeysHelper {
       final state = playbackService.playerState;
       if (state == PlayerState.playing) {
         playbackService.pause();
+        showHotkeyToast(text: "暂停", icon: Icons.pause);
       } else if (state == PlayerState.completed) {
         playbackService.playAgain();
+        showHotkeyToast(text: "重播", icon: Icons.replay);
       } else {
         playbackService.start();
+        showHotkeyToast(text: "播放", icon: Icons.play_arrow);
       }
     },
     HotKey(key: PhysicalKeyboardKey.escape, scope: HotKeyScope.inapp): (_) {
@@ -38,6 +41,7 @@ class HotkeysHelper {
       scope: HotKeyScope.inapp,
     ): (_) {
       PlayService.instance.playbackService.lastAudio();
+      showHotkeyToast(text: "上一曲", icon: Icons.skip_previous);
     },
     HotKey(
       key: PhysicalKeyboardKey.arrowRight,
@@ -45,6 +49,7 @@ class HotkeysHelper {
       scope: HotKeyScope.inapp,
     ): (_) {
       PlayService.instance.playbackService.nextAudio();
+      showHotkeyToast(text: "下一曲", icon: Icons.skip_next);
     },
     HotKey(
       key: PhysicalKeyboardKey.arrowUp,
@@ -54,6 +59,10 @@ class HotkeysHelper {
       final playbackService = PlayService.instance.playbackService;
       final next = (playbackService.volumeDsp + 0.05).clamp(0.0, 1.0);
       playbackService.setVolumeDsp(next);
+      showHotkeyToast(
+        text: "应用音量：${(next * 100).round()}%",
+        icon: Icons.volume_up,
+      );
     },
     HotKey(
       key: PhysicalKeyboardKey.arrowDown,
@@ -63,10 +72,15 @@ class HotkeysHelper {
       final playbackService = PlayService.instance.playbackService;
       final next = (playbackService.volumeDsp - 0.05).clamp(0.0, 1.0);
       playbackService.setVolumeDsp(next);
+      showHotkeyToast(
+        text: "应用音量：${(next * 100).round()}%",
+        icon: Icons.volume_down,
+      );
     },
     HotKey(key: PhysicalKeyboardKey.f1, scope: HotKeyScope.inapp): (_) async {
       final full = await windowManager.isFullScreen();
       await windowManager.setFullScreen(!full);
+      showHotkeyToast(text: "全屏：${full ? "关" : "开"}", icon: Icons.fullscreen);
     },
   };
 

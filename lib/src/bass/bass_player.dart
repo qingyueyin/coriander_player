@@ -41,6 +41,7 @@ const BASS_PLUGINS = [
   "BASS\\bassflac.dll",
   "BASS\\bassmidi.dll",
   "BASS\\bassopus.dll",
+  "BASS\\basswebm.dll",
   "BASS\\basswv.dll",
 ];
 

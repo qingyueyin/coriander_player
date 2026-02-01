@@ -1,5 +1,6 @@
 // ignore_for_file: unnecessary_this
 
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
@@ -179,6 +180,78 @@ final GlobalKey<NavigatorState> ROUTER_KEY = GlobalKey();
 final SCAFFOLD_MESSAGER = GlobalKey<ScaffoldMessengerState>();
 void showTextOnSnackBar(String text) {
   SCAFFOLD_MESSAGER.currentState?.showSnackBar(SnackBar(content: Text(text)));
+}
+
+OverlayEntry? _hotkeyToastEntry;
+Timer? _hotkeyToastTimer;
+
+void showHotkeyToast({
+  required String text,
+  IconData? icon,
+}) {
+  final context = SCAFFOLD_MESSAGER.currentContext ?? ROUTER_KEY.currentContext;
+  if (context == null) return;
+  final overlay = Overlay.of(context, rootOverlay: true);
+  if (overlay == null) return;
+
+  _hotkeyToastTimer?.cancel();
+  _hotkeyToastEntry?.remove();
+
+  final scheme = Theme.of(context).colorScheme;
+  _hotkeyToastEntry = OverlayEntry(
+    builder: (context) => Positioned.fill(
+      child: IgnorePointer(
+        child: SafeArea(
+          minimum: const EdgeInsets.all(16.0),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 84.0),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Material(
+                type: MaterialType.transparency,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14.0,
+                    vertical: 10.0,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.secondaryContainer.withOpacity(0.92),
+                    borderRadius: BorderRadius.circular(20.0),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (icon != null) ...[
+                        Icon(
+                          icon,
+                          size: 18,
+                          color: scheme.onSecondaryContainer,
+                        ),
+                        const SizedBox(width: 8.0),
+                      ],
+                      Text(
+                        text,
+                        style: TextStyle(
+                          color: scheme.onSecondaryContainer,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  overlay.insert(_hotkeyToastEntry!);
+  _hotkeyToastTimer = Timer(const Duration(milliseconds: 1200), () {
+    _hotkeyToastEntry?.remove();
+    _hotkeyToastEntry = null;
+  });
 }
 
 final LOGGER_MEMORY = MemoryOutput(
