@@ -10,6 +10,43 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 
+FontWeight _discreteFontWeight(int weight) {
+  final w = weight.clamp(100, 900);
+  return FontWeight.values[((w / 100).floor() - 1).clamp(0, 8)];
+}
+
+double _lyricLetterSpacing({
+  required int weight,
+  required double fontSize,
+}) {
+  final sizeFactor = fontSize / 16;
+  var v = 0.001 * (weight - 400) * sizeFactor;
+
+  if (weight > 800) {
+    final t = ((weight - 800) / 100).clamp(0.0, 1.0);
+    v += t * (0.6 * sizeFactor);
+  }
+
+  if (v < -0.10) return -0.10;
+  if (v > 2.0) return 2.0;
+  return v;
+}
+
+TextStyle _lyricTextStyle({
+  required Color color,
+  required double fontSize,
+  required int weight,
+}) {
+  final w = weight.clamp(100, 900);
+  return TextStyle(
+    color: color,
+    fontSize: fontSize,
+    fontFamily: 'MiSans',
+    fontVariations: [FontVariation('wght', w.toDouble())],
+    letterSpacing: _lyricLetterSpacing(weight: w, fontSize: fontSize),
+  );
+}
+
 class LyricViewTile extends StatelessWidget {
   const LyricViewTile(
       {super.key, required this.line, required this.opacity, this.onTap});
@@ -69,6 +106,7 @@ class _SyncLineContent extends StatelessWidget {
     final lyricFontSize = lyricViewController.lyricFontSize;
     final translationFontSize = lyricViewController.translationFontSize;
     final alignment = lyricViewController.lyricTextAlign;
+    final fontWeight = lyricViewController.lyricFontWeight;
 
     if (!isMainLine) {
       if (syncLine.words.isEmpty) {
@@ -76,7 +114,8 @@ class _SyncLineContent extends StatelessWidget {
       }
 
       final List<Text> contents = [
-        buildPrimaryText(syncLine.content, scheme, alignment, lyricFontSize),
+        buildPrimaryText(
+            syncLine.content, scheme, alignment, lyricFontSize, fontWeight),
       ];
       if (syncLine.translation != null) {
         contents.add(buildSecondaryText(
@@ -84,6 +123,7 @@ class _SyncLineContent extends StatelessWidget {
           scheme,
           alignment,
           translationFontSize,
+          fontWeight,
         ));
       }
 
@@ -139,10 +179,10 @@ class _SyncLineContent extends StatelessWidget {
                       },
                       child: Text(
                         syncLine.words[i].content,
-                        style: TextStyle(
+                        style: _lyricTextStyle(
                           color: scheme.primary,
                           fontSize: lyricFontSize,
-                          fontWeight: FontWeight.bold,
+                          weight: fontWeight,
                         ),
                       ),
                     ),
@@ -160,6 +200,7 @@ class _SyncLineContent extends StatelessWidget {
         scheme,
         alignment,
         translationFontSize,
+        fontWeight,
       ));
     }
     return Padding(
@@ -180,6 +221,7 @@ class _SyncLineContent extends StatelessWidget {
     ColorScheme scheme,
     LyricTextAlign align,
     double fontSize,
+    int fontWeight,
   ) {
     return Text(
       text,
@@ -188,10 +230,10 @@ class _SyncLineContent extends StatelessWidget {
         LyricTextAlign.center => TextAlign.center,
         LyricTextAlign.right => TextAlign.right,
       },
-      style: TextStyle(
+      style: _lyricTextStyle(
         color: scheme.onSecondaryContainer,
         fontSize: fontSize,
-        fontWeight: FontWeight.bold,
+        weight: fontWeight,
       ),
     );
   }
@@ -201,7 +243,9 @@ class _SyncLineContent extends StatelessWidget {
     ColorScheme scheme,
     LyricTextAlign align,
     double fontSize,
+    int fontWeight,
   ) {
+    final translationWeight = (fontWeight - 50).clamp(100, 900);
     return Text(
       text,
       textAlign: switch (align) {
@@ -209,7 +253,11 @@ class _SyncLineContent extends StatelessWidget {
         LyricTextAlign.center => TextAlign.center,
         LyricTextAlign.right => TextAlign.right,
       },
-      style: TextStyle(color: scheme.onSecondaryContainer, fontSize: fontSize),
+      style: _lyricTextStyle(
+        color: scheme.onSecondaryContainer,
+        fontSize: fontSize,
+        weight: translationWeight,
+      ),
     );
   }
 }
@@ -236,10 +284,12 @@ class _LrcLineContent extends StatelessWidget {
     final lyricFontSize = lyricViewController.lyricFontSize;
     final translationFontSize = lyricViewController.translationFontSize;
     final alignment = lyricViewController.lyricTextAlign;
+    final fontWeight = lyricViewController.lyricFontWeight;
 
     final splited = lrcLine.content.split("┃");
     final List<Text> contents = [
-      buildPrimaryText(splited.first, scheme, alignment, lyricFontSize),
+      buildPrimaryText(
+          splited.first, scheme, alignment, lyricFontSize, fontWeight),
     ];
     for (var i = 1; i < splited.length; i++) {
       contents.add(buildSecondaryText(
@@ -247,6 +297,7 @@ class _LrcLineContent extends StatelessWidget {
         scheme,
         alignment,
         translationFontSize,
+        fontWeight,
       ));
     }
 
@@ -268,6 +319,7 @@ class _LrcLineContent extends StatelessWidget {
     ColorScheme scheme,
     LyricTextAlign align,
     double fontSize,
+    int fontWeight,
   ) {
     return Text(
       text,
@@ -276,10 +328,10 @@ class _LrcLineContent extends StatelessWidget {
         LyricTextAlign.center => TextAlign.center,
         LyricTextAlign.right => TextAlign.right,
       },
-      style: TextStyle(
+      style: _lyricTextStyle(
         color: scheme.onSecondaryContainer,
         fontSize: fontSize,
-        fontWeight: FontWeight.bold,
+        weight: fontWeight,
       ),
     );
   }
@@ -289,7 +341,9 @@ class _LrcLineContent extends StatelessWidget {
     ColorScheme scheme,
     LyricTextAlign align,
     double fontSize,
+    int fontWeight,
   ) {
+    final translationWeight = (fontWeight - 50).clamp(100, 900);
     return Text(
       text,
       textAlign: switch (align) {
@@ -297,7 +351,11 @@ class _LrcLineContent extends StatelessWidget {
         LyricTextAlign.center => TextAlign.center,
         LyricTextAlign.right => TextAlign.right,
       },
-      style: TextStyle(color: scheme.onSecondaryContainer, fontSize: fontSize),
+      style: _lyricTextStyle(
+        color: scheme.onSecondaryContainer,
+        fontSize: fontSize,
+        weight: translationWeight,
+      ),
     );
   }
 }

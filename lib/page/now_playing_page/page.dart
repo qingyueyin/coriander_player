@@ -18,6 +18,7 @@ import 'package:coriander_player/play_service/play_service.dart';
 import 'package:coriander_player/play_service/playback_service.dart';
 import 'package:coriander_player/src/bass/bass_player.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
@@ -155,6 +156,16 @@ class _NowPlayingMoreAction extends StatelessWidget {
     final playbackService = context.watch<PlaybackService>();
     final nowPlaying = playbackService.nowPlaying;
     final scheme = Theme.of(context).colorScheme;
+    final menuStyle = MenuStyle(
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+    );
+    final menuItemStyle = ButtonStyle(
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
 
     if (nowPlaying == null) {
       return IconButton(
@@ -165,55 +176,63 @@ class _NowPlayingMoreAction extends StatelessWidget {
       );
     }
 
-    return MenuAnchor(
-      menuChildren: [
-        SubmenuButton(
-          menuChildren: List.generate(
-            nowPlaying.splitedArtists.length,
-            (i) => MenuItemButton(
-              onPressed: () {
-                final Artist artist = AudioLibrary
-                    .instance.artistCollection[nowPlaying.splitedArtists[i]]!;
-                context.pushReplacement(
-                  app_paths.ARTIST_DETAIL_PAGE,
-                  extra: artist,
-                );
-              },
-              leadingIcon: const Icon(Symbols.people),
-              child: Text(nowPlaying.splitedArtists[i]),
+    return MenuTheme(
+      data: MenuThemeData(style: menuStyle),
+      child: MenuAnchor(
+        style: menuStyle,
+        menuChildren: [
+          SubmenuButton(
+            style: menuItemStyle,
+            menuChildren: List.generate(
+              nowPlaying.splitedArtists.length,
+              (i) => MenuItemButton(
+                style: menuItemStyle,
+                onPressed: () {
+                  final Artist artist = AudioLibrary
+                      .instance.artistCollection[nowPlaying.splitedArtists[i]]!;
+                  context.pushReplacement(
+                    app_paths.ARTIST_DETAIL_PAGE,
+                    extra: artist,
+                  );
+                },
+                leadingIcon: const Icon(Symbols.people),
+                child: Text(nowPlaying.splitedArtists[i]),
+              ),
             ),
+            child: const Text("艺术家"),
           ),
-          child: const Text("艺术家"),
-        ),
-        MenuItemButton(
+          MenuItemButton(
+            style: menuItemStyle,
+            onPressed: () {
+              final Album album =
+                  AudioLibrary.instance.albumCollection[nowPlaying.album]!;
+              context.pushReplacement(app_paths.ALBUM_DETAIL_PAGE, extra: album);
+            },
+            leadingIcon: const Icon(Symbols.album),
+            child: Text(nowPlaying.album),
+          ),
+          MenuItemButton(
+            style: menuItemStyle,
+            onPressed: () {
+              context.pushReplacement(app_paths.AUDIO_DETAIL_PAGE,
+                  extra: nowPlaying);
+            },
+            leadingIcon: const Icon(Symbols.info),
+            child: const Text("详细信息"),
+          ),
+        ],
+        builder: (context, controller, _) => IconButton(
+          tooltip: "更多",
           onPressed: () {
-            final Album album =
-                AudioLibrary.instance.albumCollection[nowPlaying.album]!;
-            context.pushReplacement(app_paths.ALBUM_DETAIL_PAGE, extra: album);
+            if (controller.isOpen) {
+              controller.close();
+            } else {
+              controller.open();
+            }
           },
-          leadingIcon: const Icon(Symbols.album),
-          child: Text(nowPlaying.album),
+          icon: const Icon(Symbols.more_vert),
+          color: scheme.onSecondaryContainer,
         ),
-        MenuItemButton(
-          onPressed: () {
-            context.pushReplacement(app_paths.AUDIO_DETAIL_PAGE,
-                extra: nowPlaying);
-          },
-          leadingIcon: const Icon(Symbols.info),
-          child: const Text("详细信息"),
-        ),
-      ],
-      builder: (context, controller, _) => IconButton(
-        tooltip: "更多",
-        onPressed: () {
-          if (controller.isOpen) {
-            controller.close();
-          } else {
-            controller.open();
-          }
-        },
-        icon: const Icon(Symbols.more_vert),
-        color: scheme.onSecondaryContainer,
       ),
     );
   }
@@ -269,10 +288,31 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
   final dragVolDsp = ValueNotifier(
     AppPreference.instance.playbackPref.volumeDsp,
   );
+  final dragSystemVol = ValueNotifier(0.0);
+
   bool isDragging = false;
+  bool isSystemDragging = false;
   Timer? _indicatorTimer;
+  Timer? _systemIndicatorTimer;
   bool _showCustomIndicator = false;
+  bool _showSystemCustomIndicator = false;
   bool _isHovering = false;
+  bool _isSystemHovering = false;
+
+  @override
+  void initState() {
+    super.initState();
+    FlutterVolumeController.getVolume().then((v) {
+      if (mounted) {
+        dragSystemVol.value = v ?? 0.5;
+      }
+    });
+    FlutterVolumeController.addListener((v) {
+      if (mounted && !isSystemDragging) {
+        dragSystemVol.value = v;
+      }
+    });
+  }
 
   void _triggerIndicator() {
     setState(() => _showCustomIndicator = true);
@@ -284,9 +324,21 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
     });
   }
 
+  void _triggerSystemIndicator() {
+    setState(() => _showSystemCustomIndicator = true);
+    _systemIndicatorTimer?.cancel();
+    _systemIndicatorTimer = Timer(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        setState(() => _showSystemCustomIndicator = false);
+      }
+    });
+  }
+
   @override
   void dispose() {
+    FlutterVolumeController.removeListener();
     _indicatorTimer?.cancel();
+    _systemIndicatorTimer?.cancel();
     super.dispose();
   }
 
@@ -297,81 +349,210 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
     return MenuAnchor(
       style: MenuStyle(
         shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
       menuChildren: [
-        SliderTheme(
-          data: const SliderThemeData(
-            showValueIndicator: ShowValueIndicator.always,
-          ),
-          child: ValueListenableBuilder(
-            valueListenable: dragVolDsp,
-            builder: (context, dragVolDspValue, _) {
-              final currentValue =
-                  isDragging ? dragVolDspValue : playbackService.volumeDsp;
-
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  const double padding = 24.0;
-                  final double trackWidth =
-                      constraints.maxWidth - (padding * 2);
-                  const double min = 0.0;
-                  const double max = 1.0;
-                  final double percent = (currentValue - min) / (max - min);
-                  final double leftOffset = padding + (trackWidth * percent);
-
-                  return MouseRegion(
-                    onEnter: (_) => setState(() => _isHovering = true),
-                    onExit: (_) => setState(() => _isHovering = false),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.centerLeft,
-                      children: [
-                        Slider(
-                          thumbColor: scheme.primary,
-                          activeColor: scheme.primary,
-                          inactiveColor: scheme.outline,
-                          min: min,
-                          max: max,
-                          value: currentValue,
-                          label: "${(currentValue * 100).toInt()}%",
-                          onChangeStart: (value) {
-                            isDragging = true;
-                            dragVolDsp.value = value;
-                            playbackService.setVolumeDsp(value);
-                            _triggerIndicator();
-                          },
-                          onChanged: (value) {
-                            dragVolDsp.value = value;
-                            playbackService.setVolumeDsp(value);
-                          },
-                          onChangeEnd: (value) {
-                            isDragging = false;
-                            dragVolDsp.value = value;
-                            playbackService.setVolumeDsp(value);
-                          },
-                        ),
-                        if (_showCustomIndicator || _isHovering)
-                          Positioned(
-                            left: leftOffset -
-                                24.0, // Center the bubble (width 48)
-                            top: -40,
-                            child: IgnorePointer(
-                              child: _CustomValueIndicator(
-                                value: currentValue * 100,
-                                suffix: "%",
-                                color: scheme.primary,
-                                textColor: scheme.onPrimary,
-                              ),
-                            ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+          child: SizedBox(
+            width: 300,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // System Volume Slider
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    children: [
+                      const Icon(Symbols.volume_up, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "系统音量",
+                          style: TextStyle(
+                            color: scheme.onSurface,
+                            fontSize: 12,
                           ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SliderTheme(
+                  data: const SliderThemeData(
+                    showValueIndicator: ShowValueIndicator.never,
+                  ),
+                  child: ValueListenableBuilder(
+                    valueListenable: dragSystemVol,
+                    builder: (context, systemVolValue, _) {
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          const double padding = 24.0;
+                          final double trackWidth =
+                              constraints.maxWidth - (padding * 2);
+                          const double min = 0.0;
+                          const double max = 1.0;
+                          final double percent =
+                              (systemVolValue - min) / (max - min);
+                          final double leftOffset =
+                              padding + (trackWidth * percent);
+
+                          return MouseRegion(
+                            onEnter: (_) =>
+                                setState(() => _isSystemHovering = true),
+                            onExit: (_) =>
+                                setState(() => _isSystemHovering = false),
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              alignment: Alignment.centerLeft,
+                              children: [
+                                Slider(
+                                  thumbColor: scheme.secondary,
+                                  activeColor: scheme.secondary,
+                                  inactiveColor: scheme.outline,
+                                  min: min,
+                                  max: max,
+                                  value: systemVolValue,
+                                  onChangeStart: (value) {
+                                    isSystemDragging = true;
+                                    dragSystemVol.value = value;
+                                    FlutterVolumeController.setVolume(value);
+                                    _triggerSystemIndicator();
+                                  },
+                                  onChanged: (value) {
+                                    dragSystemVol.value = value;
+                                    FlutterVolumeController.setVolume(value);
+                                    if (isSystemDragging)
+                                      _triggerSystemIndicator();
+                                  },
+                                  onChangeEnd: (value) {
+                                    isSystemDragging = false;
+                                    dragSystemVol.value = value;
+                                    FlutterVolumeController.setVolume(value);
+                                  },
+                                ),
+                                if (_showSystemCustomIndicator ||
+                                    _isSystemHovering)
+                                  Positioned(
+                                    left: leftOffset - 24.0,
+                                    top: -40,
+                                    child: IgnorePointer(
+                                      child: _CustomValueIndicator(
+                                        value: systemVolValue * 100,
+                                        suffix: "%",
+                                        color: scheme.secondary,
+                                        textColor: scheme.onSecondary,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+                const Divider(),
+                // App Volume Slider
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    children: [
+                      const Icon(Symbols.music_note, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "应用音量",
+                          style: TextStyle(
+                            color: scheme.onSurface,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SliderTheme(
+                  data: const SliderThemeData(
+                    showValueIndicator: ShowValueIndicator.never,
+                  ),
+                  child: ValueListenableBuilder(
+                    valueListenable: dragVolDsp,
+                    builder: (context, dragVolDspValue, _) {
+                      final currentValue = isDragging
+                          ? dragVolDspValue
+                          : playbackService.volumeDsp;
+
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          const double padding = 24.0;
+                          final double trackWidth =
+                              constraints.maxWidth - (padding * 2);
+                          const double min = 0.0;
+                          const double max = 1.0;
+                          final double percent =
+                              (currentValue - min) / (max - min);
+                          final double leftOffset =
+                              padding + (trackWidth * percent);
+
+                          return MouseRegion(
+                            onEnter: (_) => setState(() => _isHovering = true),
+                            onExit: (_) => setState(() => _isHovering = false),
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              alignment: Alignment.centerLeft,
+                              children: [
+                                Slider(
+                                  thumbColor: scheme.primary,
+                                  activeColor: scheme.primary,
+                                  inactiveColor: scheme.outline,
+                                  min: min,
+                                  max: max,
+                                  value: currentValue,
+                                  onChangeStart: (value) {
+                                    isDragging = true;
+                                    dragVolDsp.value = value;
+                                    playbackService.setVolumeDsp(value);
+                                    _triggerIndicator();
+                                  },
+                                  onChanged: (value) {
+                                    dragVolDsp.value = value;
+                                    playbackService.setVolumeDsp(value);
+                                    // Also trigger indicator on drag
+                                    if (isDragging) _triggerIndicator();
+                                  },
+                                  onChangeEnd: (value) {
+                                    isDragging = false;
+                                    dragVolDsp.value = value;
+                                    playbackService.setVolumeDsp(value);
+                                  },
+                                ),
+                                if (_showCustomIndicator || _isHovering)
+                                  Positioned(
+                                    left: leftOffset -
+                                        24.0, // Center the bubble (width 48)
+                                    top: -40,
+                                    child: IgnorePointer(
+                                      child: _CustomValueIndicator(
+                                        value: currentValue * 100,
+                                        suffix: "%",
+                                        color: scheme.primary,
+                                        textColor: scheme.onPrimary,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],

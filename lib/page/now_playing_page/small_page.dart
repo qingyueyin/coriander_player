@@ -103,6 +103,7 @@ class _NowPlayingPage_SmallState extends State<_NowPlayingPage_Small> {
             children: [
               _NowPlayingShuffleSwitch(),
               _NowPlayingPlayModeSwitch(),
+              NowPlayingPitchControl(),
               _NowPlayingVolDspSlider(),
               _ExclusiveModeSwitch(),
               _DesktopLyricSwitch(),

@@ -73,4 +73,5 @@ Thumbs.db
 
 # Build artifacts
 output/
+todo/
 *.zip

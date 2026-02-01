@@ -39,6 +39,11 @@ class _NowPlayingPitchControlState extends State<NowPlayingPitchControl> {
     final playbackService = PlayService.instance.playbackService;
 
     return MenuAnchor(
+      style: MenuStyle(
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+      ),
       builder: (context, controller, child) {
         return IconButton(
           onPressed: () {
@@ -55,147 +60,132 @@ class _NowPlayingPitchControlState extends State<NowPlayingPitchControl> {
       },
       menuChildren: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
           child: SizedBox(
-            width: 250,
+            width: 300,
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (!playbackService.isBassFxLoaded)
                   Container(
-                    margin: const EdgeInsets.only(bottom: 8.0),
-                    padding: const EdgeInsets.all(8.0),
-                    decoration: BoxDecoration(
-                      color: scheme.errorContainer,
-                      borderRadius: BorderRadius.circular(8.0),
+                      margin: const EdgeInsets.only(bottom: 8.0),
+                      padding: const EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(
+                        color: scheme.errorContainer,
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Text(
+                        "BASS_FX missing",
+                        style: TextStyle(
+                            color: scheme.onErrorContainer, fontSize: 12),
+                      ),
                     ),
-                    child: Text(
-                      "BASS_FX missing",
-                      style: TextStyle(
-                          color: scheme.onErrorContainer, fontSize: 12),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("音调(半音)", style: TextStyle(color: scheme.onSurface)),
+                      IconButton(
+                        icon: const Icon(Symbols.restart_alt, size: 16),
+                        onPressed: () => playbackService.setPitch(0.0),
+                        tooltip: "重置音调",
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
                   ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("音调(半音)", style: TextStyle(color: scheme.onSurface)),
-                    IconButton(
-                      icon: const Icon(Symbols.restart_alt, size: 16),
-                      onPressed: () => playbackService.setPitch(0.0),
-                      tooltip: "重置音调",
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                  SliderTheme(
+                    data: const SliderThemeData(
+                      showValueIndicator: ShowValueIndicator.never,
                     ),
-                  ],
-                ),
-                SliderTheme(
-                  data: const SliderThemeData(
-                    showValueIndicator: ShowValueIndicator.always,
-                  ),
-                  child: ValueListenableBuilder(
-                    valueListenable: playbackService.pitch,
-                    builder: (context, pitchValue, _) => Row(
-                      children: [
-                        IconButton(
-                          onPressed: playbackService.isBassFxLoaded
-                              ? () {
-                                  final newValue =
-                                      (pitchValue - 1.0).clamp(-12.0, 12.0);
-                                  playbackService.setPitch(newValue);
-                                  _triggerIndicator();
-                                }
-                              : null,
-                          icon: const Icon(Symbols.remove),
-                          color: scheme.onSurface,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                        Expanded(
-                          child: LayoutBuilder(builder: (context, constraints) {
-                            // Slider default padding is 24.0 on each side for overlay
-                            const double padding = 24.0;
-                            final double trackWidth =
-                                constraints.maxWidth - (padding * 2);
-                            const double min = -12.0;
-                            const double max = 12.0;
-                            final double percent =
-                                (pitchValue - min) / (max - min);
-                            final double leftOffset =
-                                padding + (trackWidth * percent);
+                    child: ValueListenableBuilder(
+                      valueListenable: playbackService.pitch,
+                      builder: (context, pitchValue, _) => Row(
+                        children: [
+                          IconButton(
+                            onPressed: playbackService.isBassFxLoaded
+                                ? () {
+                                    final newValue =
+                                        (pitchValue - 1.0).clamp(-12.0, 12.0);
+                                    playbackService.setPitch(newValue);
+                                    _triggerIndicator();
+                                  }
+                                : null,
+                            icon: const Icon(Symbols.remove),
+                            color: scheme.onSurface,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                          Expanded(
+                            child: LayoutBuilder(builder: (context, constraints) {
+                              // Slider default padding is 24.0 on each side for overlay
+                              const double padding = 24.0;
+                              final double trackWidth =
+                                  constraints.maxWidth - (padding * 2);
+                              const double min = -12.0;
+                              const double max = 12.0;
+                              final double percent =
+                                  (pitchValue - min) / (max - min);
+                              final double leftOffset =
+                                  padding + (trackWidth * percent);
 
-                            return MouseRegion(
-                              onEnter: (_) => setState(() => _isHovering = true),
-                              onExit: (_) => setState(() => _isHovering = false),
-                              // Hover detection logic: if mouse is close to the thumb, we could show it.
-                              // But for simplicity and standard UX, showing on hover of the slider area is often acceptable.
-                              // However, user asked "mouse pointer stops at the small dot".
-                              // Let's approximate this by checking if hovering AND using the LayoutBuilder logic.
-                              // Actually, simply showing it when hovering the slider area (which is small enough) 
-                              // effectively feels like hovering the control. 
-                              // To be precise about "the dot", we would need onHover local position.
-                              onHover: (event) {
-                                // If we want strict "hover over dot" logic:
-                                // final localX = event.localPosition.dx;
-                                // if ((localX - leftOffset).abs() < 20) { ... }
-                                // For now, let's enable it for the whole slider area as it's more usable.
-                              },
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                alignment: Alignment.centerLeft,
-                                children: [
-                                  Slider(
-                                    thumbColor: scheme.primary,
-                                    activeColor: scheme.primary,
-                                    inactiveColor: scheme.outline,
-                                    min: min,
-                                    max: max,
-                                    divisions: 24,
-                                    value: pitchValue,
-                                    label:
-                                        "${pitchValue > 0 ? '+' : ''}${pitchValue.toInt()}",
-                                    onChanged: playbackService.isBassFxLoaded
-                                        ? (value) {
-                                            playbackService.setPitch(value);
-                                          }
-                                        : null,
-                                  ),
-                                  if (_showCustomIndicator || _isHovering)
-                                    Positioned(
-                                      left: leftOffset -
-                                          24.0, // Center the bubble (width 48)
-                                      top: -40,
-                                      child: IgnorePointer(
-                                        child: _CustomValueIndicator(
-                                          value: pitchValue,
-                                          color: scheme.primary,
-                                          textColor: scheme.onPrimary,
+                              return MouseRegion(
+                                onEnter: (_) => setState(() => _isHovering = true),
+                                onExit: (_) => setState(() => _isHovering = false),
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  alignment: Alignment.centerLeft,
+                                  children: [
+                                    Slider(
+                                      thumbColor: scheme.primary,
+                                      activeColor: scheme.primary,
+                                      inactiveColor: scheme.outline,
+                                      min: min,
+                                      max: max,
+                                      divisions: 24,
+                                      value: pitchValue,
+                                      onChanged: playbackService.isBassFxLoaded
+                                          ? (value) {
+                                              playbackService.setPitch(value);
+                                            }
+                                          : null,
+                                    ),
+                                    if (_showCustomIndicator || _isHovering)
+                                      Positioned(
+                                        left: leftOffset -
+                                            24.0, // Center the bubble (width 48)
+                                        top: -40,
+                                        child: IgnorePointer(
+                                          child: _CustomValueIndicator(
+                                            value: pitchValue,
+                                            color: scheme.primary,
+                                            textColor: scheme.onPrimary,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                ],
-                              ),
-                            );
-                          }),
-                        ),
-                        IconButton(
-                          onPressed: playbackService.isBassFxLoaded
-                              ? () {
-                                  final newValue =
-                                      (pitchValue + 1.0).clamp(-12.0, 12.0);
-                                  playbackService.setPitch(newValue);
-                                  _triggerIndicator();
-                                }
-                              : null,
-                          icon: const Icon(Symbols.add),
-                          color: scheme.onSurface,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                      ],
+                                  ],
+                                ),
+                              );
+                            }),
+                          ),
+                          IconButton(
+                            onPressed: playbackService.isBassFxLoaded
+                                ? () {
+                                    final newValue =
+                                        (pitchValue + 1.0).clamp(-12.0, 12.0);
+                                    playbackService.setPitch(newValue);
+                                    _triggerIndicator();
+                                  }
+                                : null,
+                            icon: const Icon(Symbols.add),
+                            color: scheme.onSurface,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

@@ -1,9 +1,5 @@
 # Coriander Player 二改：Material You 风格的本地音乐播放器
 
-\*\*该播放器发行版已经附带桌面歌词组件。
-
-- [desktop_lyric](https://github.com/Ferry-200/desktop_lyric.git)
-
 ## 安装
 
 通过项目内的ps1来自动编译，默认只支持Windows版
@@ -11,7 +7,7 @@
 ## 其他平台支持
 
 - MacOS: [https://github.com/marscey/coriander_player/tree/macos-platform](https://github.com/marscey/coriander_player/tree/macos-platform)
-- Linux: [https://github.com/Sh12uku/coriander_player_linux]
+- Linux: [https://github.com/Sh12uku/coriander_player_linux](https://github.com/Sh12uku/coriander_player_linux)
 
 ## 软件内快捷键
 
@@ -31,9 +27,10 @@
 
 ## 本分支特性
 
-- **降调功能**：集成了 BASS_FX 插件，支持在不改变速度的情况下调节音调（Pitch），或同时调节速度（Speed）。
-- **系统级的音量调节**：
-- **修复SMTC**：
+- **降调功能**：集成了 BASS_FX 插件，支持在不改变速度的情况下调节音调（Pitch）
+- **系统级的音量调节**：新增了系统级的音量调节条，用户可以通过滑动条调整系统全局音量。
+- **圆角修改**：修改了播放页带悬浮窗控件的圆角，使其更加圆润。
+- **字体粗度调节**：新增了字体粗度调节功能，用户可以在桌面歌词控制区域调整字体粗度。
 
 ## 感谢
 
@@ -43,3 +40,4 @@
 - [flutter_rust_bridge](https://pub.dev/packages/flutter_rust_bridge)：实现许多 Windows 原生交互
 - [Silicon7921](https://github.com/Silicon7921)：绘制了新图标
 - [coriander_playeri](https://github.com/Ferry-200/coriander_player)：原版coriander_player项目
+- [MiSans](https://hyperos.mi.com/font/zh/)：歌词多字重字体支持

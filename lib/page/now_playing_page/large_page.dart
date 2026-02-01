@@ -20,12 +20,9 @@ class _NowPlayingPage_Large extends StatelessWidget {
                     builder: (context, value, _) => AnimatedSwitcher(
                       duration: const Duration(milliseconds: 150),
                       child: switch (value) {
-                        NowPlayingViewMode.onlyMain =>
-                          const VerticalLyricView(),
-                        NowPlayingViewMode.withLyric =>
-                          const VerticalLyricView(),
                         NowPlayingViewMode.withPlaylist =>
                           const CurrentPlaylistView(),
+                        _ => const VerticalLyricView(),
                       },
                     ),
                   ),

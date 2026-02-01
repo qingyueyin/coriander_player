@@ -30,12 +30,14 @@ class NowPlayingPagePreference {
   LyricTextAlign lyricTextAlign;
   double lyricFontSize;
   double translationFontSize;
+  int lyricFontWeight;
 
   NowPlayingPagePreference(
     this.nowPlayingViewMode,
     this.lyricTextAlign,
     this.lyricFontSize,
     this.translationFontSize,
+    this.lyricFontWeight,
   );
 
   Map toMap() => {
@@ -43,6 +45,7 @@ class NowPlayingPagePreference {
         "lyricTextAlign": lyricTextAlign.name,
         "lyricFontSize": lyricFontSize,
         "translationFontSize": translationFontSize,
+        "lyricFontWeight": lyricFontWeight,
       };
 
   factory NowPlayingPagePreference.fromMap(Map map) {
@@ -52,6 +55,7 @@ class NowPlayingPagePreference {
       LyricTextAlign.fromString(map["lyricTextAlign"]) ?? LyricTextAlign.left,
       map["lyricFontSize"] ?? 22.0,
       map["translationFontSize"] ?? 18.0,
+      map["lyricFontWeight"] ?? 400,
     );
   }
 }
@@ -105,7 +109,7 @@ class AppPreference {
   var playbackPref = PlaybackPreference(PlayMode.forward, 1.0);
 
   var nowPlayingPagePref = NowPlayingPagePreference(
-      NowPlayingViewMode.withLyric, LyricTextAlign.left, 22.0, 18.0);
+      NowPlayingViewMode.withLyric, LyricTextAlign.left, 22.0, 18.0, 400);
 
   Future<void> save() async {
     try {
