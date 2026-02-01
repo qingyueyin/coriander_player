@@ -1,3 +1,6 @@
+import 'package:coriander_player/app_paths.dart' as app_paths;
+import 'package:coriander_player/app_preference.dart';
+import 'package:coriander_player/immersive_mode.dart';
 import 'package:coriander_player/play_service/play_service.dart';
 import 'package:coriander_player/src/bass/bass_player.dart';
 import 'package:coriander_player/utils.dart';
@@ -23,9 +26,18 @@ class HotkeysHelper {
         showHotkeyToast(text: "播放", icon: Icons.play_arrow);
       }
     },
-    HotKey(key: PhysicalKeyboardKey.escape, scope: HotKeyScope.inapp): (_) {
+    HotKey(key: PhysicalKeyboardKey.escape, scope: HotKeyScope.inapp):
+        (_) async {
       final routerContext = ROUTER_KEY.currentContext;
       if (routerContext == null) return;
+
+      if (ImmersiveModeController.instance.enabled) {
+        await ImmersiveModeController.instance.exit();
+        final startIndex = AppPreference.instance.startPage
+            .clamp(0, app_paths.START_PAGES.length - 1);
+        GoRouter.of(routerContext).go(app_paths.START_PAGES[startIndex]);
+        return;
+      }
 
       // 先关闭弹窗，再返回上一级页面
       final navigator = Navigator.maybeOf(routerContext);
@@ -78,9 +90,11 @@ class HotkeysHelper {
       );
     },
     HotKey(key: PhysicalKeyboardKey.f1, scope: HotKeyScope.inapp): (_) async {
-      final full = await windowManager.isFullScreen();
-      await windowManager.setFullScreen(!full);
-      showHotkeyToast(text: "全屏：${full ? "关" : "开"}", icon: Icons.fullscreen);
+      await ImmersiveModeController.instance.toggle();
+      showHotkeyToast(
+        text: "沉浸：${ImmersiveModeController.instance.enabled ? "开" : "关"}",
+        icon: Icons.fullscreen,
+      );
     },
   };
 

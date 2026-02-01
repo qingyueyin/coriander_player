@@ -5,6 +5,7 @@ import 'package:coriander_player/app_settings.dart';
 import 'package:coriander_player/component/horizontal_lyric_view.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
 import 'package:coriander_player/hotkeys_helper.dart';
+import 'package:coriander_player/immersive_mode.dart';
 import 'package:coriander_player/library/playlist.dart';
 import 'package:coriander_player/lyric/lyric_source.dart';
 import 'package:coriander_player/play_service/play_service.dart';
@@ -229,7 +230,7 @@ class _WindowControllsState extends State<WindowControlls> with WindowListener {
     });
 
     try {
-      await windowManager.setFullScreen(!_isFullScreen);
+      await ImmersiveModeController.instance.toggle();
     } catch (e) {
       rethrow;
     } finally {

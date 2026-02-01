@@ -2,11 +2,13 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/component/title_bar.dart';
 import 'package:coriander_player/enums.dart';
+import 'package:coriander_player/immersive_mode.dart';
 import 'package:coriander_player/utils.dart';
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/library/playlist.dart';
@@ -29,6 +31,7 @@ import 'package:window_manager/window_manager.dart';
 
 part 'small_page.dart';
 part 'large_page.dart';
+part 'immersive_page.dart';
 
 final NOW_PLAYING_VIEW_MODE = ValueNotifier(
   AppPreference.instance.nowPlayingPagePref.nowPlayingViewMode,
@@ -74,56 +77,87 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     final brightness = theme.brightness;
     final scheme = theme.colorScheme;
 
-    return Scaffold(
-      appBar: const PreferredSize(
-        preferredSize: Size.fromHeight(56.0),
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            children: [
-              NavBackBtn(),
-              Expanded(child: DragToMoveArea(child: SizedBox.expand())),
-              WindowControlls(),
-            ],
-          ),
-        ),
-      ),
-      backgroundColor: scheme.secondaryContainer,
-      body: Stack(
-        fit: StackFit.expand,
-        alignment: AlignmentDirectional.center,
-        children: [
-          if (nowPlayingCover != null) ...[
-            Image(
-              image: nowPlayingCover!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+    return ListenableBuilder(
+      listenable: ImmersiveModeController.instance,
+      builder: (context, _) {
+        final immersive = ImmersiveModeController.instance.enabled;
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 520),
+          switchInCurve: Curves.easeInOutCubic,
+          switchOutCurve: Curves.easeInOutCubic,
+          transitionBuilder: (child, animation) {
+            final fade = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOutCubic,
+            );
+            final scale = Tween<double>(begin: 0.985, end: 1.0).animate(fade);
+            return FadeTransition(
+              opacity: fade,
+              child: ScaleTransition(scale: scale, child: child),
+            );
+          },
+          child: KeyedSubtree(
+            key: ValueKey(immersive),
+            child: Scaffold(
+              appBar: immersive
+                  ? null
+                  : const PreferredSize(
+                      preferredSize: Size.fromHeight(56.0),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Row(
+                          children: [
+                            NavBackBtn(),
+                            Expanded(
+                              child: DragToMoveArea(child: SizedBox.expand()),
+                            ),
+                            WindowControlls(),
+                          ],
+                        ),
+                      ),
+                    ),
+              backgroundColor: scheme.secondaryContainer,
+              body: Stack(
+                fit: StackFit.expand,
+                alignment: AlignmentDirectional.center,
+                children: [
+                  if (nowPlayingCover != null) ...[
+                    Image(
+                      image: nowPlayingCover!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                    switch (brightness) {
+                      Brightness.dark => const ColoredBox(color: Colors.black45),
+                      Brightness.light =>
+                        const ColoredBox(color: Colors.white54),
+                    },
+                    BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 250, sigmaY: 250),
+                      child: const ColoredBox(color: Colors.transparent),
+                    ),
+                  ],
+                  ChangeNotifierProvider.value(
+                    value: PlayService.instance.playbackService,
+                    builder: (context, _) => immersive
+                        ? const _NowPlayingPage_Immersive()
+                        : ResponsiveBuilder2(builder: (context, screenType) {
+                            switch (screenType) {
+                              case ScreenType.small:
+                                return const _NowPlayingPage_Small();
+                              case ScreenType.medium:
+                              case ScreenType.large:
+                                return const _NowPlayingPage_Large();
+                            }
+                          }),
+                  ),
+                  if (immersive) const _ImmersiveHelpOverlay(),
+                ],
+              ),
             ),
-            switch (brightness) {
-              Brightness.dark => const ColoredBox(color: Colors.black45),
-              Brightness.light => const ColoredBox(color: Colors.white54),
-            },
-            BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 250, sigmaY: 250),
-              child: const ColoredBox(color: Colors.transparent),
-            ),
-          ],
-          ChangeNotifierProvider.value(
-            value: PlayService.instance.playbackService,
-            builder: (context, _) {
-              return ResponsiveBuilder2(builder: (context, screenType) {
-                switch (screenType) {
-                  case ScreenType.small:
-                    return const _NowPlayingPage_Small();
-                  case ScreenType.medium:
-                  case ScreenType.large:
-                    return const _NowPlayingPage_Large();
-                }
-              });
-            },
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

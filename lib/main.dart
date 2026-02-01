@@ -4,6 +4,7 @@ import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/app_settings.dart';
 import 'package:coriander_player/entry.dart';
 import 'package:coriander_player/hotkeys_helper.dart';
+import 'package:coriander_player/immersive_mode.dart';
 import 'package:coriander_player/src/rust/api/logger.dart';
 import 'package:coriander_player/src/rust/frb_generated.dart';
 import 'package:coriander_player/theme_provider.dart';
@@ -87,6 +88,7 @@ Future<void> main() async {
   final welcome = !File("$supportPath\\index.json").existsSync();
 
   await initWindow();
+  await ImmersiveModeController.instance.init();
 
   runApp(Entry(welcome: welcome));
 }

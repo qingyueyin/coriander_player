@@ -12,7 +12,14 @@ import 'package:provider/provider.dart';
 bool ALWAYS_SHOW_LYRIC_VIEW_CONTROLS = false;
 
 class VerticalLyricView extends StatefulWidget {
-  const VerticalLyricView({super.key});
+  const VerticalLyricView({
+    super.key,
+    this.showControls = true,
+    this.enableSeekOnTap = true,
+  });
+
+  final bool showControls;
+  final bool enableSeekOnTap;
 
   @override
   State<VerticalLyricView> createState() => _VerticalLyricViewState();
@@ -75,9 +82,13 @@ class _VerticalLyricViewState extends State<VerticalLyricView> {
                         ConnectionState.active => loadingWidget,
                         ConnectionState.done => lyricNullable == null
                             ? noLyricWidget
-                            : _VerticalLyricScrollView(lyric: lyricNullable),
+                            : _VerticalLyricScrollView(
+                                lyric: lyricNullable,
+                                enableSeekOnTap: widget.enableSeekOnTap,
+                              ),
                       },
-                      if (isHovering || ALWAYS_SHOW_LYRIC_VIEW_CONTROLS)
+                      if (widget.showControls &&
+                          (isHovering || ALWAYS_SHOW_LYRIC_VIEW_CONTROLS))
                         const Align(
                           alignment: Alignment.bottomRight,
                           child: LyricViewControls(),
@@ -97,9 +108,13 @@ class _VerticalLyricViewState extends State<VerticalLyricView> {
 final LYRIC_VIEW_KEY = GlobalKey();
 
 class _VerticalLyricScrollView extends StatefulWidget {
-  const _VerticalLyricScrollView({required this.lyric});
+  const _VerticalLyricScrollView({
+    required this.lyric,
+    required this.enableSeekOnTap,
+  });
 
   final Lyric lyric;
+  final bool enableSeekOnTap;
 
   @override
   State<_VerticalLyricScrollView> createState() =>
@@ -203,7 +218,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
           key: i == mainLine ? currentLyricTileKey : null,
           line: widget.lyric.lines[i],
           opacity: opacity,
-          onTap: () => _seekToLyricLine(i),
+          onTap: widget.enableSeekOnTap ? () => _seekToLyricLine(i) : null,
         );
       },
     );
