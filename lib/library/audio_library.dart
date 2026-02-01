@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:coriander_player/app_settings.dart';
+import 'package:coriander_player/src/rust/api/library_db.dart' as library_db;
 import 'package:coriander_player/src/rust/api/tag_reader.dart';
 import 'package:coriander_player/utils.dart';
 import 'package:flutter/painting.dart';
@@ -44,11 +45,64 @@ class AudioLibrary {
   /// }
   /// ```
   static Future<void> initFromIndex() async {
+    final stopwatch = Stopwatch()..start();
     try {
       final supportPath = (await getAppDataDir()).path;
       final indexPath = "$supportPath\\index.json";
+      final sqlitePath = "$supportPath\\library.sqlite";
 
-      final indexStr = File(indexPath).readAsStringSync();
+      if (!File(sqlitePath).existsSync() && File(indexPath).existsSync()) {
+        try {
+          await library_db.migrateIndexJsonToSqlite(indexPath: supportPath);
+        } catch (err, trace) {
+          LOGGER.e(err, stackTrace: trace);
+        }
+      }
+
+      try {
+        final dbFolders =
+            await library_db.readIndexFromSqlite(indexPath: supportPath);
+        final folders = <AudioFolder>[];
+        for (final folder in dbFolders) {
+          final audios = <Audio>[];
+          for (final audio in folder.audios) {
+            audios.add(Audio.fromMap({
+              "title": audio.title,
+              "artist": audio.artist,
+              "album": audio.album,
+              "album_artist": audio.albumArtist,
+              "track": audio.track,
+              "duration": audio.duration.toInt(),
+              "bitrate": audio.bitrate,
+              "sample_rate": audio.sampleRate,
+              "path": audio.path,
+              "modified": audio.modified.toInt(),
+              "created": audio.created.toInt(),
+              "by": audio.by,
+            }));
+          }
+          folders.add(
+            AudioFolder(
+              audios,
+              folder.path,
+              folder.modified.toInt(),
+              folder.latest.toInt(),
+            ),
+          );
+        }
+
+        _instance = AudioLibrary._(folders);
+        instance.artistCollection.clear();
+        instance.albumCollection.clear();
+        instance._buildCollections();
+
+        LOGGER.i(
+          "AudioLibrary init from sqlite: ${stopwatch.elapsedMilliseconds}ms, audios=${instance.audioCollection.length}",
+        );
+        return;
+      } catch (_) {}
+
+      final indexStr = await File(indexPath).readAsString();
       final Map indexJson = json.decode(indexStr);
       final List foldersJson = indexJson["folders"];
       final List<AudioFolder> folders = [];
@@ -67,6 +121,9 @@ class AudioLibrary {
       instance.artistCollection.clear();
       instance.albumCollection.clear();
       instance._buildCollections();
+      LOGGER.i(
+        "AudioLibrary init from json: ${stopwatch.elapsedMilliseconds}ms, audios=${instance.audioCollection.length}",
+      );
     } catch (err, trace) {
       LOGGER.e(err, stackTrace: trace);
     }

@@ -20,6 +20,7 @@ use windows::{
 
 use crate::frb_generated::StreamSink;
 
+use super::library_db;
 use super::logger::log_to_dart;
 
 /// K: extension, V: can read tags by using Lofty
@@ -606,6 +607,7 @@ pub fn build_index_from_folders_recursively(
     index_path: String,
     sink: StreamSink<IndexActionState>,
 ) -> Result<(), io::Error> {
+    let index_dir = PathBuf::from(&index_path);
     let mut audio_folders: Vec<AudioFolder> = vec![];
     let mut scaned: u64 = 0;
     let mut total: u64 = folders.len() as u64;
@@ -634,6 +636,10 @@ pub fn build_index_from_folders_recursively(
     let mut index_path = PathBuf::from(index_path);
     index_path.push("index.json");
     fs::File::create(index_path)?.write_all(json_value.to_string().as_bytes())?;
+
+    if let Err(err) = library_db::write_index_value_to_sqlite(&index_dir, &json_value) {
+        log_to_dart(format!("sqlite index write failed: {}", err));
+    }
 
     Ok(())
 }
@@ -669,6 +675,14 @@ fn _update_index_below_1_1_0(
         .as_bytes(),
     )?;
 
+    if let Some(index_dir) = index_path.parent() {
+        if let Err(err) =
+            library_db::migrate_index_json_to_sqlite(index_dir.to_string_lossy().to_string())
+        {
+            log_to_dart(format!("sqlite index migrate failed: {}", err));
+        }
+    }
+
     Ok(())
 }
 
@@ -686,6 +700,7 @@ fn _update_index_below_1_1_0(
 /// 2. 遍历该文件夹索引，如果文件被修改（再次读取到的 modified > 记录的 modified），重新读取标签；没有则跳过它
 /// 3. 遍历该文件夹，添加新增（读取到的 created > 记录的 latest）的音乐文件
 pub fn update_index(index_path: String, sink: StreamSink<IndexActionState>) -> anyhow::Result<()> {
+    let index_dir = PathBuf::from(&index_path);
     let mut index_path = PathBuf::from(index_path);
     index_path.push("index.json");
     let index = fs::read(&index_path)?;
@@ -818,6 +833,10 @@ pub fn update_index(index_path: String, sink: StreamSink<IndexActionState>) -> a
     }
 
     fs::File::create(index_path)?.write_all(index.to_string().as_bytes())?;
+
+    if let Err(err) = library_db::write_index_value_to_sqlite(&index_dir, &index) {
+        log_to_dart(format!("sqlite index write failed: {}", err));
+    }
 
     Ok(())
 }
