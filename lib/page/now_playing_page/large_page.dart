@@ -42,9 +42,7 @@ class _NowPlayingPage_Large extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _NowPlayingShuffleSwitch(),
-                      spacer,
-                      _NowPlayingPlayModeSwitch(),
+                      _NowPlayingPlaybackModeSwitch(),
                       spacer,
                       _NowPlayingVolDspSlider(),
                       spacer,
@@ -59,6 +57,8 @@ class _NowPlayingPage_Large extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const NowPlayingPitchControl(),
+                      spacer,
+                      const SetLyricSourceBtn(),
                       spacer,
                       _NowPlayingLargeViewSwitch(),
                       spacer,

@@ -106,6 +106,7 @@ class _SyncLineContent extends StatelessWidget {
     final lyricFontSize = lyricViewController.lyricFontSize;
     final translationFontSize = lyricViewController.translationFontSize;
     final alignment = lyricViewController.lyricTextAlign;
+    final showTranslation = lyricViewController.showLyricTranslation;
     final fontWeight = lyricViewController.lyricFontWeight;
 
     if (!isMainLine) {
@@ -117,7 +118,7 @@ class _SyncLineContent extends StatelessWidget {
         buildPrimaryText(
             syncLine.content, scheme, alignment, lyricFontSize, fontWeight),
       ];
-      if (syncLine.translation != null) {
+      if (showTranslation && syncLine.translation != null) {
         contents.add(buildSecondaryText(
           syncLine.translation!,
           scheme,
@@ -194,7 +195,7 @@ class _SyncLineContent extends StatelessWidget {
         },
       )
     ];
-    if (syncLine.translation != null) {
+    if (showTranslation && syncLine.translation != null) {
       contents.add(buildSecondaryText(
         syncLine.translation!,
         scheme,
@@ -284,6 +285,7 @@ class _LrcLineContent extends StatelessWidget {
     final lyricFontSize = lyricViewController.lyricFontSize;
     final translationFontSize = lyricViewController.translationFontSize;
     final alignment = lyricViewController.lyricTextAlign;
+    final showTranslation = lyricViewController.showLyricTranslation;
     final fontWeight = lyricViewController.lyricFontWeight;
 
     final splited = lrcLine.content.split("┃");
@@ -291,14 +293,16 @@ class _LrcLineContent extends StatelessWidget {
       buildPrimaryText(
           splited.first, scheme, alignment, lyricFontSize, fontWeight),
     ];
-    for (var i = 1; i < splited.length; i++) {
-      contents.add(buildSecondaryText(
-        splited[i],
-        scheme,
-        alignment,
-        translationFontSize,
-        fontWeight,
-      ));
+    if (showTranslation) {
+      for (var i = 1; i < splited.length; i++) {
+        contents.add(buildSecondaryText(
+          splited[i],
+          scheme,
+          alignment,
+          translationFontSize,
+          fontWeight,
+        ));
+      }
     }
 
     return Padding(

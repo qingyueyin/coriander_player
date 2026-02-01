@@ -111,6 +111,8 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
   final lyricService = PlayService.instance.lyricService;
   late StreamSubscription lyricLineStreamSubscription;
   final scrollController = ScrollController();
+  LyricViewController? _lyricViewController;
+  Timer? _ensureVisibleTimer;
 
   List<LyricViewTile> lyricTiles = [
     LyricViewTile(line: LrcLine.defaultLine, opacity: 1.0)
@@ -126,6 +128,32 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
     _initLyricView();
     lyricLineStreamSubscription =
         lyricService.lyricLineStream.listen(_updateNextLyricLine);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final controller = context.read<LyricViewController>();
+    if (_lyricViewController == controller) return;
+
+    _lyricViewController?.removeListener(_scheduleEnsureCurrentVisible);
+    _lyricViewController = controller;
+    _lyricViewController?.addListener(_scheduleEnsureCurrentVisible);
+  }
+
+  void _scheduleEnsureCurrentVisible() {
+    _ensureVisibleTimer?.cancel();
+    _ensureVisibleTimer = Timer(const Duration(milliseconds: 60), () {
+      if (!mounted) return;
+      final targetContext = currentLyricTileKey.currentContext;
+      if (targetContext == null || !targetContext.mounted) return;
+      Scrollable.ensureVisible(
+        targetContext,
+        alignment: 0.25,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.fastOutSlowIn,
+      );
+    });
   }
 
   /// 加载当前歌词页面，获取并滚动到当前歌词行的位置
@@ -222,6 +250,8 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
   @override
   void dispose() {
     super.dispose();
+    _ensureVisibleTimer?.cancel();
+    _lyricViewController?.removeListener(_scheduleEnsureCurrentVisible);
     lyricLineStreamSubscription.cancel();
     scrollController.dispose();
   }

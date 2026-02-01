@@ -1,7 +1,6 @@
 import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
 import 'package:coriander_player/enums.dart';
-import 'package:coriander_player/page/now_playing_page/component/lyric_source_view.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +10,7 @@ class LyricViewController extends ChangeNotifier {
   late LyricTextAlign lyricTextAlign = nowPlayingPagePref.lyricTextAlign;
   late double lyricFontSize = nowPlayingPagePref.lyricFontSize;
   late double translationFontSize = nowPlayingPagePref.translationFontSize;
+  late bool showLyricTranslation = nowPlayingPagePref.showLyricTranslation;
   late int lyricFontWeight = nowPlayingPagePref.lyricFontWeight;
 
   /// 在左对齐、居中、右对齐之间循环切换
@@ -42,6 +42,12 @@ class LyricViewController extends ChangeNotifier {
 
     nowPlayingPagePref.lyricFontSize = lyricFontSize;
     nowPlayingPagePref.translationFontSize = translationFontSize;
+    notifyListeners();
+  }
+
+  void toggleLyricTranslation() {
+    showLyricTranslation = !showLyricTranslation;
+    nowPlayingPagePref.showLyricTranslation = showLyricTranslation;
     notifyListeners();
   }
 
@@ -86,7 +92,7 @@ class LyricViewControls extends StatelessWidget {
                 const SizedBox(height: 8.0),
                 const _DecreaseFontSizeBtn(),
                 const SizedBox(height: 8.0),
-                const SetLyricSourceBtn(),
+                const _LyricTranslationSwitchBtn(),
                 const SizedBox(height: 8.0),
                 const _LyricAlignSwitchBtn(),
                 const SizedBox(height: 8.0),
@@ -107,7 +113,7 @@ class LyricViewControls extends StatelessWidget {
                 const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SetLyricSourceBtn(),
+                    _LyricTranslationSwitchBtn(),
                     SizedBox(width: 8.0),
                     _LyricAlignSwitchBtn(),
                   ],
@@ -194,6 +200,27 @@ class _DecreaseFontSizeBtn extends StatelessWidget {
   }
 }
 
+class _LyricTranslationSwitchBtn extends StatelessWidget {
+  const _LyricTranslationSwitchBtn();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final lyricViewController = context.watch<LyricViewController>();
+    final enabled = lyricViewController.showLyricTranslation;
+
+    return IconButton(
+      onPressed: lyricViewController.toggleLyricTranslation,
+      tooltip: enabled ? "歌词翻译：显示" : "歌词翻译：隐藏",
+      color: scheme.onSecondaryContainer,
+      icon: Icon(
+        Symbols.translate,
+        fill: enabled ? 1 : 0,
+      ),
+    );
+  }
+}
+
 class _IncreaseFontWeightBtn extends StatelessWidget {
   const _IncreaseFontWeightBtn();
 
@@ -206,7 +233,8 @@ class _IncreaseFontWeightBtn extends StatelessWidget {
       onSecondaryTap: () =>
           lyricViewController.increaseFontWeight(smallStep: true),
       child: IconButton(
-        onPressed: () => lyricViewController.increaseFontWeight(smallStep: false),
+        onPressed: () =>
+            lyricViewController.increaseFontWeight(smallStep: false),
         tooltip: "增加字体粗细 (${lyricViewController.lyricFontWeight})",
         icon: Text(
           "B+",
@@ -233,7 +261,8 @@ class _DecreaseFontWeightBtn extends StatelessWidget {
       onSecondaryTap: () =>
           lyricViewController.decreaseFontWeight(smallStep: true),
       child: IconButton(
-        onPressed: () => lyricViewController.decreaseFontWeight(smallStep: false),
+        onPressed: () =>
+            lyricViewController.decreaseFontWeight(smallStep: false),
         tooltip: "减小字体粗细 (${lyricViewController.lyricFontWeight})",
         icon: Text(
           "B-",

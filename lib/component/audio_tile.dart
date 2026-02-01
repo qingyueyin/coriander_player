@@ -34,6 +34,7 @@ class AudioTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final audio = playlist[audioIndex];
+    final playbackService = PlayService.instance.playbackService;
     final menuStyle = MenuStyle(
       shape: WidgetStatePropertyAll(
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -45,12 +46,20 @@ class AudioTile extends StatelessWidget {
       ),
     );
 
-    return MenuTheme(
-      data: MenuThemeData(style: menuStyle),
-      child: MenuAnchor(
-        consumeOutsideTap: true,
-        style: menuStyle,
-        menuChildren: [
+    return ListenableBuilder(
+      listenable: playbackService,
+      builder: (context, _) {
+        final isNowPlaying = playbackService.nowPlaying?.path == audio.path;
+        final effectiveFocus = focus || isNowPlaying;
+        final isSelected =
+            multiSelectController?.selected.contains(audio) == true;
+
+        return MenuTheme(
+          data: MenuThemeData(style: menuStyle),
+          child: MenuAnchor(
+            consumeOutsideTap: true,
+            style: menuStyle,
+            menuChildren: [
           /// artists
           SubmenuButton(
             style: menuItemStyle,
@@ -144,7 +153,7 @@ class AudioTile extends StatelessWidget {
           ),
         ],
         builder: (context, controller, _) {
-          final textColor = focus ? scheme.primary : scheme.onSurface;
+          final textColor = effectiveFocus ? scheme.primary : scheme.onSurface;
           final placeholder = Icon(
             Symbols.broken_image,
             size: 48.0,
@@ -154,12 +163,15 @@ class AudioTile extends StatelessWidget {
           return Ink(
             height: 64.0,
             decoration: BoxDecoration(
-              color: multiSelectController == null
-                  ? Colors.transparent
-                  : multiSelectController!.selected.contains(audio)
-                      ? scheme.secondaryContainer
+              color: isSelected
+                  ? scheme.secondaryContainer
+                  : effectiveFocus
+                      ? scheme.primary.withOpacity(0.08)
                       : Colors.transparent,
               borderRadius: BorderRadius.circular(8.0),
+              border: effectiveFocus && !isSelected
+                  ? Border.all(color: scheme.primary.withOpacity(0.35))
+                  : null,
             ),
             child: InkWell(
               focusColor: Colors.transparent,
@@ -245,7 +257,7 @@ class AudioTile extends StatelessWidget {
                   Text(
                     Duration(seconds: audio.duration).toStringHMMSS(),
                     style: TextStyle(
-                      color: focus ? scheme.primary : scheme.onSurface,
+                      color: effectiveFocus ? scheme.primary : scheme.onSurface,
                     ),
                   ),
                   if (action != null)
@@ -258,7 +270,9 @@ class AudioTile extends StatelessWidget {
             ),
           );
         },
-      ),
+          ),
+        );
+      },
     );
   }
 }

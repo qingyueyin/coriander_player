@@ -101,9 +101,9 @@ class _NowPlayingPage_SmallState extends State<_NowPlayingPage_Small> {
           const Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _NowPlayingShuffleSwitch(),
-              _NowPlayingPlayModeSwitch(),
+              _NowPlayingPlaybackModeSwitch(),
               NowPlayingPitchControl(),
+              SetLyricSourceBtn(),
               _NowPlayingVolDspSlider(),
               _ExclusiveModeSwitch(),
               _DesktopLyricSwitch(),

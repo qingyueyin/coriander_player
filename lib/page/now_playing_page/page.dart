@@ -1,6 +1,7 @@
 // ignore_for_file: camel_case_types
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:coriander_player/app_preference.dart';
@@ -11,6 +12,7 @@ import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
 import 'package:coriander_player/page/now_playing_page/component/current_playlist_view.dart';
 import 'package:coriander_player/page/now_playing_page/component/filled_icon_button_style.dart';
+import 'package:coriander_player/page/now_playing_page/component/lyric_source_view.dart';
 import 'package:coriander_player/page/now_playing_page/component/pitch_control.dart';
 import 'package:coriander_player/page/now_playing_page/component/vertical_lyric_view.dart';
 import 'package:coriander_player/app_paths.dart' as app_paths;
@@ -206,7 +208,8 @@ class _NowPlayingMoreAction extends StatelessWidget {
             onPressed: () {
               final Album album =
                   AudioLibrary.instance.albumCollection[nowPlaying.album]!;
-              context.pushReplacement(app_paths.ALBUM_DETAIL_PAGE, extra: album);
+              context.pushReplacement(app_paths.ALBUM_DETAIL_PAGE,
+                  extra: album);
             },
             leadingIcon: const Icon(Symbols.album),
             child: Text(nowPlaying.album),
@@ -292,6 +295,8 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
 
   bool isDragging = false;
   bool isSystemDragging = false;
+  Timer? _systemVolPollTimer;
+  bool _systemVolPollBusy = false;
   Timer? _indicatorTimer;
   Timer? _systemIndicatorTimer;
   bool _showCustomIndicator = false;
@@ -312,6 +317,24 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
         dragSystemVol.value = v;
       }
     });
+
+    if (Platform.isWindows) {
+      _systemVolPollTimer =
+          Timer.periodic(const Duration(milliseconds: 250), (_) async {
+        if (!mounted || isSystemDragging || _systemVolPollBusy) return;
+        _systemVolPollBusy = true;
+        try {
+          final v = await FlutterVolumeController.getVolume();
+          if (!mounted || v == null || isSystemDragging) return;
+          final curr = dragSystemVol.value;
+          if ((v - curr).abs() > 0.005) {
+            dragSystemVol.value = v;
+          }
+        } finally {
+          _systemVolPollBusy = false;
+        }
+      });
+    }
   }
 
   void _triggerIndicator() {
@@ -337,6 +360,7 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
   @override
   void dispose() {
     FlutterVolumeController.removeListener();
+    _systemVolPollTimer?.cancel();
     _indicatorTimer?.cancel();
     _systemIndicatorTimer?.cancel();
     super.dispose();
@@ -362,21 +386,13 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
               children: [
                 // System Volume Slider
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    children: [
-                      const Icon(Symbols.volume_up, size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          "系统音量",
-                          style: TextStyle(
-                            color: scheme.onSurface,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
+                  padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 8.0),
+                  child: Text(
+                    "系统音量",
+                    style: TextStyle(
+                      color: scheme.onSurface,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
                 SliderTheme(
@@ -454,24 +470,18 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
                     },
                   ),
                 ),
-                const Divider(),
+                const SizedBox(height: 8.0),
+                const Divider(height: 20),
+                const SizedBox(height: 4.0),
                 // App Volume Slider
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    children: [
-                      const Icon(Symbols.music_note, size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          "应用音量",
-                          style: TextStyle(
-                            color: scheme.onSurface,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
+                  padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 8.0),
+                  child: Text(
+                    "应用音量",
+                    style: TextStyle(
+                      color: scheme.onSurface,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
                 SliderTheme(
@@ -640,67 +650,53 @@ class _TrianglePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _NowPlayingPlayModeSwitch extends StatelessWidget {
-  const _NowPlayingPlayModeSwitch();
+class _NowPlayingPlaybackModeSwitch extends StatelessWidget {
+  const _NowPlayingPlaybackModeSwitch();
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final playbackService = PlayService.instance.playbackService;
 
-    return ValueListenableBuilder(
-      valueListenable: playbackService.playMode,
-      builder: (context, playMode, _) {
-        late IconData result;
-        if (playMode == PlayMode.forward) {
-          result = Symbols.repeat;
-        } else if (playMode == PlayMode.loop) {
-          result = Symbols.repeat_on;
-        } else {
-          result = Symbols.repeat_one_on;
-        }
+    return ListenableBuilder(
+      listenable: Listenable.merge([playbackService.shuffle, playbackService.playMode]),
+      builder: (context, _) {
+        final shuffle = playbackService.shuffle.value;
+        final playMode = playbackService.playMode.value;
+
+        final modeText = switch (true) {
+          _ when shuffle => "随机播放",
+          _ when playMode == PlayMode.singleLoop => "单曲循环",
+          _ => "顺序播放",
+        };
+
+        final icon = switch (true) {
+          _ when shuffle => Symbols.shuffle_on,
+          _ when playMode == PlayMode.singleLoop => Symbols.repeat_one_on,
+          _ => Symbols.repeat,
+        };
 
         return IconButton(
-          tooltip: "播放模式；现在：${switch (playMode) {
-            PlayMode.forward => "顺序播放",
-            PlayMode.loop => "列表循环",
-            PlayMode.singleLoop => "单曲循环",
-          }}",
+          tooltip: "播放模式；现在：$modeText",
           onPressed: () {
-            if (playMode == PlayMode.forward) {
-              playbackService.setPlayMode(PlayMode.loop);
-            } else if (playMode == PlayMode.loop) {
+            if (!shuffle && playMode != PlayMode.singleLoop) {
+              playbackService.useShuffle(false);
               playbackService.setPlayMode(PlayMode.singleLoop);
-            } else {
-              playbackService.setPlayMode(PlayMode.forward);
+              return;
             }
+            if (!shuffle && playMode == PlayMode.singleLoop) {
+              playbackService.setPlayMode(PlayMode.forward);
+              playbackService.useShuffle(true);
+              return;
+            }
+
+            playbackService.useShuffle(false);
+            playbackService.setPlayMode(PlayMode.forward);
           },
-          icon: Icon(result),
+          icon: Icon(icon),
           color: scheme.onSecondaryContainer,
         );
       },
-    );
-  }
-}
-
-class _NowPlayingShuffleSwitch extends StatelessWidget {
-  const _NowPlayingShuffleSwitch();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final playbackService = PlayService.instance.playbackService;
-
-    return ValueListenableBuilder(
-      valueListenable: playbackService.shuffle,
-      builder: (context, shuffle, _) => IconButton(
-        tooltip: "随机；现在：${shuffle ? "启用" : "禁用"}",
-        onPressed: () {
-          playbackService.useShuffle(!shuffle);
-        },
-        icon: Icon(shuffle ? Symbols.shuffle_on : Symbols.shuffle),
-        color: scheme.onSecondaryContainer,
-      ),
     );
   }
 }

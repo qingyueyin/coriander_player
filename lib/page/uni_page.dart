@@ -1,10 +1,14 @@
 import 'dart:ui';
 
 import 'package:coriander_player/app_preference.dart';
+import 'package:coriander_player/component/responsive_builder.dart';
 import 'package:coriander_player/enums.dart';
+import 'package:coriander_player/library/audio_library.dart';
+import 'package:coriander_player/play_service/play_service.dart';
 import 'package:coriander_player/page/uni_page_components.dart';
 import 'package:coriander_player/page/page_scaffold.dart';
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 typedef ContentBuilder<T> = Widget Function(BuildContext context, T item,
     int index, MultiSelectController<T>? multiSelectController);
@@ -123,6 +127,68 @@ class _UniPageState<T> extends State<UniPage<T>> {
   late ContentView currContentView = widget.pref.contentView;
   late ScrollController scrollController = ScrollController();
 
+  void _scrollToIndex(int targetAt) {
+    if (targetAt < 0 || targetAt >= widget.contentList.length) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !scrollController.hasClients) return;
+
+      if (currContentView == ContentView.list) {
+        scrollController.animateTo(
+          targetAt * 64.0,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.fastOutSlowIn,
+        );
+      } else {
+        final renderObject = context.findRenderObject();
+        if (renderObject is RenderBox) {
+          final ratio = PlatformDispatcher.instance.views.first.devicePixelRatio;
+          final width = renderObject.size.width - 32;
+          final crossAxisCount = (width * ratio / 300).floor().clamp(1, 100);
+          final offset = (targetAt ~/ crossAxisCount) * (64.0 + 8.0);
+          scrollController.animateTo(
+            offset,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.fastOutSlowIn,
+          );
+        }
+      }
+    });
+  }
+
+  Widget _locateNowPlayingButton() {
+    if (widget.contentList is! List<Audio>) return const SizedBox.shrink();
+    final playbackService = PlayService.instance.playbackService;
+
+    return ListenableBuilder(
+      listenable: playbackService,
+      builder: (context, _) {
+        final nowPlaying = playbackService.nowPlaying;
+        if (nowPlaying == null) return const SizedBox.shrink();
+
+        final contentList = widget.contentList as List<Audio>;
+        final targetAt =
+            contentList.indexWhere((audio) => audio.path == nowPlaying.path);
+        if (targetAt < 0) return const SizedBox.shrink();
+
+        return ResponsiveBuilder(
+          builder: (context, screenType) {
+            final bottom = screenType == ScreenType.small ? 88.0 : 112.0;
+            return Positioned(
+              right: 32.0,
+              bottom: bottom,
+              child: IconButton.filledTonal(
+                tooltip: "定位正在播放",
+                onPressed: () => _scrollToIndex(targetAt),
+                icon: const Icon(Symbols.my_location),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -131,15 +197,15 @@ class _UniPageState<T> extends State<UniPage<T>> {
 
     int targetAt = widget.contentList.indexOf(widget.locateTo as T);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!scrollController.hasClients) return;
       if (currContentView == ContentView.list) {
         scrollController.jumpTo(targetAt * 64);
       } else {
         final renderObject = context.findRenderObject();
         if (renderObject is RenderBox) {
-          final ratio =
-              PlatformDispatcher.instance.views.first.devicePixelRatio;
+          final ratio = PlatformDispatcher.instance.views.first.devicePixelRatio;
           final width = renderObject.size.width - 32;
-          final crossAxisCount = (width * ratio / 300).floor();
+          final crossAxisCount = (width * ratio / 300).floor().clamp(1, 100);
           final offset = (targetAt ~/ crossAxisCount) * (64.0 + 8.0);
           scrollController.jumpTo(offset);
         }
@@ -229,32 +295,37 @@ class _UniPageState<T> extends State<UniPage<T>> {
               : actions,
       body: Material(
         type: MaterialType.transparency,
-        child: switch (currContentView) {
-          ContentView.list => ListView.builder(
-              controller: scrollController,
-              padding: const EdgeInsets.only(bottom: 96.0),
-              itemCount: widget.contentList.length,
-              itemExtent: 64,
-              itemBuilder: (context, i) => widget.contentBuilder(
-                context,
-                widget.contentList[i],
-                i,
-                multiSelectController,
-              ),
-            ),
-          ContentView.table => GridView.builder(
-              controller: scrollController,
-              padding: const EdgeInsets.only(bottom: 96.0),
-              gridDelegate: gridDelegate,
-              itemCount: widget.contentList.length,
-              itemBuilder: (context, i) => widget.contentBuilder(
-                context,
-                widget.contentList[i],
-                i,
-                multiSelectController,
-              ),
-            ),
-        },
+        child: Stack(
+          children: [
+            switch (currContentView) {
+              ContentView.list => ListView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.only(bottom: 96.0),
+                  itemCount: widget.contentList.length,
+                  itemExtent: 64,
+                  itemBuilder: (context, i) => widget.contentBuilder(
+                    context,
+                    widget.contentList[i],
+                    i,
+                    multiSelectController,
+                  ),
+                ),
+              ContentView.table => GridView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.only(bottom: 96.0),
+                  gridDelegate: gridDelegate,
+                  itemCount: widget.contentList.length,
+                  itemBuilder: (context, i) => widget.contentBuilder(
+                    context,
+                    widget.contentList[i],
+                    i,
+                    multiSelectController,
+                  ),
+                ),
+            },
+            _locateNowPlayingButton(),
+          ],
+        ),
       ),
     );
   }

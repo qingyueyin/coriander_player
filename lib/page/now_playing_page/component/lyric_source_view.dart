@@ -53,47 +53,67 @@ class _SetLyricSourceBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final lyricService = PlayService.instance.lyricService;
-    return MenuAnchor(
-      onOpen: () {
-        ALWAYS_SHOW_LYRIC_VIEW_CONTROLS = true;
-      },
-      onClose: () {
-        ALWAYS_SHOW_LYRIC_VIEW_CONTROLS = false;
-      },
-      menuChildren: [
-        MenuItemButton(
-          onPressed: () {
-            final nowPlaying = PlayService.instance.playbackService.nowPlaying;
-            showDialog<String>(
-              context: context,
-              builder: (context) => _SetLyricSourceDialog(audio: nowPlaying!),
-            );
-          },
-          child: const Text("指定默认歌词"),
+    final menuStyle = MenuStyle(
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+    );
+    final menuItemStyle = ButtonStyle(
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+    final sourceText = switch (isLocal) { true => "本地", false => "在线", null => "未知" };
+
+    return MenuTheme(
+      data: MenuThemeData(style: menuStyle),
+      child: MenuAnchor(
+        onOpen: () {
+          ALWAYS_SHOW_LYRIC_VIEW_CONTROLS = true;
+        },
+        onClose: () {
+          ALWAYS_SHOW_LYRIC_VIEW_CONTROLS = false;
+        },
+        style: menuStyle,
+        menuChildren: [
+          MenuItemButton(
+            style: menuItemStyle,
+            onPressed: () {
+              final nowPlaying = PlayService.instance.playbackService.nowPlaying;
+              showDialog<String>(
+                context: context,
+                builder: (context) => _SetLyricSourceDialog(audio: nowPlaying!),
+              );
+            },
+            child: const Text("指定默认歌词"),
+          ),
+          MenuItemButton(
+            style: menuItemStyle,
+            onPressed: lyricService.useOnlineLyric,
+            leadingIcon: isLocal == false ? const Icon(Symbols.check) : null,
+            child: const Text("在线"),
+          ),
+          MenuItemButton(
+            style: menuItemStyle,
+            onPressed: lyricService.useLocalLyric,
+            leadingIcon: isLocal == true ? const Icon(Symbols.check) : null,
+            child: const Text("本地"),
+          ),
+        ],
+        builder: (context, controller, _) => IconButton(
+          tooltip: "歌词来源（$sourceText）",
+          onPressed: PlayService.instance.playbackService.nowPlaying == null
+              ? null
+              : () {
+                  if (controller.isOpen) {
+                    controller.close();
+                  } else {
+                    controller.open();
+                  }
+                },
+          icon: const Icon(Symbols.lyrics),
+          color: scheme.onSecondaryContainer,
         ),
-        MenuItemButton(
-          onPressed: lyricService.useOnlineLyric,
-          leadingIcon: isLocal == false ? const Icon(Symbols.check) : null,
-          child: const Text("在线"),
-        ),
-        MenuItemButton(
-          onPressed: lyricService.useLocalLyric,
-          leadingIcon: isLocal == true ? const Icon(Symbols.check) : null,
-          child: const Text("本地"),
-        ),
-      ],
-      builder: (context, controller, _) => IconButton(
-        onPressed: PlayService.instance.playbackService.nowPlaying == null
-            ? null
-            : () {
-                if (controller.isOpen) {
-                  controller.close();
-                } else {
-                  controller.open();
-                }
-              },
-        icon: const Icon(Symbols.lyrics),
-        color: scheme.onSecondaryContainer,
       ),
     );
   }
