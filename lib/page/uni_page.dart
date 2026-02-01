@@ -142,7 +142,8 @@ class _UniPageState<T> extends State<UniPage<T>> {
       } else {
         final renderObject = context.findRenderObject();
         if (renderObject is RenderBox) {
-          final ratio = PlatformDispatcher.instance.views.first.devicePixelRatio;
+          final ratio =
+              PlatformDispatcher.instance.views.first.devicePixelRatio;
           final width = renderObject.size.width - 32;
           final crossAxisCount = (width * ratio / 300).floor().clamp(1, 100);
           final offset = (targetAt ~/ crossAxisCount) * (64.0 + 8.0);
@@ -174,8 +175,9 @@ class _UniPageState<T> extends State<UniPage<T>> {
         return ResponsiveBuilder(
           builder: (context, screenType) {
             final bottom = screenType == ScreenType.small ? 88.0 : 112.0;
+            final right = screenType == ScreenType.small ? 88.0 : 128.0;
             return Positioned(
-              right: 32.0,
+              right: right,
               bottom: bottom,
               child: IconButton.filledTonal(
                 tooltip: "定位正在播放",
@@ -203,7 +205,8 @@ class _UniPageState<T> extends State<UniPage<T>> {
       } else {
         final renderObject = context.findRenderObject();
         if (renderObject is RenderBox) {
-          final ratio = PlatformDispatcher.instance.views.first.devicePixelRatio;
+          final ratio =
+              PlatformDispatcher.instance.views.first.devicePixelRatio;
           final width = renderObject.size.width - 32;
           final crossAxisCount = (width * ratio / 300).floor().clamp(1, 100);
           final offset = (targetAt ~/ crossAxisCount) * (64.0 + 8.0);

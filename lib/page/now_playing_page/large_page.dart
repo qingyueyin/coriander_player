@@ -42,6 +42,8 @@ class _NowPlayingPage_Large extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      _DesktopLyricSwitch(),
+                      spacer,
                       _NowPlayingPlaybackModeSwitch(),
                       spacer,
                       _NowPlayingVolDspSlider(),
@@ -61,8 +63,6 @@ class _NowPlayingPage_Large extends StatelessWidget {
                       const SetLyricSourceBtn(),
                       spacer,
                       _NowPlayingLargeViewSwitch(),
-                      spacer,
-                      _DesktopLyricSwitch(),
                       spacer,
                       _NowPlayingMoreAction(),
                     ],

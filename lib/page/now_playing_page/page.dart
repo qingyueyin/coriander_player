@@ -297,6 +297,9 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
   bool isSystemDragging = false;
   Timer? _systemVolPollTimer;
   bool _systemVolPollBusy = false;
+  Timer? _systemVolBoostTimer;
+  int _systemVolReadFailures = 0;
+  late final void Function(double) _systemVolListener;
   Timer? _indicatorTimer;
   Timer? _systemIndicatorTimer;
   bool _showCustomIndicator = false;
@@ -304,18 +307,31 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
   bool _isHovering = false;
   bool _isSystemHovering = false;
 
+  Future<double?> _readSystemVol({required Duration timeout}) async {
+    try {
+      return await FlutterVolumeController.getVolume().timeout(timeout);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _rebindSystemVolListener() {
+    FlutterVolumeController.removeListener();
+    FlutterVolumeController.addListener(_systemVolListener);
+  }
+
   @override
   void initState() {
     super.initState();
-    FlutterVolumeController.getVolume().then((v) {
-      if (mounted) {
-        dragSystemVol.value = v ?? 0.5;
-      }
-    });
-    FlutterVolumeController.addListener((v) {
+    _systemVolListener = (v) {
       if (mounted && !isSystemDragging) {
         dragSystemVol.value = v;
       }
+    };
+    FlutterVolumeController.addListener(_systemVolListener);
+    _readSystemVol(timeout: const Duration(milliseconds: 600)).then((v) {
+      if (!mounted) return;
+      dragSystemVol.value = v ?? 0.5;
     });
 
     if (Platform.isWindows) {
@@ -324,8 +340,17 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
         if (!mounted || isSystemDragging || _systemVolPollBusy) return;
         _systemVolPollBusy = true;
         try {
-          final v = await FlutterVolumeController.getVolume();
-          if (!mounted || v == null || isSystemDragging) return;
+          final v = await _readSystemVol(timeout: const Duration(seconds: 1));
+          if (!mounted || isSystemDragging) return;
+          if (v == null) {
+            _systemVolReadFailures += 1;
+            if (_systemVolReadFailures >= 3) {
+              _systemVolReadFailures = 0;
+              _rebindSystemVolListener();
+            }
+            return;
+          }
+          _systemVolReadFailures = 0;
           final curr = dragSystemVol.value;
           if ((v - curr).abs() > 0.005) {
             dragSystemVol.value = v;
@@ -361,6 +386,7 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
   void dispose() {
     FlutterVolumeController.removeListener();
     _systemVolPollTimer?.cancel();
+    _systemVolBoostTimer?.cancel();
     _indicatorTimer?.cancel();
     _systemIndicatorTimer?.cancel();
     super.dispose();
@@ -376,6 +402,25 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
+      onOpen: () {
+        int ticks = 0;
+        _systemVolBoostTimer?.cancel();
+        _systemVolBoostTimer =
+            Timer.periodic(const Duration(milliseconds: 120), (_) async {
+          if (!mounted || isSystemDragging) return;
+          if (ticks++ > 25) {
+            _systemVolBoostTimer?.cancel();
+            return;
+          }
+          final v = await _readSystemVol(timeout: const Duration(milliseconds: 500));
+          if (v != null && (v - dragSystemVol.value).abs() > 0.003) {
+            dragSystemVol.value = v;
+          }
+        });
+      },
+      onClose: () {
+        _systemVolBoostTimer?.cancel();
+      },
       menuChildren: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
@@ -659,7 +704,8 @@ class _NowPlayingPlaybackModeSwitch extends StatelessWidget {
     final playbackService = PlayService.instance.playbackService;
 
     return ListenableBuilder(
-      listenable: Listenable.merge([playbackService.shuffle, playbackService.playMode]),
+      listenable:
+          Listenable.merge([playbackService.shuffle, playbackService.playMode]),
       builder: (context, _) {
         final shuffle = playbackService.shuffle.value;
         final playMode = playbackService.playMode.value;
