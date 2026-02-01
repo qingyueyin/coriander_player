@@ -1279,6 +1279,7 @@ dependencies = [
  "serde_json",
  "ttf-parser",
  "windows",
+ "windows-core",
 ]
 
 [[package]]

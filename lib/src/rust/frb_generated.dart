@@ -7,6 +7,7 @@ import 'api/installed_font.dart';
 import 'api/logger.dart';
 import 'api/smtc_flutter.dart';
 import 'api/system_theme.dart';
+import 'api/system_volume.dart';
 import 'api/tag_reader.dart';
 import 'api/utils.dart';
 import 'dart:async';
@@ -73,7 +74,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1148029228;
+  int get rustContentHash => -1808024758;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -125,6 +126,14 @@ abstract class RustLibApi extends BaseApi {
   Future<bool> crateApiUtilsShowInExplorer({required String path});
 
   SystemTheme crateApiSystemThemeSystemThemeGetSystemTheme();
+
+  void crateApiSystemVolumeSystemVolumeDispose();
+
+  double crateApiSystemVolumeSystemVolumeGet();
+
+  Stream<double> crateApiSystemVolumeSystemVolumeInit();
+
+  void crateApiSystemVolumeSystemVolumeSet({required double val});
 
   Stream<IndexActionState> crateApiTagReaderUpdateIndex(
       {required String indexPath});
@@ -557,6 +566,102 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  void crateApiSystemVolumeSystemVolumeDispose() {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiSystemVolumeSystemVolumeDisposeConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiSystemVolumeSystemVolumeDisposeConstMeta =>
+      const TaskConstMeta(
+        debugName: "system_volume_dispose",
+        argNames: [],
+      );
+
+  @override
+  double crateApiSystemVolumeSystemVolumeGet() {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_f_64,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiSystemVolumeSystemVolumeGetConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiSystemVolumeSystemVolumeGetConstMeta =>
+      const TaskConstMeta(
+        debugName: "system_volume_get",
+        argNames: [],
+      );
+
+  @override
+  Stream<double> crateApiSystemVolumeSystemVolumeInit() {
+    final sink = RustStreamSink<double>();
+    handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_StreamSink_f_64_Sse(sink, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_f_64,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiSystemVolumeSystemVolumeInitConstMeta,
+      argValues: [sink],
+      apiImpl: this,
+    ));
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiSystemVolumeSystemVolumeInitConstMeta =>
+      const TaskConstMeta(
+        debugName: "system_volume_init",
+        argNames: ["sink"],
+      );
+
+  @override
+  void crateApiSystemVolumeSystemVolumeSet({required double val}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_f_64(val, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiSystemVolumeSystemVolumeSetConstMeta,
+      argValues: [val],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiSystemVolumeSystemVolumeSetConstMeta =>
+      const TaskConstMeta(
+        debugName: "system_volume_set",
+        argNames: ["val"],
+      );
+
+  @override
   Stream<IndexActionState> crateApiTagReaderUpdateIndex(
       {required String indexPath}) {
     final sink = RustStreamSink<IndexActionState>();
@@ -566,7 +671,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(indexPath, serializer);
         sse_encode_StreamSink_index_action_state_Sse(sink, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 16, port: port_);
+            funcId: 20, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -625,6 +730,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<double> dco_decode_StreamSink_f_64_Sse(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     throw UnimplementedError();
   }
@@ -826,6 +937,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   RustStreamSink<String> sse_decode_StreamSink_String_Sse(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<double> sse_decode_StreamSink_f_64_Sse(
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     throw UnimplementedError('Unreachable ()');
@@ -1051,6 +1169,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         self.setupAndSerialize(
             codec: SseCodec(
           decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_AnyhowException,
+        )),
+        serializer);
+  }
+
+  @protected
+  void sse_encode_StreamSink_f_64_Sse(
+      RustStreamSink<double> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+        self.setupAndSerialize(
+            codec: SseCodec(
+          decodeSuccessData: sse_decode_f_64,
           decodeErrorData: sse_decode_AnyhowException,
         )),
         serializer);

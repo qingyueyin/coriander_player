@@ -122,7 +122,7 @@ class DesktopLyricService extends ChangeNotifier {
   }
 
   void sendUnlockMessage() {
-    sendMessage(const msg.UnlockMessage());
+    sendMessage(msg.UnlockMessage());
     isLocked = false;
     notifyListeners();
   }

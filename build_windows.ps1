@@ -17,7 +17,8 @@ if (-not (Get-Command "flutter" -ErrorAction SilentlyContinue)) {
 
 # 1. Smart flutter pub get
 $needPubGet = $true
-if (Test-Path "pubspec.lock") {
+$packageConfig = ".dart_tool\package_config.json"
+if ((Test-Path "pubspec.lock") -and (Test-Path $packageConfig)) {
     $yamlTime = (Get-Item "pubspec.yaml").LastWriteTime
     $lockTime = (Get-Item "pubspec.lock").LastWriteTime
     if ($yamlTime -le $lockTime) {

@@ -11,7 +11,9 @@ flutter_rust_bridge = "=2.11.1"
 lofty = "0.21.1"
 serde_json = "1.0.117"
 phf = { version = "0.11", features = ["macros"] }
+windows-core = "0.57.0"
 windows = { version = "0.57.0", features = [
+    "implement",
     "Media_Playback",
     "Storage",
     "Storage_Streams",
@@ -21,6 +23,7 @@ windows = { version = "0.57.0", features = [
     "Foundation_Collections",
     "System",
     "Win32_UI_Shell",
+    "Win32_UI_Shell_PropertiesSystem",
     "Win32_UI_WindowsAndMessaging",
     "Win32_Media_Audio",
     "Win32_Media_Audio_Endpoints",
