@@ -86,6 +86,92 @@ extension PinyinCompare on String {
 
     return thisCmpStr.compareTo(otherCmpStr);
   }
+
+  int naturalCompareTo(String other) {
+    final a = this;
+    final b = other;
+    final aTokens = _tokenizeForNaturalCompare(a);
+    final bTokens = _tokenizeForNaturalCompare(b);
+
+    final len =
+        aTokens.length < bTokens.length ? aTokens.length : bTokens.length;
+    for (int i = 0; i < len; i++) {
+      final ta = aTokens[i];
+      final tb = bTokens[i];
+      if (ta.isNumber && tb.isNumber) {
+        final cmp = ta.number!.compareTo(tb.number!);
+        if (cmp != 0) return cmp;
+        final lenCmp = ta.text.length.compareTo(tb.text.length);
+        if (lenCmp != 0) return lenCmp;
+        continue;
+      }
+      final cmp = ta.text.toLowerCase().localeCompareTo(tb.text.toLowerCase());
+      if (cmp != 0) return cmp;
+    }
+    return aTokens.length.compareTo(bTokens.length);
+  }
+
+  String getIndexKey() {
+    final s = trimLeft();
+    if (s.isEmpty) return "#";
+    String first = s.substring(0, 1);
+    if (ChineseHelper.isChinese(first)) {
+      first = PinyinHelper.convertToPinyinArray(
+            first,
+            PinyinFormat.WITHOUT_TONE,
+          ).firstOrNull ??
+          first;
+    }
+    final code = first.codeUnitAt(0);
+    if (code >= 0x41 && code <= 0x5A) return first;
+    if (code >= 0x61 && code <= 0x7A) return first.toUpperCase();
+    if (code >= 0x30 && code <= 0x39) return "#";
+    return "#";
+  }
+}
+
+class _NaturalToken {
+  final bool isNumber;
+  final String text;
+  final BigInt? number;
+  const _NaturalToken._(this.isNumber, this.text, this.number);
+  factory _NaturalToken.text(String text) => _NaturalToken._(false, text, null);
+  factory _NaturalToken.number(String text) =>
+      _NaturalToken._(true, text, BigInt.tryParse(text) ?? BigInt.zero);
+}
+
+List<_NaturalToken> _tokenizeForNaturalCompare(String input) {
+  if (input.isEmpty) return const [];
+  final tokens = <_NaturalToken>[];
+  final buffer = StringBuffer();
+  bool? inNumber;
+
+  for (int i = 0; i < input.length; i++) {
+    final c = input.codeUnitAt(i);
+    final isDigit = c >= 0x30 && c <= 0x39;
+    if (inNumber == null) {
+      inNumber = isDigit;
+      buffer.writeCharCode(c);
+      continue;
+    }
+
+    if (isDigit == inNumber) {
+      buffer.writeCharCode(c);
+      continue;
+    }
+
+    final text = buffer.toString();
+    tokens
+        .add(inNumber ? _NaturalToken.number(text) : _NaturalToken.text(text));
+    buffer.clear();
+    inNumber = isDigit;
+    buffer.writeCharCode(c);
+  }
+
+  final text = buffer.toString();
+  tokens.add(
+      inNumber == true ? _NaturalToken.number(text) : _NaturalToken.text(text));
+  return tokens;
 }
 
 final GlobalKey<NavigatorState> ROUTER_KEY = GlobalKey();

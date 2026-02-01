@@ -313,6 +313,34 @@ class _WindowControllsState extends State<WindowControlls> with WindowListener {
   }
 
   @override
+  void onWindowResized() async {
+    super.onWindowResized();
+    if (_isFullScreen || _isMaximized) return;
+    try {
+      final minimumSize = const Size(507, 507);
+      final view = WidgetsBinding.instance.platformDispatcher.views.first;
+      final display = view.display;
+      final displayW = display.size.width / display.devicePixelRatio;
+      final displayH = display.size.height / display.devicePixelRatio;
+      final maxW = (displayW - 16.0)
+          .clamp(minimumSize.width, double.infinity)
+          .toDouble();
+      final maxH = (displayH - 16.0)
+          .clamp(minimumSize.height, double.infinity)
+          .toDouble();
+      final current = await windowManager.getSize();
+      final clamped = Size(
+        current.width.clamp(minimumSize.width, maxW),
+        current.height.clamp(minimumSize.height, maxH),
+      );
+      if ((clamped.width - current.width).abs() > 0.5 ||
+          (clamped.height - current.height).abs() > 0.5) {
+        await windowManager.setSize(clamped);
+      }
+    } catch (_) {}
+  }
+
+  @override
   void onWindowEnterFullScreen() {
     super.onWindowEnterFullScreen();
     _updateWindowStates();

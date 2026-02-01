@@ -57,6 +57,7 @@ struct Audio {
     title: String,
     artist: String,
     album: String,
+    album_artist: Option<String>,
     track: Option<u32>,
     /// in secs
     duration: u64,
@@ -80,6 +81,7 @@ impl Audio {
             title: path.file_name()?.to_string_lossy().to_string(),
             artist: "UNKNOWN".to_string(),
             album: "UNKNOWN".to_string(),
+            album_artist: None,
             track: None,
             duration: 0,
             bitrate: None,
@@ -96,6 +98,7 @@ impl Audio {
             "title": self.title,
             "artist": self.artist,
             "album": self.album,
+            "album_artist": self.album_artist,
             "track": self.track,
             "duration": self.duration,
             "bitrate": self.bitrate,
@@ -183,6 +186,13 @@ impl Audio {
                 artist_strs.join("/")
             };
 
+            let album_artist_strs: Vec<_> = tag.get_strings(&ItemKey::AlbumArtist).collect();
+            let album_artist = if album_artist_strs.is_empty() {
+                None
+            } else {
+                Some(album_artist_strs.join("/"))
+            };
+
             return Some(Audio {
                 title: tag
                     .title()
@@ -193,6 +203,7 @@ impl Audio {
                     .album()
                     .unwrap_or(std::borrow::Cow::Borrowed("UNKNOWN"))
                     .to_string(),
+                album_artist,
                 track: tag.track(),
                 duration: properties.duration().as_secs(),
                 bitrate: properties.audio_bitrate(),
@@ -208,6 +219,7 @@ impl Audio {
             title: path.file_name()?.to_string_lossy().to_string(),
             artist: std::borrow::Cow::Borrowed("UNKNOWN").to_string(),
             album: std::borrow::Cow::Borrowed("UNKNOWN").to_string(),
+            album_artist: None,
             track: None,
             duration: properties.duration().as_secs(),
             bitrate: properties.audio_bitrate(),
@@ -258,10 +270,21 @@ impl Audio {
             album = "UNKNOWN".to_string();
         }
 
+        let album_artist = music_properties
+            .AlbumArtist()
+            .unwrap_or(HSTRING::from(""))
+            .to_string();
+        let album_artist = if album_artist.is_empty() {
+            None
+        } else {
+            Some(album_artist)
+        };
+
         Ok(Audio {
             title,
             artist,
             album,
+            album_artist,
             track: Some(music_properties.TrackNumber()?),
             duration: duration.as_secs(),
             bitrate: Some(music_properties.Bitrate()? / 1000),

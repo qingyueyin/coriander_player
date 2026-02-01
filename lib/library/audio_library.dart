@@ -78,7 +78,11 @@ class AudioLibrary {
     }
 
     for (Audio audio in audioCollection) {
-      for (String artistName in audio.splitedArtists) {
+      final artistNames = <String>{
+        ...audio.splitedArtists,
+        ...audio.splitedAlbumArtists,
+      };
+      for (String artistName in artistNames) {
         /// 如果artistCollection中有artistName指向的artist，putIfAbsent会返回该artist。
         /// 随后往这个artist里添加该audio。
         ///
@@ -113,13 +117,19 @@ class AudioLibrary {
 
     /// 将专辑和艺术家链接起来
     for (Album album in albumCollection.values) {
+      final albumArtistNames = <String>{};
       for (Audio audio in album.works) {
-        for (String artistName in audio.splitedArtists) {
-          album.artistsMap.putIfAbsent(
-            artistName,
-            () => artistCollection[artistName]!,
-          );
-        }
+        albumArtistNames.addAll(audio.splitedAlbumArtists);
+      }
+
+      final namesToUse = albumArtistNames.isNotEmpty
+          ? albumArtistNames
+          : album.works.expand((a) => a.splitedArtists).toSet();
+
+      for (String artistName in namesToUse) {
+        final artist = artistCollection[artistName];
+        if (artist == null) continue;
+        album.artistsMap.putIfAbsent(artistName, () => artist);
       }
     }
   }
@@ -169,6 +179,10 @@ class Audio {
 
   String album;
 
+  String? albumArtist;
+
+  List<String> splitedAlbumArtists;
+
   /// 0: 没有track
   int track;
 
@@ -200,6 +214,7 @@ class Audio {
     this.title,
     this.artist,
     this.album,
+    this.albumArtist,
     this.track,
     this.duration,
     this.bitrate,
@@ -208,14 +223,19 @@ class Audio {
     this.modified,
     this.created,
     this.by,
-  ) : splitedArtists = artist.split(
+  )   : splitedArtists = artist.split(
           RegExp(AppSettings.instance.artistSplitPattern),
-        );
+        ),
+        splitedAlbumArtists = (albumArtist ?? "").isEmpty
+            ? const []
+            : albumArtist!
+                .split(RegExp(AppSettings.instance.artistSplitPattern));
 
   factory Audio.fromMap(Map map) => Audio(
         map["title"],
         map["artist"],
         map["album"],
+        map["album_artist"],
         map["track"] ?? 0,
         map["duration"] ?? 0,
         map["bitrate"],
@@ -230,6 +250,7 @@ class Audio {
         "title": title,
         "artist": artist,
         "album": album,
+        "album_artist": albumArtist,
         "track": track,
         "duration": duration,
         "bitrate": bitrate,
@@ -255,6 +276,31 @@ class Audio {
 
       return MemoryImage(pic);
     });
+  }
+
+  Future<ImageProvider?> _getFolderCover({
+    required int width,
+    required int height,
+  }) async {
+    try {
+      final dir = Directory(File(path).parent.path);
+      final candidates = [
+        File("${dir.path}\\cover.jpg"),
+        File("${dir.path}\\cover.png"),
+      ];
+      for (final f in candidates) {
+        if (f.existsSync()) {
+          final ratio =
+              PlatformDispatcher.instance.views.first.devicePixelRatio;
+          return ResizeImage(
+            FileImage(f),
+            width: (width * ratio).round(),
+            height: (height * ratio).round(),
+          );
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   /// 缓存ImageProvider而不是Uint8List（bytes）
@@ -325,8 +371,12 @@ class Album {
 
   /// 只能用在album detail page
   /// 200*200
-  Future<ImageProvider?> get cover =>
-      works.first._getResizedPic(width: 200, height: 200);
+  Future<ImageProvider?> get cover async {
+    final folderCover =
+        await works.first._getFolderCover(width: 200, height: 200);
+    if (folderCover != null) return folderCover;
+    return works.first._getResizedPic(width: 200, height: 200);
+  }
 
   Album({required this.name});
 }

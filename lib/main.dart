@@ -15,9 +15,22 @@ import 'package:window_manager/window_manager.dart';
 Future<void> initWindow() async {
   await windowManager.ensureInitialized();
   await windowManager.setPreventClose(true);
+  final minimumSize = const Size(507, 507);
+  Size targetSize = AppSettings.instance.windowSize;
+  final view = WidgetsBinding.instance.platformDispatcher.views.first;
+  final display = view.display;
+  final displayW = display.size.width / display.devicePixelRatio;
+  final displayH = display.size.height / display.devicePixelRatio;
+  final maxW = (displayW - 16.0).clamp(minimumSize.width, double.infinity).toDouble();
+  final maxH = (displayH - 16.0).clamp(minimumSize.height, double.infinity).toDouble();
+  targetSize = Size(
+    targetSize.width.clamp(minimumSize.width, maxW),
+    targetSize.height.clamp(minimumSize.height, maxH),
+  );
+
   WindowOptions windowOptions = WindowOptions(
-    minimumSize: const Size(507, 507),
-    size: AppSettings.instance.windowSize,
+    minimumSize: minimumSize,
+    size: targetSize,
     center: true,
     backgroundColor: Colors.transparent,
     skipTaskbar: false,

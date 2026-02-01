@@ -46,10 +46,10 @@ class FolderDetailPage extends StatelessWidget {
           method: (list, order) {
             switch (order) {
               case SortOrder.ascending:
-                list.sort((a, b) => a.title.localeCompareTo(b.title));
+                list.sort((a, b) => a.title.naturalCompareTo(b.title));
                 break;
               case SortOrder.decending:
-                list.sort((a, b) => b.title.localeCompareTo(a.title));
+                list.sort((a, b) => b.title.naturalCompareTo(a.title));
                 break;
             }
           },
@@ -60,10 +60,10 @@ class FolderDetailPage extends StatelessWidget {
           method: (list, order) {
             switch (order) {
               case SortOrder.ascending:
-                list.sort((a, b) => a.artist.localeCompareTo(b.artist));
+                list.sort((a, b) => a.artist.naturalCompareTo(b.artist));
                 break;
               case SortOrder.decending:
-                list.sort((a, b) => b.artist.localeCompareTo(a.artist));
+                list.sort((a, b) => b.artist.naturalCompareTo(a.artist));
                 break;
             }
           },
@@ -74,10 +74,10 @@ class FolderDetailPage extends StatelessWidget {
           method: (list, order) {
             switch (order) {
               case SortOrder.ascending:
-                list.sort((a, b) => a.album.localeCompareTo(b.album));
+                list.sort((a, b) => a.album.naturalCompareTo(b.album));
                 break;
               case SortOrder.decending:
-                list.sort((a, b) => b.album.localeCompareTo(a.album));
+                list.sort((a, b) => b.album.naturalCompareTo(a.album));
                 break;
             }
           },

@@ -108,10 +108,10 @@ class _PlaylistsPageState extends State<PlaylistsPage> {
           method: (list, order) {
             switch (order) {
               case SortOrder.ascending:
-                list.sort((a, b) => a.name.localeCompareTo(b.name));
+                list.sort((a, b) => a.name.naturalCompareTo(b.name));
                 break;
               case SortOrder.decending:
-                list.sort((a, b) => b.name.localeCompareTo(a.name));
+                list.sort((a, b) => b.name.naturalCompareTo(a.name));
                 break;
             }
           },
