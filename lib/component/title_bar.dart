@@ -200,6 +200,7 @@ class _WindowControllsState extends State<WindowControlls> with WindowListener {
   bool _isFullScreen = false;
   bool _isMaximized = false;
   bool _isProcessing = false;
+  bool _isClosing = false;
 
   @override
   void initState() {
@@ -270,6 +271,26 @@ class _WindowControllsState extends State<WindowControlls> with WindowListener {
     super.dispose();
   }
 
+  Future<void> _shutdownAndExit() async {
+    if (_isClosing) return;
+    _isClosing = true;
+
+    PlayService.instance.close();
+
+    await savePlaylists();
+    await saveLyricSources();
+    await AppSettings.instance.saveSettings();
+    await AppPreference.instance.save();
+
+    await HotkeysHelper.unregisterAll();
+    await windowManager.destroy();
+  }
+
+  @override
+  void onWindowClose() {
+    _shutdownAndExit();
+  }
+
   @override
   void onWindowMaximize() {
     _updateWindowStates();
@@ -333,17 +354,7 @@ class _WindowControllsState extends State<WindowControlls> with WindowListener {
         ),
         IconButton(
           tooltip: "退出",
-          onPressed: () async {
-            PlayService.instance.close();
-
-            await savePlaylists();
-            await saveLyricSources();
-            await AppSettings.instance.saveSettings();
-            await AppPreference.instance.save();
-
-            await HotkeysHelper.unregisterAll();
-            windowManager.close();
-          },
+          onPressed: _shutdownAndExit,
           icon: const Icon(Symbols.close),
         ),
       ],

@@ -73,5 +73,6 @@ Thumbs.db
 
 # Build artifacts
 output/
+# Project notes / scratch
 todo/
 *.zip

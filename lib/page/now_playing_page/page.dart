@@ -9,6 +9,7 @@ import 'package:coriander_player/component/title_bar.dart';
 import 'package:coriander_player/enums.dart';
 import 'package:coriander_player/utils.dart';
 import 'package:coriander_player/library/audio_library.dart';
+import 'package:coriander_player/library/playlist.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
 import 'package:coriander_player/page/now_playing_page/component/current_playlist_view.dart';
 import 'package:coriander_player/page/now_playing_page/component/filled_icon_button_style.dart';
@@ -222,6 +223,29 @@ class _NowPlayingMoreAction extends StatelessWidget {
             },
             leadingIcon: const Icon(Symbols.info),
             child: const Text("详细信息"),
+          ),
+          SubmenuButton(
+            style: menuItemStyle,
+            menuChildren: List.generate(
+              PLAYLISTS.length,
+              (i) => MenuItemButton(
+                style: menuItemStyle,
+                onPressed: () {
+                  final added = PLAYLISTS[i].audios.containsKey(nowPlaying.path);
+                  if (added) {
+                    showTextOnSnackBar("歌曲“${nowPlaying.title}”已存在");
+                    return;
+                  }
+                  PLAYLISTS[i].audios[nowPlaying.path] = nowPlaying;
+                  showTextOnSnackBar(
+                    "成功将“${nowPlaying.title}”添加到歌单“${PLAYLISTS[i].name}”",
+                  );
+                },
+                leadingIcon: const Icon(Symbols.queue_music),
+                child: Text(PLAYLISTS[i].name),
+              ),
+            ),
+            child: const Text("添加到歌单"),
           ),
         ],
         builder: (context, controller, _) => IconButton(
