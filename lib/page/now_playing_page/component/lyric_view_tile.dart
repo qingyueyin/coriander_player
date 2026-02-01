@@ -42,6 +42,7 @@ TextStyle _lyricTextStyle({
     color: color,
     fontSize: fontSize,
     fontFamily: 'MiSans',
+    fontWeight: _discreteFontWeight(w),
     fontVariations: [FontVariation('wght', w.toDouble())],
     letterSpacing: _lyricLetterSpacing(weight: w, fontSize: fontSize),
   );

@@ -46,3 +46,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/fonts/MiSans/MiSansVF.ttf
+  fonts:
+    - family: MiSans
+      fonts:
+        - asset: assets/fonts/MiSans/MiSansVF.ttf
