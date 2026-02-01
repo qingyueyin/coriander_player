@@ -22,6 +22,12 @@ windows = { version = "0.57.0", features = [
     "System",
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
+    "Win32_Media_Audio",
+    "Win32_Media_Audio_Endpoints",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Variant",
+    "Win32_System_Ole",
     "UI_ViewManagement",
 ] }
 anyhow = "1.0.86"

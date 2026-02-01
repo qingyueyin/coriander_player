@@ -201,9 +201,10 @@ class _UniPageState<T> extends State<UniPage<T>> {
     if (indexMap.isEmpty) return const SizedBox.shrink();
 
     return Positioned(
-      left: 4.0,
+      left: 0.0,
       top: 8.0,
       bottom: 104.0,
+      width: 16.0,
       child: LayoutBuilder(
         builder: (context, constraints) {
           void handleDy(double dy) {
