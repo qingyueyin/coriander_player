@@ -61,7 +61,7 @@ class _NowPlayingPage_SmallState extends State<_NowPlayingPage_Small> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
         children: [
           Expanded(
@@ -90,14 +90,14 @@ class _NowPlayingPage_SmallState extends State<_NowPlayingPage_Small> {
               ],
             ),
           ),
-          const SizedBox(height: 8.0),
+          const SizedBox(height: 6.0),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: _NowPlayingSlider(),
           ),
-          const SizedBox(height: 8.0),
+          const SizedBox(height: 6.0),
           const _NowPlayingMainControls(),
-          const SizedBox(height: 8.0),
+          const SizedBox(height: 6.0),
           const Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [

@@ -1,15 +1,21 @@
 part of 'page.dart';
 
 class _NowPlayingPage_Immersive extends StatelessWidget {
-  const _NowPlayingPage_Immersive();
+  const _NowPlayingPage_Immersive({
+    required this.controlsVisible,
+    required this.onControlsHoverChanged,
+  });
+
+  final bool controlsVisible;
+  final ValueChanged<bool> onControlsHoverChanged;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(32.0, 8.0, 32.0, 32.0),
+      padding: const EdgeInsets.fromLTRB(24.0, 8.0, 24.0, 24.0),
       child: Column(
-        children: const [
-          Expanded(
+        children: [
+          const Expanded(
             child: Row(
               children: [
                 Expanded(child: _NowPlayingInfo()),
@@ -23,8 +29,25 @@ class _NowPlayingPage_Immersive extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(height: 16.0),
-          _NowPlayingSlider(),
+          const SizedBox(height: 16.0),
+          MouseRegion(
+            onEnter: (_) => onControlsHoverChanged(true),
+            onExit: (_) => onControlsHoverChanged(false),
+            child: AnimatedSlide(
+              duration: MotionDuration.base,
+              curve: MotionCurve.standard,
+              offset: controlsVisible ? Offset.zero : const Offset(0.0, 0.15),
+              child: AnimatedOpacity(
+                duration: MotionDuration.base,
+                curve: MotionCurve.standard,
+                opacity: controlsVisible ? 1.0 : 0.0,
+                child: IgnorePointer(
+                  ignoring: !controlsVisible,
+                  child: const _NowPlayingSlider(),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

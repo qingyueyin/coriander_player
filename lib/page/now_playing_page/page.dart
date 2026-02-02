@@ -50,6 +50,10 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   ImageProvider<Object>? nowPlayingCover;
   Timer? _cursorHideTimer;
   bool _cursorHidden = false;
+  Timer? _controlsHideTimer;
+  bool _controlsVisible = true;
+  bool _pointerOnControls = false;
+  bool _lastImmersive = false;
 
   void _bumpCursor() {
     _cursorHideTimer?.cancel();
@@ -62,6 +66,38 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
       if (!mounted) return;
       setState(() {
         _cursorHidden = true;
+      });
+    });
+  }
+
+  void _setPointerOnControls(bool value) {
+    if (_pointerOnControls == value) return;
+    setState(() {
+      _pointerOnControls = value;
+      if (value) {
+        _controlsVisible = true;
+      }
+    });
+    if (value) {
+      _controlsHideTimer?.cancel();
+    } else {
+      _bumpControls();
+    }
+  }
+
+  void _bumpControls() {
+    if (_pointerOnControls) return;
+    _controlsHideTimer?.cancel();
+    if (!_controlsVisible) {
+      setState(() {
+        _controlsVisible = true;
+      });
+    }
+    _controlsHideTimer = Timer(const Duration(milliseconds: 1800), () {
+      if (!mounted) return;
+      if (_pointerOnControls) return;
+      setState(() {
+        _controlsVisible = false;
       });
     });
   }
@@ -88,6 +124,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   void dispose() {
     playbackService.removeListener(updateCover);
     _cursorHideTimer?.cancel();
+    _controlsHideTimer?.cancel();
     super.dispose();
   }
 
@@ -101,6 +138,19 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
       listenable: ImmersiveModeController.instance,
       builder: (context, _) {
         final immersive = ImmersiveModeController.instance.enabled;
+        if (immersive != _lastImmersive) {
+          _lastImmersive = immersive;
+          if (immersive) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              _bumpControls();
+            });
+          } else {
+            _controlsHideTimer?.cancel();
+            _controlsVisible = true;
+            _pointerOnControls = false;
+          }
+        }
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 520),
           switchInCurve: Curves.easeInOutCubic,
@@ -138,9 +188,18 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                     ),
               backgroundColor: scheme.secondaryContainer,
               body: Listener(
-                onPointerDown: (_) => _bumpCursor(),
-                onPointerMove: (_) => _bumpCursor(),
-                onPointerHover: (_) => _bumpCursor(),
+                onPointerDown: (_) {
+                  if (immersive) _bumpControls();
+                  _bumpCursor();
+                },
+                onPointerMove: (_) {
+                  if (immersive) _bumpControls();
+                  _bumpCursor();
+                },
+                onPointerHover: (_) {
+                  if (immersive) _bumpControls();
+                  _bumpCursor();
+                },
                 child: Stack(
                   fit: StackFit.expand,
                   alignment: AlignmentDirectional.center,
@@ -165,7 +224,10 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                     ChangeNotifierProvider.value(
                       value: PlayService.instance.playbackService,
                       builder: (context, _) => immersive
-                          ? const _NowPlayingPage_Immersive()
+                          ? _NowPlayingPage_Immersive(
+                              controlsVisible: _controlsVisible,
+                              onControlsHoverChanged: _setPointerOnControls,
+                            )
                           : ResponsiveBuilder2(builder: (context, screenType) {
                               switch (screenType) {
                                 case ScreenType.small:
@@ -1209,60 +1271,89 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
     );
 
     return Center(
-      child: SizedBox(
-        width: 400.0,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              nowPlaying == null ? "Coriander Music" : nowPlaying.title,
-              maxLines: 1,
-              style: TextStyle(
-                color: scheme.onSecondaryContainer,
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520.0),
+        child: LayoutBuilder(builder: (context, constraints) {
+          final coverSize = constraints.maxWidth < 160.0
+              ? constraints.maxWidth
+              : constraints.maxWidth.clamp(160.0, 420.0);
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                nowPlaying == null ? "Coriander Music" : nowPlaying.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: scheme.onSecondaryContainer,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 26,
+                  height: 1.1,
+                ),
               ),
-            ),
-            Text(
-              nowPlaying == null
-                  ? "Enjoy Music"
-                  : "${nowPlaying.artist} - ${nowPlaying.album}",
-              maxLines: 1,
-              style: TextStyle(color: scheme.onSecondaryContainer),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: Center(
-                child: RepaintBoundary(
-                  child: nowPlayingCover == null
-                      ? placeholder
-                      : FutureBuilder(
-                          future: nowPlayingCover,
-                          builder: (context, snapshot) =>
-                              switch (snapshot.connectionState) {
-                            ConnectionState.done => snapshot.data == null
-                                ? placeholder
-                                : FittedBox(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8.0),
+              const SizedBox(height: 6),
+              Text(
+                nowPlaying == null ? "Enjoy Music" : nowPlaying.artist,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: scheme.onSecondaryContainer.withOpacity(0.86),
+                  fontSize: 14,
+                  height: 1.1,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                nowPlaying == null ? "" : nowPlaying.album,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: scheme.onSecondaryContainer.withOpacity(0.72),
+                  fontSize: 14,
+                  height: 1.1,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: RepaintBoundary(
+                    child: nowPlayingCover == null
+                        ? SizedBox(
+                            width: coverSize,
+                            height: coverSize,
+                            child: placeholder)
+                        : FutureBuilder(
+                            future: nowPlayingCover,
+                            builder: (context, snapshot) =>
+                                switch (snapshot.connectionState) {
+                              ConnectionState.done => snapshot.data == null
+                                  ? placeholder
+                                  : ClipRRect(
+                                      borderRadius: BorderRadius.circular(10.0),
                                       child: Image(
                                         image: snapshot.data!,
-                                        width: 400.0,
-                                        height: 400.0,
+                                        width: coverSize,
+                                        height: coverSize,
+                                        fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) =>
                                             placeholder,
                                       ),
                                     ),
-                                  ),
-                            _ => loadingWidget,
-                          },
-                        ),
+                              _ => SizedBox(
+                                  width: coverSize,
+                                  height: coverSize,
+                                  child: loadingWidget,
+                                ),
+                            },
+                          ),
+                  ),
                 ),
-              ),
-            )
-          ],
-        ),
+              )
+            ],
+          );
+        }),
       ),
     );
   }

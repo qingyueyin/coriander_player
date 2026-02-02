@@ -7,33 +7,38 @@ class _NowPlayingPage_Large extends StatelessWidget {
   Widget build(BuildContext context) {
     const spacer = SizedBox(width: 8.0);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(32.0, 8.0, 32.0, 32.0),
+      padding: const EdgeInsets.fromLTRB(24.0, 8.0, 24.0, 24.0),
       child: Column(
         children: [
           Expanded(
-            child: Row(
-              children: [
-                const Expanded(child: _NowPlayingInfo()),
-                Expanded(
-                  child: ValueListenableBuilder(
-                    valueListenable: NOW_PLAYING_VIEW_MODE,
-                    builder: (context, value, _) => AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 150),
-                      child: switch (value) {
-                        NowPlayingViewMode.withPlaylist =>
-                          const CurrentPlaylistView(),
-                        _ => const VerticalLyricView(),
-                      },
+            child: LayoutBuilder(builder: (context, constraints) {
+              final leftWidth =
+                  (constraints.maxWidth * 0.44).clamp(380.0, 540.0);
+              return Row(
+                children: [
+                  SizedBox(width: leftWidth, child: const _NowPlayingInfo()),
+                  const SizedBox(width: 24.0),
+                  Expanded(
+                    child: ValueListenableBuilder(
+                      valueListenable: NOW_PLAYING_VIEW_MODE,
+                      builder: (context, value, _) => AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 150),
+                        child: switch (value) {
+                          NowPlayingViewMode.withPlaylist =>
+                            const CurrentPlaylistView(),
+                          _ => const VerticalLyricView(),
+                        },
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              );
+            }),
           ),
-          const SizedBox(height: 16.0),
+          const SizedBox(height: 12.0),
           const _NowPlayingSlider(),
           const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(horizontal: 16),
             child: Stack(
               alignment: Alignment.center,
               children: [
