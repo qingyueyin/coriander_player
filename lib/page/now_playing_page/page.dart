@@ -6,6 +6,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:coriander_player/app_preference.dart';
+import 'package:coriander_player/component/hotkey_ui_feedback.dart';
 import 'package:coriander_player/component/motion.dart';
 import 'package:coriander_player/component/title_bar.dart';
 import 'package:coriander_player/enums.dart';
@@ -400,6 +401,22 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
   bool _showSystemCustomIndicator = false;
   bool _isHovering = false;
   bool _isSystemHovering = false;
+  MenuController? _menuController;
+  Timer? _autoCloseTimer;
+  int _lastVolumeHotkeySerial = 0;
+  late final VoidCallback _hotkeyListener;
+
+  void _scheduleAutoClose() {
+    _autoCloseTimer?.cancel();
+    _autoCloseTimer = Timer(const Duration(milliseconds: 950), () {
+      if (!mounted) return;
+      if (isDragging || isSystemDragging || _isHovering || _isSystemHovering) {
+        _scheduleAutoClose();
+        return;
+      }
+      _menuController?.close();
+    });
+  }
 
   Future<double?> _readSystemVol({required Duration timeout}) async {
     try {
@@ -417,6 +434,24 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
   @override
   void initState() {
     super.initState();
+    _hotkeyListener = () {
+      if (!mounted) return;
+      final event = HOTKEY_UI_FEEDBACK.lastEvent;
+      if (event == null) return;
+      if (event.action != HotkeyUiAction.volumeStep) return;
+      if (event.serial == _lastVolumeHotkeySerial) return;
+      _lastVolumeHotkeySerial = event.serial;
+
+      if (_menuController?.isOpen != true) {
+        _menuController?.open();
+      }
+      if (!isDragging) {
+        dragVolDsp.value = playbackService.volumeDsp;
+      }
+      _triggerIndicator();
+      _scheduleAutoClose();
+    };
+    HOTKEY_UI_FEEDBACK.addListener(_hotkeyListener);
     _lastVolumeDsp = playbackService.volumeDsp;
     playbackService.addListener(() {
       if (!mounted) return;
@@ -493,6 +528,8 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
     _systemVolBoostTimer?.cancel();
     _indicatorTimer?.cancel();
     _systemIndicatorTimer?.cancel();
+    _autoCloseTimer?.cancel();
+    HOTKEY_UI_FEEDBACK.removeListener(_hotkeyListener);
     super.dispose();
   }
 
@@ -723,18 +760,21 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
           ),
         ),
       ],
-      builder: (context, controller, _) => IconButton(
-        tooltip: "音量",
-        onPressed: () {
-          if (controller.isOpen) {
-            controller.close();
-          } else {
-            controller.open();
-          }
-        },
-        icon: const Icon(Symbols.volume_up),
-        color: scheme.onSecondaryContainer,
-      ),
+      builder: (context, controller, _) {
+        _menuController = controller;
+        return IconButton(
+          tooltip: "音量",
+          onPressed: () {
+            if (controller.isOpen) {
+              controller.close();
+            } else {
+              controller.open();
+            }
+          },
+          icon: const Icon(Symbols.volume_up),
+          color: scheme.onSecondaryContainer,
+        );
+      },
     );
   }
 }
@@ -871,9 +911,10 @@ class _NowPlayingMainControls extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(
+        _HotkeyPulseIconButton(
           tooltip: "上一曲",
           onPressed: playbackService.lastAudio,
+          hotkeyAction: HotkeyUiAction.prev,
           icon: const Icon(Symbols.skip_previous),
           style: LargeFilledIconButtonStyle(primary: false, scheme: scheme),
         ),
@@ -905,13 +946,84 @@ class _NowPlayingMainControls extends StatelessWidget {
           },
         ),
         const SizedBox(width: 16),
-        IconButton(
+        _HotkeyPulseIconButton(
           tooltip: "下一曲",
           onPressed: playbackService.nextAudio,
+          hotkeyAction: HotkeyUiAction.next,
           icon: const Icon(Symbols.skip_next),
           style: LargeFilledIconButtonStyle(primary: false, scheme: scheme),
         ),
       ],
+    );
+  }
+}
+
+class _HotkeyPulseIconButton extends StatefulWidget {
+  const _HotkeyPulseIconButton({
+    required this.tooltip,
+    required this.onPressed,
+    required this.icon,
+    required this.hotkeyAction,
+    this.style,
+  });
+
+  final String tooltip;
+  final VoidCallback onPressed;
+  final Widget icon;
+  final HotkeyUiAction hotkeyAction;
+  final ButtonStyle? style;
+
+  @override
+  State<_HotkeyPulseIconButton> createState() => _HotkeyPulseIconButtonState();
+}
+
+class _HotkeyPulseIconButtonState extends State<_HotkeyPulseIconButton> {
+  double _scale = 1.0;
+  Timer? _timer;
+  int _lastSerial = 0;
+  late final VoidCallback _listener;
+
+  void _pulse() {
+    _timer?.cancel();
+    setState(() => _scale = 0.92);
+    _timer = Timer(MotionDuration.fast, () {
+      if (mounted) setState(() => _scale = 1.0);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _listener = () {
+      final event = HOTKEY_UI_FEEDBACK.lastEvent;
+      if (event == null) return;
+      if (event.action != widget.hotkeyAction) return;
+      if (event.serial == _lastSerial) return;
+      _lastSerial = event.serial;
+      _pulse();
+    };
+    HOTKEY_UI_FEEDBACK.addListener(_listener);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    HOTKEY_UI_FEEDBACK.removeListener(_listener);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedScale(
+      duration: MotionDuration.fast,
+      curve: MotionCurve.standard,
+      scale: _scale,
+      child: IconButton(
+        tooltip: widget.tooltip,
+        onPressed: widget.onPressed,
+        icon: widget.icon,
+        style: widget.style,
+      ),
     );
   }
 }

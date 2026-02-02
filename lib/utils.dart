@@ -179,6 +179,7 @@ void showHotkeyToast({
   _hotkeyToastEntry?.remove();
 
   final scheme = Theme.of(context).colorScheme;
+  final visible = ValueNotifier(false);
   _hotkeyToastEntry = OverlayEntry(
     builder: (context) => Positioned.fill(
       child: IgnorePointer(
@@ -188,36 +189,50 @@ void showHotkeyToast({
             padding: const EdgeInsets.only(bottom: 84.0),
             child: Align(
               alignment: Alignment.bottomCenter,
-              child: Material(
-                type: MaterialType.transparency,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14.0,
-                    vertical: 10.0,
+              child: ValueListenableBuilder(
+                valueListenable: visible,
+                builder: (context, v, child) => AnimatedOpacity(
+                  duration: const Duration(milliseconds: 140),
+                  curve: Curves.fastOutSlowIn,
+                  opacity: v ? 1.0 : 0.0,
+                  child: AnimatedScale(
+                    duration: const Duration(milliseconds: 140),
+                    curve: Curves.fastOutSlowIn,
+                    scale: v ? 1.0 : 0.96,
+                    child: child,
                   ),
-                  decoration: BoxDecoration(
-                    color: scheme.secondaryContainer.withOpacity(0.92),
-                    borderRadius: BorderRadius.circular(20.0),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (icon != null) ...[
-                        Icon(
-                          icon,
-                          size: 18,
-                          color: scheme.onSecondaryContainer,
+                ),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14.0,
+                      vertical: 10.0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: scheme.secondaryContainer.withOpacity(0.92),
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (icon != null) ...[
+                          Icon(
+                            icon,
+                            size: 18,
+                            color: scheme.onSecondaryContainer,
+                          ),
+                          const SizedBox(width: 8.0),
+                        ],
+                        Text(
+                          text,
+                          style: TextStyle(
+                            color: scheme.onSecondaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        const SizedBox(width: 8.0),
                       ],
-                      Text(
-                        text,
-                        style: TextStyle(
-                          color: scheme.onSecondaryContainer,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -229,9 +244,17 @@ void showHotkeyToast({
   );
 
   overlay.insert(_hotkeyToastEntry!);
-  _hotkeyToastTimer = Timer(const Duration(milliseconds: 1200), () {
-    _hotkeyToastEntry?.remove();
-    _hotkeyToastEntry = null;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (_hotkeyToastEntry == null) return;
+    visible.value = true;
+  });
+
+  _hotkeyToastTimer = Timer(const Duration(milliseconds: 1100), () {
+    visible.value = false;
+    Timer(const Duration(milliseconds: 160), () {
+      _hotkeyToastEntry?.remove();
+      _hotkeyToastEntry = null;
+    });
   });
 }
 
