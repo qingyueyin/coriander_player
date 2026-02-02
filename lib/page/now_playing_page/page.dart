@@ -6,6 +6,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:coriander_player/app_preference.dart';
+import 'package:coriander_player/component/motion.dart';
 import 'package:coriander_player/component/title_bar.dart';
 import 'package:coriander_player/enums.dart';
 import 'package:coriander_player/immersive_mode.dart';
@@ -47,6 +48,23 @@ class NowPlayingPage extends StatefulWidget {
 class _NowPlayingPageState extends State<NowPlayingPage> {
   final playbackService = PlayService.instance.playbackService;
   ImageProvider<Object>? nowPlayingCover;
+  Timer? _cursorHideTimer;
+  bool _cursorHidden = false;
+
+  void _bumpCursor() {
+    _cursorHideTimer?.cancel();
+    if (_cursorHidden) {
+      setState(() {
+        _cursorHidden = false;
+      });
+    }
+    _cursorHideTimer = Timer(const Duration(milliseconds: 1800), () {
+      if (!mounted) return;
+      setState(() {
+        _cursorHidden = true;
+      });
+    });
+  }
 
   void updateCover() {
     playbackService.nowPlaying?.cover.then((cover) {
@@ -63,11 +81,13 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     super.initState();
     playbackService.addListener(updateCover);
     updateCover();
+    _bumpCursor();
   }
 
   @override
   void dispose() {
     playbackService.removeListener(updateCover);
+    _cursorHideTimer?.cancel();
     super.dispose();
   }
 
@@ -117,42 +137,55 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                       ),
                     ),
               backgroundColor: scheme.secondaryContainer,
-              body: Stack(
-                fit: StackFit.expand,
-                alignment: AlignmentDirectional.center,
-                children: [
-                  if (nowPlayingCover != null) ...[
-                    Image(
-                      image: nowPlayingCover!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              body: Listener(
+                onPointerDown: (_) => _bumpCursor(),
+                onPointerMove: (_) => _bumpCursor(),
+                onPointerHover: (_) => _bumpCursor(),
+                child: Stack(
+                  fit: StackFit.expand,
+                  alignment: AlignmentDirectional.center,
+                  children: [
+                    if (nowPlayingCover != null) ...[
+                      Image(
+                        image: nowPlayingCover!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+                      switch (brightness) {
+                        Brightness.dark =>
+                          const ColoredBox(color: Colors.black45),
+                        Brightness.light =>
+                          const ColoredBox(color: Colors.white54),
+                      },
+                      BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 250, sigmaY: 250),
+                        child: const ColoredBox(color: Colors.transparent),
+                      ),
+                    ],
+                    ChangeNotifierProvider.value(
+                      value: PlayService.instance.playbackService,
+                      builder: (context, _) => immersive
+                          ? const _NowPlayingPage_Immersive()
+                          : ResponsiveBuilder2(builder: (context, screenType) {
+                              switch (screenType) {
+                                case ScreenType.small:
+                                  return const _NowPlayingPage_Small();
+                                case ScreenType.medium:
+                                case ScreenType.large:
+                                  return const _NowPlayingPage_Large();
+                              }
+                            }),
                     ),
-                    switch (brightness) {
-                      Brightness.dark => const ColoredBox(color: Colors.black45),
-                      Brightness.light =>
-                        const ColoredBox(color: Colors.white54),
-                    },
-                    BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 250, sigmaY: 250),
-                      child: const ColoredBox(color: Colors.transparent),
-                    ),
+                    if (immersive) const _ImmersiveHelpOverlay(),
+                    if (_cursorHidden)
+                      const Positioned.fill(
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.none,
+                          child: SizedBox.expand(),
+                        ),
+                      ),
                   ],
-                  ChangeNotifierProvider.value(
-                    value: PlayService.instance.playbackService,
-                    builder: (context, _) => immersive
-                        ? const _NowPlayingPage_Immersive()
-                        : ResponsiveBuilder2(builder: (context, screenType) {
-                            switch (screenType) {
-                              case ScreenType.small:
-                                return const _NowPlayingPage_Small();
-                              case ScreenType.medium:
-                              case ScreenType.large:
-                                return const _NowPlayingPage_Large();
-                            }
-                          }),
-                  ),
-                  if (immersive) const _ImmersiveHelpOverlay(),
-                ],
+                ),
               ),
             ),
           ),
@@ -313,7 +346,7 @@ class _DesktopLyricSwitch extends StatelessWidget {
         return FutureBuilder(
           future: desktopLyricService.desktopLyric,
           builder: (context, snapshot) => IconButton(
-            tooltip: "桌面歌词；现在：${snapshot.data == null ? "禁用" : "启用"}",
+            tooltip: "桌面歌词；${snapshot.data == null ? "禁用" : "启用"}",
             onPressed: snapshot.data == null
                 ? desktopLyricService.startDesktopLyric
                 : desktopLyricService.isLocked

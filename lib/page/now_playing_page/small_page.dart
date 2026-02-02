@@ -142,23 +142,30 @@ class _NowPlayingSmallViewSwitchState
         child: Material(
           borderRadius: BorderRadius.circular(16.0),
           type: MaterialType.transparency,
-          child: Opacity(
+          child: AnimatedOpacity(
+            duration: MotionDuration.fast,
+            curve: MotionCurve.standard,
             opacity: visible ? 1.0 : 0.0,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16.0),
-              hoverColor: scheme.onSecondaryContainer.withOpacity(0.08),
-              highlightColor: scheme.onSecondaryContainer.withOpacity(0.12),
-              splashColor: scheme.onSecondaryContainer.withOpacity(0.12),
-              onTap: widget.onTap,
-              onHover: (hasEntered) {
-                setState(() {
-                  visible = hasEntered;
-                });
-              },
-              child: Center(
-                child: Icon(
-                  widget.icon,
-                  color: scheme.onSecondaryContainer,
+            child: AnimatedScale(
+              duration: MotionDuration.fast,
+              curve: MotionCurve.standard,
+              scale: visible ? 1.0 : 0.94,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16.0),
+                hoverColor: scheme.onSecondaryContainer.withOpacity(0.08),
+                highlightColor: scheme.onSecondaryContainer.withOpacity(0.12),
+                splashColor: scheme.onSecondaryContainer.withOpacity(0.12),
+                onTap: widget.onTap,
+                onHover: (hasEntered) {
+                  setState(() {
+                    visible = hasEntered;
+                  });
+                },
+                child: Center(
+                  child: Icon(
+                    widget.icon,
+                    color: scheme.onSecondaryContainer,
+                  ),
                 ),
               ),
             ),

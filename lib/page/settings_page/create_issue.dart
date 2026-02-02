@@ -12,6 +12,11 @@ const String cpFeedbackKey = String.fromEnvironment(
   defaultValue: '',
 );
 
+const bool enableIssueReporting = bool.fromEnvironment(
+  'ENABLE_ISSUE_REPORTING',
+  defaultValue: false,
+);
+
 class CreateIssueTile extends StatelessWidget {
   const CreateIssueTile({super.key});
 
@@ -20,7 +25,11 @@ class CreateIssueTile extends StatelessWidget {
     return SettingsTile(
       description: "报告问题",
       action: FilledButton.icon(
-        onPressed: () => context.push(app_paths.SETTINGS_ISSUE_PAGE),
+        onPressed: enableIssueReporting
+            ? () => context.push(app_paths.SETTINGS_ISSUE_PAGE)
+            : () => showTextOnSnackBar(
+                  "未启用 Issue 上报（需要 ENABLE_ISSUE_REPORTING）",
+                ),
         label: const Text("创建问题(至原项目)"),
         icon: const Icon(Symbols.help),
       ),
@@ -41,7 +50,34 @@ class _SettingsIssuePageState extends State<SettingsIssuePage> {
   final logEditingController = TextEditingController();
   final submitBtnController = WidgetStatesController();
 
+  String _buildLogSnapshot() {
+    final logStrBuf = StringBuffer();
+    for (final event in LOGGER_MEMORY.buffer) {
+      for (var line in event.lines) {
+        logStrBuf.writeln(line);
+      }
+    }
+    var text = logStrBuf.toString();
+    text = text.replaceAll(
+      RegExp(r'([A-Za-z]:\\Users\\)([^\\]+)\\', caseSensitive: false),
+      r'$1***\\',
+    );
+    text = text.replaceAll(
+      RegExp(r'(/Users/)([^/]+)/', caseSensitive: false),
+      r'$1***/',
+    );
+    text = text.replaceAll(
+      RegExp(r'(/home/)([^/]+)/', caseSensitive: false),
+      r'$1***/',
+    );
+    return text;
+  }
+
   Future<void> createIssue() async {
+    if (!enableIssueReporting) {
+      showTextOnSnackBar("未启用 Issue 上报");
+      return;
+    }
     if (cpFeedbackKey.isEmpty) {
       showTextOnSnackBar("未配置 CPFEEDBACK_KEY，无法创建 Issue");
       return;
@@ -83,13 +119,6 @@ class _SettingsIssuePageState extends State<SettingsIssuePage> {
   @override
   void initState() {
     super.initState();
-    final logStrBuf = StringBuffer();
-    for (final event in LOGGER_MEMORY.buffer) {
-      for (var line in event.lines) {
-        logStrBuf.writeln(line);
-      }
-    }
-    logEditingController.text = logStrBuf.toString();
   }
 
   @override
@@ -120,17 +149,39 @@ class _SettingsIssuePageState extends State<SettingsIssuePage> {
                   padding: const EdgeInsets.only(left: 8.0),
                   child: FilledButton(
                     statesController: submitBtnController,
-                    onPressed: cpFeedbackKey.isEmpty
-                        ? () => showTextOnSnackBar(
-                              "未配置 CPFEEDBACK_KEY，无法创建 Issue",
-                            )
-                        : createIssue,
+                    onPressed: !enableIssueReporting
+                        ? () => showTextOnSnackBar("未启用 Issue 上报")
+                        : cpFeedbackKey.isEmpty
+                            ? () => showTextOnSnackBar(
+                                  "未配置 CPFEEDBACK_KEY，无法创建 Issue",
+                                )
+                            : createIssue,
                     child: const Text("报告问题"),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    "日志（可选）",
+                    style: TextStyle(color: scheme.onSurface.withOpacity(0.75)),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    logEditingController.text = _buildLogSnapshot();
+                  },
+                  child: const Text("填充日志"),
+                ),
+                TextButton(
+                  onPressed: () => logEditingController.clear(),
+                  child: const Text("清空"),
+                ),
+              ],
+            ),
             Expanded(
               child: Focus(
                 onFocusChange: HotkeysHelper.onFocusChanges,

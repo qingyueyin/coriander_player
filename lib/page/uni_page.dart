@@ -1,13 +1,13 @@
 import 'dart:ui';
 
 import 'package:coriander_player/app_preference.dart';
+import 'package:coriander_player/component/motion.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
 import 'package:coriander_player/enums.dart';
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/play_service/play_service.dart';
 import 'package:coriander_player/page/uni_page_components.dart';
 import 'package:coriander_player/page/page_scaffold.dart';
-import 'package:coriander_player/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -127,142 +127,6 @@ class _UniPageState<T> extends State<UniPage<T>> {
   late SortOrder currSortOrder = widget.pref.sortOrder;
   late ContentView currContentView = widget.pref.contentView;
   late ScrollController scrollController = ScrollController();
-  String? _activeIndexKey;
-
-  static const List<String> _alphaKeys = [
-    "#",
-    "A",
-    "B",
-    "C",
-    "D",
-    "E",
-    "F",
-    "G",
-    "H",
-    "I",
-    "J",
-    "K",
-    "L",
-    "M",
-    "N",
-    "O",
-    "P",
-    "Q",
-    "R",
-    "S",
-    "T",
-    "U",
-    "V",
-    "W",
-    "X",
-    "Y",
-    "Z",
-  ];
-
-  String? _indexTextForItem(Object item) {
-    if (item is Audio) return item.title;
-    if (item is Artist) return item.name;
-    if (item is Album) return item.name;
-    if (item is AudioFolder) return item.path;
-    return null;
-  }
-
-  Map<String, int> _buildAlphaIndexMap() {
-    if (widget.contentList.length < 30) return const {};
-    final map = <String, int>{};
-    for (int i = 0; i < widget.contentList.length; i++) {
-      final item = widget.contentList[i];
-      final text = _indexTextForItem(item as Object);
-      if (text == null) continue;
-      final key = text.getIndexKey();
-      map.putIfAbsent(key, () => i);
-    }
-    return map;
-  }
-
-  int? _findNearestIndexKeyTarget(String key, Map<String, int> indexMap) {
-    if (indexMap.isEmpty) return null;
-    final direct = indexMap[key];
-    if (direct != null) return direct;
-    final startAt = _alphaKeys.indexOf(key);
-    if (startAt < 0) return null;
-    for (int i = startAt + 1; i < _alphaKeys.length; i++) {
-      final v = indexMap[_alphaKeys[i]];
-      if (v != null) return v;
-    }
-    if (key == "#") return indexMap.values.reduce((a, b) => a < b ? a : b);
-    return null;
-  }
-
-  Widget _alphaIndexBar() {
-    if (currContentView != ContentView.list) return const SizedBox.shrink();
-    if (currSortMethod?.name != "标题") return const SizedBox.shrink();
-    final indexMap = _buildAlphaIndexMap();
-    if (indexMap.isEmpty) return const SizedBox.shrink();
-
-    return Positioned(
-      left: 0.0,
-      top: 8.0,
-      bottom: 104.0,
-      width: 16.0,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          void handleDy(double dy) {
-            final h = constraints.maxHeight;
-            if (h <= 0) return;
-            final t = (dy / h).clamp(0.0, 0.999999);
-            final idx =
-                (t * _alphaKeys.length).floor().clamp(0, _alphaKeys.length - 1);
-            final key = _alphaKeys[idx];
-            final targetAt = _findNearestIndexKeyTarget(key, indexMap);
-            if (targetAt == null) return;
-            setState(() => _activeIndexKey = key);
-            _scrollToIndex(targetAt);
-          }
-
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapDown: (d) => handleDy(d.localPosition.dy),
-            onVerticalDragDown: (d) => handleDy(d.localPosition.dy),
-            onVerticalDragUpdate: (d) => handleDy(d.localPosition.dy),
-            onVerticalDragEnd: (_) => setState(() => _activeIndexKey = null),
-            onVerticalDragCancel: () => setState(() => _activeIndexKey = null),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: _alphaKeys
-                  .map(
-                    (k) => SizedBox(
-                      height: constraints.maxHeight / _alphaKeys.length,
-                      child: Center(
-                        child: Text(
-                          k,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: _activeIndexKey == k
-                                ? Theme.of(context).colorScheme.primary
-                                : (indexMap.containsKey(k)
-                                    ? Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withOpacity(0.85)
-                                    : Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withOpacity(0.25)),
-                          ),
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   void _scrollToIndex(int targetAt) {
     if (targetAt < 0 || targetAt >= widget.contentList.length) return;
 
@@ -315,10 +179,23 @@ class _UniPageState<T> extends State<UniPage<T>> {
             return Positioned(
               right: right,
               bottom: bottom,
-              child: IconButton.filledTonal(
-                tooltip: "定位正在播放",
-                onPressed: () => _scrollToIndex(targetAt),
-                icon: const Icon(Symbols.my_location),
+              child: TweenAnimationBuilder<double>(
+                key: ValueKey(nowPlaying.path),
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: MotionDuration.base,
+                curve: MotionCurve.standard,
+                builder: (context, t, child) => Opacity(
+                  opacity: t,
+                  child: Transform.translate(
+                    offset: Offset(0.0, (1 - t) * 10.0),
+                    child: child,
+                  ),
+                ),
+                child: IconButton.filledTonal(
+                  tooltip: "定位正在播放",
+                  onPressed: () => _scrollToIndex(targetAt),
+                  icon: const Icon(Symbols.my_location),
+                ),
               ),
             );
           },
@@ -463,7 +340,6 @@ class _UniPageState<T> extends State<UniPage<T>> {
                 ),
             },
             _locateNowPlayingButton(),
-            _alphaIndexBar(),
           ],
         ),
       ),

@@ -111,24 +111,6 @@ extension PinyinCompare on String {
     }
     return aTokens.length.compareTo(bTokens.length);
   }
-
-  String getIndexKey() {
-    final s = trimLeft();
-    if (s.isEmpty) return "#";
-    String first = s.substring(0, 1);
-    if (ChineseHelper.isChinese(first)) {
-      first = PinyinHelper.convertToPinyinArray(
-            first,
-            PinyinFormat.WITHOUT_TONE,
-          ).firstOrNull ??
-          first;
-    }
-    final code = first.codeUnitAt(0);
-    if (code >= 0x41 && code <= 0x5A) return first;
-    if (code >= 0x61 && code <= 0x7A) return first.toUpperCase();
-    if (code >= 0x30 && code <= 0x39) return "#";
-    return "#";
-  }
 }
 
 class _NaturalToken {

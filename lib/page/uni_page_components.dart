@@ -4,6 +4,7 @@ import 'package:coriander_player/library/playlist.dart';
 import 'package:coriander_player/page/uni_page.dart';
 import 'package:coriander_player/play_service/play_service.dart';
 import 'package:coriander_player/utils.dart';
+import 'package:coriander_player/component/motion.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -94,10 +95,15 @@ class SortMethodComboBox<T> extends StatelessWidget {
                       style: TextStyle(color: scheme.onSecondaryContainer),
                     ),
                     const SizedBox(width: 4.0),
-                    Icon(
-                      Symbols.arrow_drop_down,
-                      size: 24,
-                      color: scheme.onSecondaryContainer,
+                    AnimatedRotation(
+                      duration: MotionDuration.fast,
+                      curve: MotionCurve.standard,
+                      turns: menuController.isOpen ? 0.5 : 0.0,
+                      child: Icon(
+                        Symbols.arrow_drop_down,
+                        size: 24,
+                        color: scheme.onSecondaryContainer,
+                      ),
                     ),
                   ],
                 ),
@@ -124,7 +130,19 @@ class SortOrderSwitch<T> extends StatelessWidget {
       onPressed: () => setSortOrder(
         isAscending ? SortOrder.decending : SortOrder.ascending,
       ),
-      icon: Icon(isAscending ? Symbols.arrow_upward : Symbols.arrow_downward),
+      icon: AnimatedSwitcher(
+        duration: MotionDuration.fast,
+        switchInCurve: MotionCurve.standard,
+        switchOutCurve: MotionCurve.standard,
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(scale: animation, child: child),
+        ),
+        child: Icon(
+          isAscending ? Symbols.arrow_upward : Symbols.arrow_downward,
+          key: ValueKey(isAscending),
+        ),
+      ),
     );
   }
 }
@@ -143,7 +161,19 @@ class ContentViewSwitch<T> extends StatelessWidget {
       onPressed: () => setContentView(
         isListView ? ContentView.table : ContentView.list,
       ),
-      icon: Icon(isListView ? Symbols.list : Symbols.table),
+      icon: AnimatedSwitcher(
+        duration: MotionDuration.fast,
+        switchInCurve: MotionCurve.standard,
+        switchOutCurve: MotionCurve.standard,
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(scale: animation, child: child),
+        ),
+        child: Icon(
+          isListView ? Symbols.list : Symbols.table,
+          key: ValueKey(isListView),
+        ),
+      ),
     );
   }
 }

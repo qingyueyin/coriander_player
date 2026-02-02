@@ -6,12 +6,12 @@
 
 ## 可选：启用软件内创建 Issue
 
-设置页里有“报告问题/创建 Issue”的入口。为了避免把 token 提交到仓库，这个功能默认是关闭的（未配置时会提示无法创建）。
+设置页里有“报告问题/创建 Issue”的入口。为了实现默认“无 token / 无隐私数据”构建，这个功能默认是关闭的；只有显式开启后才会启用上报。
 
 - 本地构建（推荐）：先设置环境变量，再运行脚本
-  - PowerShell：`$env:CPFEEDBACK_KEY="你的 token"`，然后执行 `.\build_windows.ps1`
+  - PowerShell：`$env:ENABLE_ISSUE_REPORTING="1"; $env:CPFEEDBACK_KEY="你的token"`，然后执行 `.\build_windows.ps1`
 - 直接 flutter 构建：在构建命令中传入
-  - `flutter build windows --release --dart-define=CPFEEDBACK_KEY=你的token`
+  - `flutter build windows --release --dart-define=ENABLE_ISSUE_REPORTING=true --dart-define=CPFEEDBACK_KEY=你的token`
 
 注意：`--dart-define` 会在编译期写入产物；请使用权限尽量小的 token，且不要提交到仓库。
 
@@ -47,6 +47,7 @@
 - **系统级的音量调节**：新增了系统级的音量调节条，用户可以通过滑动条调整系统全局音量。
 - **圆角修改**：修改了播放页带悬浮窗控件的圆角，使其更加圆润。
 - **字体粗度调节**：新增了字体粗度调节功能，用户可以在桌面歌词控制区域调整字体粗度。
+- **播放页自动隐藏鼠标指针**：鼠标静止一段时间后自动隐藏，移动/点击恢复显示。
 - **数据库迁移**：新增了数据库迁移功能，用户可以在设置中迁移到 SQLite 数据库。
 - **支持播放 mka**：已加载 BASSWebM.dll，支持播放 WebM 格式的音乐。
 - **快捷键悬浮提示**：快捷键操作显示短暂提示；音量菜单内快捷键也会显示气泡。
