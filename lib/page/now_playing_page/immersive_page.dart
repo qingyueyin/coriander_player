@@ -16,33 +16,106 @@ class _NowPlayingPage_Immersive extends StatelessWidget {
             child: isWide
                 ? const Row(
                     children: [
-                      Expanded(child: _ImmersiveCover()),
+                      Expanded(child: _ImmersiveLeftPanel()),
                       SizedBox(width: 24.0),
                       Expanded(
                         child: VerticalLyricView(
                           showControls: false,
                           enableSeekOnTap: false,
+                          centerVertically: false,
                         ),
                       ),
                     ],
                   )
                 : const Column(
                     children: [
-                      Expanded(child: _ImmersiveCover()),
+                      Expanded(child: _ImmersiveLeftPanel()),
                       SizedBox(height: 16.0),
                       Expanded(
                         child: VerticalLyricView(
                           showControls: false,
                           enableSeekOnTap: false,
+                          centerVertically: false,
                         ),
                       ),
                     ],
                   ),
           ),
-          const SizedBox(height: 16.0),
-          const _NowPlayingSlider(),
         ],
       ),
+    );
+  }
+}
+
+class _ImmersiveLeftPanel extends StatelessWidget {
+  const _ImmersiveLeftPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final edge = min(constraints.maxWidth, constraints.maxHeight);
+        final coverSize = (edge * 0.48).clamp(220.0, 420.0);
+
+        return Center(
+          child: SizedBox(
+            width: coverSize,
+            child: ListenableBuilder(
+              listenable: PlayService.instance.playbackService,
+              builder: (context, _) {
+                final nowPlaying =
+                    PlayService.instance.playbackService.nowPlaying;
+                final title = nowPlaying?.title ?? "Coriander Player";
+                final subtitle = nowPlaying == null
+                    ? ""
+                    : "${nowPlaying.artist} · ${nowPlaying.album}";
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: scheme.onSecondaryContainer,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                      ),
+                    ),
+                    if (subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: scheme.onSecondaryContainer.withOpacity(0.85),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: coverSize,
+                      height: coverSize,
+                      child: _ImmersiveCover(size: coverSize),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: coverSize,
+                      child: const _NowPlayingSlider(),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -160,8 +233,9 @@ class _ImmersiveHelpOverlayState extends State<_ImmersiveHelpOverlay> {
                                 PlayService.instance.playbackService.nowPlaying;
                             final title =
                                 nowPlaying?.title ?? "Coriander Player";
-                            final subtitle =
-                                nowPlaying == null ? "" : "${nowPlaying.artist} · ${nowPlaying.album}";
+                            final subtitle = nowPlaying == null
+                                ? ""
+                                : "${nowPlaying.artist} · ${nowPlaying.album}";
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
@@ -258,7 +332,9 @@ class _ImmersiveHelpOverlayState extends State<_ImmersiveHelpOverlay> {
 }
 
 class _ImmersiveCover extends StatefulWidget {
-  const _ImmersiveCover();
+  const _ImmersiveCover({required this.size});
+
+  final double size;
 
   @override
   State<_ImmersiveCover> createState() => _ImmersiveCoverState();
@@ -301,55 +377,50 @@ class _ImmersiveCoverState extends State<_ImmersiveCover> {
       size: 128.0,
       color: scheme.onSecondaryContainer,
     );
+    final size = widget.size;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final edge = min(constraints.maxWidth, constraints.maxHeight);
-        final size = (edge * 0.55).clamp(260.0, 480.0);
-        return Center(
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: RepaintBoundary(
-              child: _coverFuture == null
-                  ? Center(child: placeholder)
-                  : FutureBuilder(
-                      future: _coverFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState != ConnectionState.done) {
-                          return const Center(
-                            child: SizedBox(
-                              width: 28,
-                              height: 28,
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-                        }
-                        final image = snapshot.data;
-                        if (image == null) return Center(child: placeholder);
-                        return AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          switchInCurve: Curves.fastOutSlowIn,
-                          switchOutCurve: Curves.fastOutSlowIn,
-                          child: ClipRRect(
-                            key: ValueKey(image),
-                            borderRadius: BorderRadius.circular(14.0),
-                            child: Image(
-                              image: image,
-                              width: size,
-                              height: size,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  Center(child: placeholder),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ),
-        );
-      },
+    return Center(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: RepaintBoundary(
+          child: _coverFuture == null
+              ? Center(child: placeholder)
+              : FutureBuilder(
+                  future: _coverFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return const Center(
+                        child: SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+                    final image = snapshot.data;
+                    if (image == null) return Center(child: placeholder);
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.fastOutSlowIn,
+                      switchOutCurve: Curves.fastOutSlowIn,
+                      child: ClipRRect(
+                        key: ValueKey(image),
+                        borderRadius: BorderRadius.circular(14.0),
+                        child: Image(
+                          image: image,
+                          width: size,
+                          height: size,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              Center(child: placeholder),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ),
     );
   }
 }

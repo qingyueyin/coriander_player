@@ -16,10 +16,12 @@ class VerticalLyricView extends StatefulWidget {
     super.key,
     this.showControls = true,
     this.enableSeekOnTap = true,
+    this.centerVertically = true,
   });
 
   final bool showControls;
   final bool enableSeekOnTap;
+  final bool centerVertically;
 
   @override
   State<VerticalLyricView> createState() => _VerticalLyricViewState();
@@ -85,6 +87,7 @@ class _VerticalLyricViewState extends State<VerticalLyricView> {
                             : _VerticalLyricScrollView(
                                 lyric: lyricNullable,
                                 enableSeekOnTap: widget.enableSeekOnTap,
+                                centerVertically: widget.centerVertically,
                               ),
                       },
                       if (widget.showControls &&
@@ -111,10 +114,12 @@ class _VerticalLyricScrollView extends StatefulWidget {
   const _VerticalLyricScrollView({
     required this.lyric,
     required this.enableSeekOnTap,
+    required this.centerVertically,
   });
 
   final Lyric lyric;
   final bool enableSeekOnTap;
+  final bool centerVertically;
 
   @override
   State<_VerticalLyricScrollView> createState() =>
@@ -250,14 +255,14 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
       key: LYRIC_VIEW_KEY,
       controller: scrollController,
       slivers: [
-        const SliverFillRemaining(),
+        if (widget.centerVertically) const SliverFillRemaining(),
         SliverToBoxAdapter(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: lyricTiles,
           ),
         ),
-        const SliverFillRemaining(),
+        if (widget.centerVertically) const SliverFillRemaining(),
       ],
     );
   }

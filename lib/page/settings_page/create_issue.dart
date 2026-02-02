@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:coriander_player/component/settings_tile.dart';
 import 'package:coriander_player/hotkeys_helper.dart';
 import 'package:coriander_player/utils.dart';
@@ -50,6 +52,16 @@ class _SettingsIssuePageState extends State<SettingsIssuePage> {
   final logEditingController = TextEditingController();
   final submitBtnController = WidgetStatesController();
 
+  String _buildEnvironmentInfo() {
+    final locale = WidgetsBinding.instance.platformDispatcher.locale;
+    return [
+      "OS: ${Platform.operatingSystem}",
+      "OS Version: ${Platform.operatingSystemVersion}",
+      "Runtime: ${Platform.version}",
+      "Locale: ${locale.toLanguageTag()}",
+    ].join("\n");
+  }
+
   String _buildLogSnapshot() {
     final logStrBuf = StringBuffer();
     for (final event in LOGGER_MEMORY.buffer) {
@@ -88,6 +100,8 @@ class _SettingsIssuePageState extends State<SettingsIssuePage> {
     );
     final issueBodyBuilder = StringBuffer();
     issueBodyBuilder
+      ..writeln("## 环境信息")
+      ..writeln(_buildEnvironmentInfo())
       ..writeln("## 描述")
       ..writeln(descEditingController.text)
       ..writeln("## 日志")
