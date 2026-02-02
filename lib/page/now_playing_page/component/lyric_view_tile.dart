@@ -20,15 +20,19 @@ double _lyricLetterSpacing({
   required double fontSize,
 }) {
   final sizeFactor = fontSize / 16;
-  var v = 0.001 * (weight - 400) * sizeFactor;
+  var v = 0.0012 * (weight - 400) * sizeFactor;
 
   if (weight > 800) {
     final t = ((weight - 800) / 100).clamp(0.0, 1.0);
-    v += t * (0.6 * sizeFactor);
+    v += t * (0.9 * sizeFactor);
+  }
+
+  if (weight >= 900) {
+    v = max(v, 1.0 * sizeFactor);
   }
 
   if (v < -0.10) return -0.10;
-  if (v > 2.0) return 2.0;
+  if (v > 3.0) return 3.0;
   return v;
 }
 
