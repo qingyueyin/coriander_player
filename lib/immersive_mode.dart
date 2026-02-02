@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:window_manager/window_manager.dart';
 
-class ImmersiveModeController with ChangeNotifier, WindowListener {
+class ImmersiveModeController with ChangeNotifier {
   ImmersiveModeController._();
 
   static final ImmersiveModeController instance = ImmersiveModeController._();
@@ -14,24 +13,18 @@ class ImmersiveModeController with ChangeNotifier, WindowListener {
   Future<void> init() async {
     if (_initialized) return;
     _initialized = true;
-    windowManager.addListener(this);
-    final full = await windowManager.isFullScreen();
-    _setEnabled(full);
   }
 
   Future<void> enter() async {
-    await windowManager.setFullScreen(true);
     _setEnabled(true);
   }
 
   Future<void> exit() async {
-    await windowManager.setFullScreen(false);
     _setEnabled(false);
   }
 
   Future<void> toggle() async {
-    final full = await windowManager.isFullScreen();
-    if (full) {
+    if (_enabled) {
       await exit();
     } else {
       await enter();
@@ -42,16 +35,6 @@ class ImmersiveModeController with ChangeNotifier, WindowListener {
     if (_enabled == value) return;
     _enabled = value;
     notifyListeners();
-  }
-
-  @override
-  void onWindowEnterFullScreen() {
-    _setEnabled(true);
-  }
-
-  @override
-  void onWindowLeaveFullScreen() {
-    _setEnabled(false);
   }
 }
 

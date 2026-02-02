@@ -209,7 +209,6 @@ class AppSettings {
   Future<void> saveSettings() async {
     try {
       final isMaximized = await windowManager.isMaximized();
-      final isFullScreen = await windowManager.isFullScreen();
       final settingsMap = {
         "Version": version,
         "ThemeMode": themeMode == ThemeMode.dark,
@@ -224,10 +223,10 @@ class AppSettings {
         "FontPath": fontPath,
       };
 
-      // 只有在窗口不是最大化且不是全屏时才保存窗口尺寸
+      // 只有在窗口不是最大化时才保存窗口尺寸
       // 这样windowSize始终保存的是窗口化时的尺寸
       Size sizeToSave = windowSize;
-      if (!isMaximized && !isFullScreen) {
+      if (!isMaximized) {
         sizeToSave = await windowManager.getSize();
       }
       settingsMap["WindowSize"] =

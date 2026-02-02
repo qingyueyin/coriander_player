@@ -198,7 +198,6 @@ class WindowControlls extends StatefulWidget {
 }
 
 class _WindowControllsState extends State<WindowControlls> with WindowListener {
-  bool _isFullScreen = false;
   bool _isMaximized = false;
   bool _isProcessing = false;
   bool _isClosing = false;
@@ -211,34 +210,12 @@ class _WindowControllsState extends State<WindowControlls> with WindowListener {
   }
 
   Future<void> _updateWindowStates() async {
-    final isFullScreen = await windowManager.isFullScreen();
     final isMaximized = await windowManager.isMaximized();
     if (mounted) {
       setState(() {
-        _isFullScreen = isFullScreen;
         _isMaximized = isMaximized;
         _isProcessing = false;
       });
-    }
-  }
-
-  Future<void> _toggleFullScreen() async {
-    if (_isProcessing) return;
-
-    setState(() {
-      _isProcessing = true;
-    });
-
-    try {
-      await ImmersiveModeController.instance.toggle();
-    } catch (e) {
-      rethrow;
-    } finally {
-      // 无论成功还是失败，最终都重置处理状态
-      // 调用_updateWindowStates()确保状态同步，即使监听器没有触发
-      if (mounted) {
-        await _updateWindowStates();
-      }
     }
   }
 
@@ -316,7 +293,7 @@ class _WindowControllsState extends State<WindowControlls> with WindowListener {
   @override
   void onWindowResized() async {
     super.onWindowResized();
-    if (_isFullScreen || _isMaximized) return;
+    if (_isMaximized) return;
     try {
       final minimumSize = const Size(507, 507);
       final view = WidgetsBinding.instance.platformDispatcher.views.first;
@@ -342,41 +319,18 @@ class _WindowControllsState extends State<WindowControlls> with WindowListener {
   }
 
   @override
-  void onWindowEnterFullScreen() {
-    super.onWindowEnterFullScreen();
-    _updateWindowStates();
-    // 进入全屏时保存设置
-    AppSettings.instance.saveSettings();
-  }
-
-  @override
-  void onWindowLeaveFullScreen() {
-    super.onWindowLeaveFullScreen();
-    _updateWindowStates();
-    // 退出全屏时保存设置
-    AppSettings.instance.saveSettings();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Wrap(
       spacing: 8.0,
       children: [
-        IconButton(
-          tooltip: _isFullScreen ? "退出全屏" : "全屏",
-          onPressed: _isProcessing ? null : _toggleFullScreen,
-          icon: Icon(
-            _isFullScreen ? Symbols.close_fullscreen : Symbols.open_in_full,
-          ),
-        ),
         IconButton(
           tooltip: "最小化",
           onPressed: windowManager.minimize,
           icon: const Icon(Symbols.remove),
         ),
         IconButton(
-          tooltip: _isFullScreen ? "全屏模式下不可用" : (_isMaximized ? "还原" : "最大化"),
-          onPressed: _isFullScreen || _isProcessing ? null : _toggleMaximized,
+          tooltip: _isMaximized ? "还原" : "最大化",
+          onPressed: _isProcessing ? null : _toggleMaximized,
           icon: Icon(
             _isMaximized ? Symbols.fullscreen_exit : Symbols.fullscreen,
           ),
