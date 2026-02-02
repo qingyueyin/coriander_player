@@ -16,7 +16,7 @@ const String cpFeedbackKey = String.fromEnvironment(
 
 const bool enableIssueReporting = bool.fromEnvironment(
   'ENABLE_ISSUE_REPORTING',
-  defaultValue: false,
+  defaultValue: true,
 );
 
 class CreateIssueTile extends StatelessWidget {
@@ -27,11 +27,7 @@ class CreateIssueTile extends StatelessWidget {
     return SettingsTile(
       description: "报告问题",
       action: FilledButton.icon(
-        onPressed: enableIssueReporting
-            ? () => context.push(app_paths.SETTINGS_ISSUE_PAGE)
-            : () => showTextOnSnackBar(
-                  "未启用 Issue 上报（需要 ENABLE_ISSUE_REPORTING）",
-                ),
+        onPressed: () => context.push(app_paths.SETTINGS_ISSUE_PAGE),
         label: const Text("创建问题(至原项目)"),
         icon: const Icon(Symbols.help),
       ),

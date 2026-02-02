@@ -4,17 +4,6 @@
 
 通过项目内的ps1来自动编译，默认只支持Windows版
 
-## 可选：启用软件内创建 Issue
-
-设置页里有“报告问题/创建 Issue”的入口。为了实现默认“无 token / 无隐私数据”构建，这个功能默认是关闭的；只有显式开启后才会启用上报。
-
-- 本地构建（推荐）：先设置环境变量，再运行脚本
-  - PowerShell：`$env:ENABLE_ISSUE_REPORTING="1"; $env:CPFEEDBACK_KEY="你的token"`，然后执行 `.\build_windows.ps1`
-- 直接 flutter 构建：在构建命令中传入
-  - `flutter build windows --release --dart-define=ENABLE_ISSUE_REPORTING=true --dart-define=CPFEEDBACK_KEY=你的token`
-
-注意：`--dart-define` 会在编译期写入产物；请使用权限尽量小的 token，且不要提交到仓库。
-
 ## 其他平台支持
 
 - MacOS: [https://github.com/marscey/coriander_player/tree/macos-platform](https://github.com/marscey/coriander_player/tree/macos-platform)
@@ -31,8 +20,6 @@
 - Ctrl + 上方向键：增加音量
 - Ctrl + 下方向键：减少音量
 - F1：切换沉浸模式
-
-注：使用快捷键调整音量/切歌/播放暂停时，会出现短暂的悬浮提示。
 
 ## 提供建议、提交 Bug 或者提 PR
 
