@@ -195,8 +195,9 @@ class AudioTile extends StatelessWidget {
                 }
               },
               onSecondaryTapDown: (details) {
-                if (multiSelectController?.enableMultiSelectView == true)
+                if (multiSelectController?.enableMultiSelectView == true) {
                   return;
+                }
 
                 controller.open(
                     position: details.localPosition.translate(0, -240));

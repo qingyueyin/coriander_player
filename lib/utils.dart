@@ -192,7 +192,6 @@ void showHotkeyToast({
   final context = SCAFFOLD_MESSAGER.currentContext ?? ROUTER_KEY.currentContext;
   if (context == null) return;
   final overlay = Overlay.of(context, rootOverlay: true);
-  if (overlay == null) return;
 
   _hotkeyToastTimer?.cancel();
   _hotkeyToastEntry?.remove();

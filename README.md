@@ -4,6 +4,17 @@
 
 通过项目内的ps1来自动编译，默认只支持Windows版
 
+## 可选：启用软件内创建 Issue
+
+设置页里有“报告问题/创建 Issue”的入口。为了避免把 token 提交到仓库，这个功能默认是关闭的（未配置时会提示无法创建）。
+
+- 本地构建（推荐）：先设置环境变量，再运行脚本
+  - PowerShell：`$env:CPFEEDBACK_KEY="你的 token"`，然后执行 `.\build_windows.ps1`
+- 直接 flutter 构建：在构建命令中传入
+  - `flutter build windows --release --dart-define=CPFEEDBACK_KEY=你的token`
+
+注意：`--dart-define` 会在编译期写入产物；请使用权限尽量小的 token，且不要提交到仓库。
+
 ## 其他平台支持
 
 - MacOS: [https://github.com/marscey/coriander_player/tree/macos-platform](https://github.com/marscey/coriander_player/tree/macos-platform)

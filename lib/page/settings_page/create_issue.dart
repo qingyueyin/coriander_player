@@ -1,12 +1,16 @@
 import 'package:coriander_player/component/settings_tile.dart';
 import 'package:coriander_player/hotkeys_helper.dart';
-import 'package:coriander_player/page/settings_page/cpfeedback_key.dart';
 import 'package:coriander_player/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:github/github.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:go_router/go_router.dart';
 import 'package:coriander_player/app_paths.dart' as app_paths;
+
+const String cpFeedbackKey = String.fromEnvironment(
+  'CPFEEDBACK_KEY',
+  defaultValue: '',
+);
 
 class CreateIssueTile extends StatelessWidget {
   const CreateIssueTile({super.key});
@@ -38,9 +42,13 @@ class _SettingsIssuePageState extends State<SettingsIssuePage> {
   final submitBtnController = WidgetStatesController();
 
   Future<void> createIssue() async {
+    if (cpFeedbackKey.isEmpty) {
+      showTextOnSnackBar("未配置 CPFEEDBACK_KEY，无法创建 Issue");
+      return;
+    }
     submitBtnController.update(WidgetState.disabled, true);
     final cpfeedback = GitHub(
-      auth: const Authentication.withToken(CPFEEDBACK_KEY),
+      auth: const Authentication.withToken(cpFeedbackKey),
     );
     final issueBodyBuilder = StringBuffer();
     issueBodyBuilder
@@ -112,7 +120,11 @@ class _SettingsIssuePageState extends State<SettingsIssuePage> {
                   padding: const EdgeInsets.only(left: 8.0),
                   child: FilledButton(
                     statesController: submitBtnController,
-                    onPressed: createIssue,
+                    onPressed: cpFeedbackKey.isEmpty
+                        ? () => showTextOnSnackBar(
+                              "未配置 CPFEEDBACK_KEY，无法创建 Issue",
+                            )
+                        : createIssue,
                     child: const Text("报告问题"),
                   ),
                 ),

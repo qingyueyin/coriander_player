@@ -47,7 +47,15 @@ else {
 
 # 3. Build Windows
 Write-Host "Building Windows ($BuildMode)..." -ForegroundColor Cyan
-flutter build windows --release
+$flutterArgs = @("build", "windows", "--release")
+if ($env:CPFEEDBACK_KEY) {
+    Write-Host "Detected CPFEEDBACK_KEY in environment; enabling issue reporting." -ForegroundColor Gray
+    $flutterArgs += "--dart-define=CPFEEDBACK_KEY=$($env:CPFEEDBACK_KEY)"
+}
+else {
+    Write-Host "CPFEEDBACK_KEY not set; issue reporting will be disabled." -ForegroundColor Gray
+}
+flutter @flutterArgs
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Build failed!"

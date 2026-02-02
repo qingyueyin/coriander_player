@@ -58,9 +58,9 @@ class _NowPlayingPage_Large extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const NowPlayingPitchControl(),
+                      NowPlayingPitchControl(),
                       spacer,
-                      const SetLyricSourceBtn(),
+                      SetLyricSourceBtn(),
                       spacer,
                       _NowPlayingLargeViewSwitch(),
                       spacer,

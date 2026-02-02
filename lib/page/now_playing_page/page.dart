@@ -561,8 +561,9 @@ class _NowPlayingVolDspSliderState extends State<_NowPlayingVolDspSlider> {
                                   onChanged: (value) {
                                     dragSystemVol.value = value;
                                     FlutterVolumeController.setVolume(value);
-                                    if (isSystemDragging)
+                                    if (isSystemDragging) {
                                       _triggerSystemIndicator();
+                                    }
                                   },
                                   onChangeEnd: (value) {
                                     isSystemDragging = false;
@@ -903,7 +904,7 @@ class _NowPlayingSliderState extends State<_NowPlayingSlider> {
       children: [
         SliderTheme(
           data: const SliderThemeData(
-            showValueIndicator: ShowValueIndicator.always,
+            showValueIndicator: ShowValueIndicator.onDrag,
           ),
           child: StreamBuilder(
             stream: playbackService.playerStateStream,

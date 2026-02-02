@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:go_router/go_router.dart';
-import 'package:window_manager/window_manager.dart';
 
 class HotkeysHelper {
   static final Map<HotKey, void Function(HotKey)> _hotKeys = {
