@@ -90,6 +90,20 @@ typedef BOOL = ffi.Int;
 typedef HPLUGIN = DWORD;
 typedef HSAMPLE = DWORD;
 typedef HSTREAM = DWORD;
+typedef HFX = DWORD;
+
+const int BASS_FX_DX8_PARAMEQ = 3;
+
+final class BASS_DX8_PARAMEQ extends ffi.Struct {
+  @ffi.Float()
+  external double fCenter;
+
+  @ffi.Float()
+  external double fBandwidth;
+
+  @ffi.Float()
+  external double fGain;
+}
 
 final class HWND__ extends ffi.Struct {
   @ffi.Int()
@@ -206,6 +220,41 @@ class Bass {
       );
   late final _BASS_ChannelSetAttribute =
       _BASS_ChannelSetAttributePtr.asFunction<int Function(int, int, double)>();
+
+  int BASS_ChannelSetFX(int handle, int type, int priority) {
+    return _BASS_ChannelSetFX(handle, type, priority);
+  }
+
+  late final _BASS_ChannelSetFXPtr =
+      _lookup<ffi.NativeFunction<HFX Function(DWORD, DWORD, ffi.Int)>>(
+        'BASS_ChannelSetFX',
+      );
+  late final _BASS_ChannelSetFX =
+      _BASS_ChannelSetFXPtr.asFunction<int Function(int, int, int)>();
+
+  int BASS_FXSetParameters(int handle, ffi.Pointer<ffi.Void> params) {
+    return _BASS_FXSetParameters(handle, params);
+  }
+
+  late final _BASS_FXSetParametersPtr =
+      _lookup<ffi.NativeFunction<BOOL Function(HFX, ffi.Pointer<ffi.Void>)>>(
+        'BASS_FXSetParameters',
+      );
+  late final _BASS_FXSetParameters =
+      _BASS_FXSetParametersPtr.asFunction<
+        int Function(int, ffi.Pointer<ffi.Void>)
+      >();
+
+  int BASS_ChannelRemoveFX(int handle, int fx) {
+    return _BASS_ChannelRemoveFX(handle, fx);
+  }
+
+  late final _BASS_ChannelRemoveFXPtr =
+      _lookup<ffi.NativeFunction<BOOL Function(DWORD, HFX)>>(
+        'BASS_ChannelRemoveFX',
+      );
+  late final _BASS_ChannelRemoveFX =
+      _BASS_ChannelRemoveFXPtr.asFunction<int Function(int, int)>();
 
   int BASS_StreamCreateFile(
     int mem,

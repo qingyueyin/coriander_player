@@ -41,7 +41,7 @@ class _NowPlayingPage_Large extends StatelessWidget {
         ),
         const SizedBox(height: 12.0),
         const _NowPlayingSlider(),
-        const Padding(
+        Padding(
           padding: EdgeInsets.fromLTRB(16, 0, 16, 20),
           child: Stack(
             alignment: Alignment.center,
@@ -54,6 +54,18 @@ class _NowPlayingPage_Large extends StatelessWidget {
                     _DesktopLyricSwitch(),
                     spacer,
                     _ExclusiveModeSwitch(),
+                    spacer,
+                    IconButton(
+                      tooltip: "均衡器",
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => const EqualizerDialog(),
+                        );
+                      },
+                      icon: const Icon(Symbols.graphic_eq),
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
                   ],
                 ),
               ),
@@ -61,6 +73,8 @@ class _NowPlayingPage_Large extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    const _NowPlayingPlaybackModeSwitch(),
+                    spacer,
                     _GlowingIconButton(
                       tooltip: "上一曲",
                       onPressed: PlayService.instance.playbackService.lastAudio,
@@ -123,7 +137,7 @@ class _NowPlayingPage_Large extends StatelessWidget {
                           Theme.of(context).colorScheme.onSecondaryContainer,
                     ),
                     spacer,
-                    const _NowPlayingTimeDisplay(),
+                    const _NowPlayingLargeViewSwitch(),
                   ],
                 ),
               ),
@@ -135,8 +149,6 @@ class _NowPlayingPage_Large extends StatelessWidget {
                     NowPlayingPitchControl(),
                     spacer,
                     SetLyricSourceBtn(),
-                    spacer,
-                    _NowPlayingLargeViewSwitch(),
                     spacer,
                     _NowPlayingMoreAction(),
                   ],

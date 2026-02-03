@@ -53,6 +53,12 @@ class PlaybackService extends ChangeNotifier {
 
   bool get isBassFxLoaded => _player.isBassFxLoaded;
 
+  List<double> get eqGains => _player.eqGains;
+
+  void setEQ(int band, double gain) {
+    _player.setEQ(band, gain);
+  }
+
   late final _wasapiExclusive = ValueNotifier(_player.wasapiExclusive);
   ValueNotifier<bool> get wasapiExclusive => _wasapiExclusive;
 

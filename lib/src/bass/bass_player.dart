@@ -56,6 +56,23 @@ class BassPlayer {
   String? _fPath;
   int? _fstream;
 
+  // Equalizer
+  final List<int> _eqHandles = [];
+  final List<double> _eqGains = List.filled(10, 0.0);
+  List<double> get eqGains => List.unmodifiable(_eqGains);
+  static const _eqCenters = [
+    31.0,
+    62.0,
+    125.0,
+    250.0,
+    500.0,
+    1000.0,
+    2000.0,
+    4000.0,
+    8000.0,
+    16000.0
+  ];
+
   double _rate = 1.0;
   double _pitch = 0.0;
 
@@ -140,6 +157,43 @@ class BassPlayer {
         _playerStateStreamController.add(PlayerState.completed);
       }
     });
+  }
+
+  void setEQ(int band, double gain) {
+    if (band < 0 || band >= 10) return;
+    _eqGains[band] = gain;
+    if (_fstream == null) return;
+
+    if (_eqHandles.isEmpty) {
+      _initEQ();
+    }
+
+    _updateEQ(band);
+  }
+
+  void _initEQ() {
+    if (_fstream == null) return;
+    _eqHandles.clear();
+    for (int i = 0; i < 10; i++) {
+      final fx =
+          _bass.BASS_ChannelSetFX(_fstream!, BASS.BASS_FX_DX8_PARAMEQ, 0);
+      _eqHandles.add(fx);
+      _updateEQ(i);
+    }
+  }
+
+  void _updateEQ(int band) {
+    if (band >= _eqHandles.length) return;
+    final fx = _eqHandles[band];
+    if (fx == 0) return;
+
+    final params = ffi.calloc<BASS.BASS_DX8_PARAMEQ>();
+    params.ref.fCenter = _eqCenters[band];
+    params.ref.fBandwidth = 2.5;
+    params.ref.fGain = _eqGains[band];
+
+    _bass.BASS_FXSetParameters(fx, params.cast());
+    ffi.calloc.free(params);
   }
 
   void _bassInit() {
@@ -436,6 +490,8 @@ class BassPlayer {
     if (handle != 0) {
       _fstream = handle;
       _fPath = path;
+
+      _initEQ();
 
       if (_rate != 1.0) {
         setRate(_rate);

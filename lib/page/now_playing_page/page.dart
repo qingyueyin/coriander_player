@@ -15,6 +15,7 @@ import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/library/playlist.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
 import 'package:coriander_player/page/now_playing_page/component/current_playlist_view.dart';
+import 'package:coriander_player/page/now_playing_page/component/equalizer_dialog.dart';
 import 'package:coriander_player/page/now_playing_page/component/filled_icon_button_style.dart';
 import 'package:coriander_player/page/now_playing_page/component/lyric_source_view.dart';
 import 'package:coriander_player/page/now_playing_page/component/pitch_control.dart';
@@ -906,6 +907,9 @@ class _NowPlayingPlaybackModeSwitch extends StatelessWidget {
         };
 
         return IconButton(
+          style: const ButtonStyle(
+            backgroundColor: WidgetStatePropertyAll(Colors.transparent),
+          ),
           tooltip: modeText,
           onPressed: () {
             if (!shuffle && playMode != PlayMode.singleLoop) {
@@ -1050,6 +1054,7 @@ class _GlowingIconButtonState extends State<_GlowingIconButton> {
                         widget.iconData,
                         size: widget.size,
                         color: widget.glowColor,
+                        fill: 1.0,
                       ),
                     ),
                   ),
@@ -1062,6 +1067,7 @@ class _GlowingIconButtonState extends State<_GlowingIconButton> {
                   widget.iconData,
                   size: widget.size,
                   color: widget.iconColor,
+                  fill: 1.0,
                 ),
               ),
             ],
@@ -1179,105 +1185,133 @@ class _NowPlayingSliderState extends State<_NowPlayingSlider>
 
     return SizedBox(
       height: 24, // Slider height
-      child: StreamBuilder(
-        stream: playbackService.playerStateStream,
-        initialData: playbackService.playerState,
-        builder: (context, playerStateSnapshot) => ListenableBuilder(
-          listenable: dragPosition,
-          builder: (context, _) => StreamBuilder(
-            stream: playbackService.positionStream,
-            initialData: playbackService.position,
-            builder: (context, positionSnapshot) {
-              final position = isDragging
-                  ? dragPosition.value
-                  : positionSnapshot.data! > nowPlayingLength
-                      ? nowPlayingLength
-                      : positionSnapshot.data!;
-              final max = nowPlayingLength > 0 ? nowPlayingLength : 1.0;
-              final fraction = (position / max).clamp(0.0, 1.0);
-
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  final width = constraints.maxWidth;
-                  return GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onHorizontalDragStart: (details) {
-                      isDragging = true;
-                      final value =
-                          (details.localPosition.dx / width).clamp(0.0, 1.0) *
-                              max;
-                      dragPosition.value = value;
-                    },
-                    onHorizontalDragUpdate: (details) {
-                      final value =
-                          (details.localPosition.dx / width).clamp(0.0, 1.0) *
-                              max;
-                      dragPosition.value = value;
-                    },
-                    onHorizontalDragEnd: (details) {
-                      isDragging = false;
-                      playbackService.seek(dragPosition.value);
-                    },
-                    onTapDown: (details) {
-                      final value =
-                          (details.localPosition.dx / width).clamp(0.0, 1.0) *
-                              max;
-                      playbackService.seek(value);
-                    },
-                    child: AnimatedBuilder(
-                      animation: _controller,
-                      builder: (context, child) {
-                        return CustomPaint(
-                          painter: _GlowSliderPainter(
-                            fraction: fraction,
-                            color: scheme.primary,
-                            glowColor: scheme.primaryContainer,
-                            animationValue: _controller.value,
-                            inactiveColor: scheme.surfaceContainerHighest,
-                          ),
-                          size: Size(width, 24),
-                        );
-                      },
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Current Time (Left)
+          Positioned(
+            left: 24,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: StreamBuilder(
+                stream: playbackService.positionStream,
+                initialData: playbackService.position,
+                builder: (context, snapshot) {
+                  final pos = snapshot.data ?? 0.0;
+                  return Text(
+                    Duration(milliseconds: (pos * 1000).toInt())
+                        .toStringHMMSS(),
+                    style: TextStyle(
+                      color: scheme.onSecondaryContainer,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   );
                 },
-              );
-            },
+              ),
+            ),
           ),
-        ),
+          // Total Time (Right)
+          Positioned(
+            right: 24,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: Text(
+                Duration(milliseconds: (nowPlayingLength * 1000).toInt())
+                    .toStringHMMSS(),
+                style: TextStyle(
+                  color: scheme.onSecondaryContainer,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ),
+          // Slider
+          Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 84.0), // Space for time text
+            child: StreamBuilder(
+              stream: playbackService.playerStateStream,
+              initialData: playbackService.playerState,
+              builder: (context, playerStateSnapshot) => ListenableBuilder(
+                listenable: dragPosition,
+                builder: (context, _) => StreamBuilder(
+                  stream: playbackService.positionStream,
+                  initialData: playbackService.position,
+                  builder: (context, positionSnapshot) {
+                    final position = isDragging
+                        ? dragPosition.value
+                        : positionSnapshot.data! > nowPlayingLength
+                            ? nowPlayingLength
+                            : positionSnapshot.data!;
+                    final max = nowPlayingLength > 0 ? nowPlayingLength : 1.0;
+                    final fraction = (position / max).clamp(0.0, 1.0);
+
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        final width = constraints.maxWidth;
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onHorizontalDragStart: (details) {
+                            isDragging = true;
+                            final value = (details.localPosition.dx / width)
+                                    .clamp(0.0, 1.0) *
+                                max;
+                            dragPosition.value = value;
+                          },
+                          onHorizontalDragUpdate: (details) {
+                            final value = (details.localPosition.dx / width)
+                                    .clamp(0.0, 1.0) *
+                                max;
+                            dragPosition.value = value;
+                          },
+                          onHorizontalDragEnd: (details) {
+                            isDragging = false;
+                            playbackService.seek(dragPosition.value);
+                          },
+                          onTapDown: (details) {
+                            final value = (details.localPosition.dx / width)
+                                    .clamp(0.0, 1.0) *
+                                max;
+                            playbackService.seek(value);
+                          },
+                          child: AnimatedBuilder(
+                            animation: _controller,
+                            builder: (context, child) {
+                              return CustomPaint(
+                                painter: _GlowSliderPainter(
+                                  fraction: fraction,
+                                  color: scheme.primary,
+                                  glowColor: scheme.primaryContainer,
+                                  animationValue: _controller.value,
+                                  inactiveColor: scheme.surfaceContainerHighest,
+                                ),
+                                size: Size(width, 24),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _NowPlayingTimeDisplay extends StatelessWidget {
-  const _NowPlayingTimeDisplay();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final playbackService = PlayService.instance.playbackService;
-
-    return StreamBuilder(
-      stream: playbackService.positionStream,
-      initialData: playbackService.position,
-      builder: (context, snapshot) {
-        final pos = snapshot.data ?? 0.0;
-        final length = playbackService.length;
-
-        return Text(
-          "${Duration(milliseconds: (pos * 1000).toInt()).toStringHMMSS()} / ${Duration(milliseconds: (length * 1000).toInt()).toStringHMMSS()}",
-          style: TextStyle(
-            color: scheme.onSecondaryContainer,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        );
-      },
-    );
-  }
-}
+// _NowPlayingTimeDisplay removed
 
 class _GlowSliderPainter extends CustomPainter {
   final double fraction;
@@ -1436,9 +1470,10 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
                             borderRadius: BorderRadius.circular(12.0),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                blurRadius: 24,
-                                offset: const Offset(0, 8),
+                                color: Colors.black.withValues(alpha: 0.1),
+                                spreadRadius: 1,
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
@@ -1461,51 +1496,95 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
                 },
               );
 
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: coverSize,
-              height: coverSize,
-              child: RepaintBoundary(child: coverWidget),
-            ),
-            const SizedBox(height: 24.0),
-            Text(
-              nowPlaying == null ? "Coriander Music" : nowPlaying.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: scheme.onSecondaryContainer,
-                fontWeight: FontWeight.bold,
-                fontSize: 24,
-                height: 1.2,
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 500),
+          switchInCurve: Curves.easeOutQuart,
+          switchOutCurve: Curves.easeInQuart,
+          transitionBuilder: (child, animation) {
+            final offsetAnimation = Tween<Offset>(
+              begin: const Offset(0, 0.08),
+              end: Offset.zero,
+            ).animate(animation);
+
+            final scaleAnimation = Tween<double>(
+              begin: 0.92,
+              end: 1.0,
+            ).animate(animation);
+
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: offsetAnimation,
+                child: ScaleTransition(
+                  scale: scaleAnimation,
+                  child: child,
+                ),
               ),
+            );
+          },
+          child: Container(
+            key: ValueKey(nowPlaying?.path),
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: coverSize,
+                  height: coverSize,
+                  child: RepaintBoundary(child: coverWidget),
+                ),
+                const SizedBox(height: 24.0),
+                Text(
+                  nowPlaying == null ? "Coriander Music" : nowPlaying.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: scheme.onSecondaryContainer,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 24,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        nowPlaying == null ? "Enjoy Music" : nowPlaying.artist,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: scheme.onSecondaryContainer
+                              .withValues(alpha: 0.8),
+                          fontSize: 16,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                    if (nowPlaying != null && nowPlaying.album.isNotEmpty) ...[
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          nowPlaying.album,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: scheme.onSecondaryContainer
+                                .withValues(alpha: 0.8),
+                            fontSize: 16,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              nowPlaying == null ? "Enjoy Music" : nowPlaying.artist,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: scheme.onSecondaryContainer.withValues(alpha: 0.8),
-                fontSize: 16,
-                height: 1.2,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              nowPlaying == null ? "" : nowPlaying.album,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: scheme.onSecondaryContainer.withValues(alpha: 0.6),
-                fontSize: 14,
-                height: 1.2,
-              ),
-            ),
-          ],
+          ),
         );
       }),
     );
