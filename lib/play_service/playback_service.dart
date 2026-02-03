@@ -45,6 +45,14 @@ class PlaybackService extends ChangeNotifier {
     positionStream.listen((progress) {
       _smtc.updateTimeProperties(progress: (progress * 1000).floor());
     });
+
+    // Restore EQ settings
+    final savedGains = _pref.eqGains;
+    for (int i = 0; i < 10; i++) {
+      if (i < savedGains.length) {
+        _player.setEQ(i, savedGains[i]);
+      }
+    }
   }
 
   final _player = BassPlayer();
@@ -54,9 +62,42 @@ class PlaybackService extends ChangeNotifier {
   bool get isBassFxLoaded => _player.isBassFxLoaded;
 
   List<double> get eqGains => _player.eqGains;
+  List<EqPreset> get eqPresets => _pref.eqPresets;
 
   void setEQ(int band, double gain) {
     _player.setEQ(band, gain);
+    if (band < _pref.eqGains.length) {
+      _pref.eqGains[band] = gain;
+    }
+  }
+
+  void saveEqPreset(String name) {
+    final gains = List<double>.from(_player.eqGains);
+    final existingIndex = _pref.eqPresets.indexWhere((e) => e.name == name);
+    if (existingIndex >= 0) {
+      _pref.eqPresets[existingIndex] = EqPreset(name, gains);
+    } else {
+      _pref.eqPresets.add(EqPreset(name, gains));
+    }
+    AppPreference.instance.save();
+  }
+
+  void removeEqPreset(String name) {
+    _pref.eqPresets.removeWhere((e) => e.name == name);
+    AppPreference.instance.save();
+  }
+
+  void applyEqPreset(EqPreset preset) {
+    for (int i = 0; i < 10; i++) {
+      if (i < preset.gains.length) {
+        setEQ(i, preset.gains[i]);
+      }
+    }
+    AppPreference.instance.save();
+  }
+
+  void savePreference() {
+    AppPreference.instance.save();
   }
 
   late final _wasapiExclusive = ValueNotifier(_player.wasapiExclusive);

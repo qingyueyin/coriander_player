@@ -12,6 +12,7 @@ class LyricViewController extends ChangeNotifier {
   late double translationFontSize = nowPlayingPagePref.translationFontSize;
   late bool showLyricTranslation = nowPlayingPagePref.showLyricTranslation;
   late int lyricFontWeight = nowPlayingPagePref.lyricFontWeight;
+  late bool enableLyricBlur = nowPlayingPagePref.enableLyricBlur;
 
   /// 在左对齐、居中、右对齐之间循环切换
   void switchLyricTextAlign() {
@@ -26,11 +27,9 @@ class LyricViewController extends ChangeNotifier {
   }
 
   void increaseFontSize() {
-    lyricFontSize += 1;
-    translationFontSize += 1;
-
+    lyricFontSize += 2;
     nowPlayingPagePref.lyricFontSize = lyricFontSize;
-    nowPlayingPagePref.translationFontSize = translationFontSize;
+    AppPreference.instance.save();
     notifyListeners();
   }
 
@@ -48,6 +47,13 @@ class LyricViewController extends ChangeNotifier {
   void toggleLyricTranslation() {
     showLyricTranslation = !showLyricTranslation;
     nowPlayingPagePref.showLyricTranslation = showLyricTranslation;
+    notifyListeners();
+  }
+
+  void toggleLyricBlur() {
+    enableLyricBlur = !enableLyricBlur;
+    nowPlayingPagePref.enableLyricBlur = enableLyricBlur;
+    AppPreference.instance.save();
     notifyListeners();
   }
 
@@ -94,6 +100,8 @@ class LyricViewControls extends StatelessWidget {
                 const SizedBox(height: 8.0),
                 const _LyricTranslationSwitchBtn(),
                 const SizedBox(height: 8.0),
+                const _LyricBlurSwitchBtn(),
+                const SizedBox(height: 8.0),
                 const _LyricAlignSwitchBtn(),
                 const SizedBox(height: 8.0),
                 const _IncreaseFontWeightBtn(),
@@ -114,6 +122,8 @@ class LyricViewControls extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _LyricTranslationSwitchBtn(),
+                    SizedBox(width: 8.0),
+                    _LyricBlurSwitchBtn(),
                     SizedBox(width: 8.0),
                     _LyricAlignSwitchBtn(),
                   ],
@@ -215,6 +225,27 @@ class _LyricTranslationSwitchBtn extends StatelessWidget {
       color: scheme.onSecondaryContainer,
       icon: Icon(
         Symbols.translate,
+        fill: enabled ? 1 : 0,
+      ),
+    );
+  }
+}
+
+class _LyricBlurSwitchBtn extends StatelessWidget {
+  const _LyricBlurSwitchBtn();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final lyricViewController = context.watch<LyricViewController>();
+    final enabled = lyricViewController.enableLyricBlur;
+
+    return IconButton(
+      onPressed: lyricViewController.toggleLyricBlur,
+      tooltip: enabled ? "歌词模糊：开启" : "歌词模糊：关闭",
+      color: scheme.onSecondaryContainer,
+      icon: Icon(
+        Symbols.blur_on,
         fill: enabled ? 1 : 0,
       ),
     );

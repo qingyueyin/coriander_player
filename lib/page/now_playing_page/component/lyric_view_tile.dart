@@ -8,6 +8,7 @@ import 'package:coriander_player/page/now_playing_page/component/lyric_view_cont
 import 'package:coriander_player/play_service/play_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
 FontWeight _discreteFontWeight(int weight) {
@@ -63,26 +64,47 @@ class LyricViewTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lyricViewController = context.watch<LyricViewController>();
+    final isMainLine = opacity == 1.0;
+
+    Widget content = InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12.0),
+      child: line is SyncLyricLine
+          ? _SyncLineContent(
+              syncLine: line as SyncLyricLine,
+              isMainLine: isMainLine,
+            )
+          : _LrcLineContent(
+              lrcLine: line as LrcLine,
+              isMainLine: isMainLine,
+            ),
+    );
+
+    if (lyricViewController.enableLyricBlur) {
+      content = content.animate(target: isMainLine ? 0 : 1).blurXY(
+            end: 2.0,
+            duration: 300.ms,
+            curve: Curves.easeInOut,
+          );
+    }
+
+    final alignment = switch (lyricViewController.lyricTextAlign) {
+      LyricTextAlign.left => Alignment.centerLeft,
+      LyricTextAlign.center => Alignment.center,
+      LyricTextAlign.right => Alignment.centerRight,
+    };
+
     return Align(
-      alignment: switch (lyricViewController.lyricTextAlign) {
-        LyricTextAlign.left => Alignment.centerLeft,
-        LyricTextAlign.center => Alignment.center,
-        LyricTextAlign.right => Alignment.centerRight,
-      },
-      child: Opacity(
+      alignment: alignment,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 300),
         opacity: opacity,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12.0),
-          child: line is SyncLyricLine
-              ? _SyncLineContent(
-                  syncLine: line as SyncLyricLine,
-                  isMainLine: opacity == 1.0,
-                )
-              : _LrcLineContent(
-                  lrcLine: line as LrcLine,
-                  isMainLine: opacity == 1.0,
-                ),
+        child: AnimatedScale(
+          scale: isMainLine ? 1.1 : 1.0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOutQuad,
+          alignment: alignment,
+          child: content,
         ),
       ),
     );

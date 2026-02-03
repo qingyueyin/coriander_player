@@ -32,6 +32,7 @@ class NowPlayingPagePreference {
   double translationFontSize;
   bool showLyricTranslation;
   int lyricFontWeight;
+  bool enableLyricBlur;
 
   NowPlayingPagePreference(
     this.nowPlayingViewMode,
@@ -40,6 +41,7 @@ class NowPlayingPagePreference {
     this.translationFontSize,
     this.showLyricTranslation,
     this.lyricFontWeight,
+    this.enableLyricBlur,
   );
 
   Map toMap() => {
@@ -49,6 +51,7 @@ class NowPlayingPagePreference {
         "translationFontSize": translationFontSize,
         "showLyricTranslation": showLyricTranslation,
         "lyricFontWeight": lyricFontWeight,
+        "enableLyricBlur": enableLyricBlur,
       };
 
   factory NowPlayingPagePreference.fromMap(Map map) {
@@ -60,24 +63,55 @@ class NowPlayingPagePreference {
       map["translationFontSize"] ?? 18.0,
       map["showLyricTranslation"] ?? true,
       map["lyricFontWeight"] ?? 400,
+      map["enableLyricBlur"] ?? false,
     );
   }
+}
+
+class EqPreset {
+  String name;
+  List<double> gains;
+
+  EqPreset(this.name, this.gains);
+
+  Map toMap() => {
+        "name": name,
+        "gains": gains,
+      };
+
+  factory EqPreset.fromMap(Map map) => EqPreset(
+        map["name"],
+        List<double>.from(map["gains"]),
+      );
 }
 
 class PlaybackPreference {
   PlayMode playMode;
   double volumeDsp;
+  List<double> eqGains;
+  List<EqPreset> eqPresets;
 
-  PlaybackPreference(this.playMode, this.volumeDsp);
+  PlaybackPreference(
+      this.playMode, this.volumeDsp, this.eqGains, this.eqPresets);
 
   Map toMap() => {
         "playMode": playMode.name,
         "volumeDsp": volumeDsp,
+        "eqGains": eqGains,
+        "eqPresets": eqPresets.map((e) => e.toMap()).toList(),
       };
 
   factory PlaybackPreference.fromMap(Map map) => PlaybackPreference(
         PlayMode.fromString(map["playMode"]) ?? PlayMode.forward,
         map["volumeDsp"] ?? 1.0,
+        map["eqGains"] != null
+            ? List<double>.from(map["eqGains"])
+            : List.filled(10, 0.0),
+        map["eqPresets"] != null
+            ? (map["eqPresets"] as List)
+                .map((e) => EqPreset.fromMap(e))
+                .toList()
+            : [],
       );
 }
 
@@ -112,10 +146,17 @@ class AppPreference {
 
   bool sidebarExpanded = true;
 
-  var playbackPref = PlaybackPreference(PlayMode.forward, 1.0);
+  var playbackPref =
+      PlaybackPreference(PlayMode.forward, 1.0, List.filled(10, 0.0), []);
 
   var nowPlayingPagePref = NowPlayingPagePreference(
-      NowPlayingViewMode.withLyric, LyricTextAlign.left, 22.0, 18.0, true, 400);
+      NowPlayingViewMode.withLyric,
+      LyricTextAlign.left,
+      22.0,
+      18.0,
+      true,
+      400,
+      false);
 
   Future<void> save() async {
     try {
