@@ -172,19 +172,45 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                         child: const ColoredBox(color: Colors.transparent),
                       ),
                     ],
-                    ChangeNotifierProvider.value(
-                      value: PlayService.instance.playbackService,
-                      builder: (context, _) => immersive
-                          ? const _NowPlayingPage_Immersive()
-                          : ResponsiveBuilder2(builder: (context, screenType) {
-                              switch (screenType) {
-                                case ScreenType.small:
-                                  return const _NowPlayingPage_Small();
-                                case ScreenType.medium:
-                                case ScreenType.large:
-                                  return const _NowPlayingPage_Large();
-                              }
-                            }),
+                    IconButtonTheme(
+                      data: IconButtonThemeData(
+                        style: ButtonStyle(
+                          backgroundColor: const WidgetStatePropertyAll(
+                            Colors.transparent,
+                          ),
+                          overlayColor:
+                              WidgetStateProperty.resolveWith((states) {
+                            if (states.contains(WidgetState.pressed)) {
+                              return scheme.onSecondaryContainer.withValues(
+                                alpha: 0.08,
+                              );
+                            }
+                            if (states.contains(WidgetState.hovered) ||
+                                states.contains(WidgetState.focused)) {
+                              return scheme.onSecondaryContainer.withValues(
+                                alpha: 0.05,
+                              );
+                            }
+                            return Colors.transparent;
+                          }),
+                        ),
+                      ),
+                      child: ChangeNotifierProvider.value(
+                        value: PlayService.instance.playbackService,
+                        builder: (context, _) => immersive
+                            ? const _NowPlayingPage_Immersive()
+                            : ResponsiveBuilder2(
+                                builder: (context, screenType) {
+                                  switch (screenType) {
+                                    case ScreenType.small:
+                                      return const _NowPlayingPage_Small();
+                                    case ScreenType.medium:
+                                    case ScreenType.large:
+                                      return const _NowPlayingPage_Large();
+                                  }
+                                },
+                              ),
+                      ),
                     ),
                     if (immersive) const _ImmersiveHelpOverlay(),
                     if (_cursorHidden)
@@ -213,7 +239,7 @@ class _ExclusiveModeSwitch extends StatelessWidget {
     return ValueListenableBuilder(
       valueListenable: PlayService.instance.playbackService.wasapiExclusive,
       builder: (context, exclusive, _) => IconButton(
-        tooltip: "独占模式；现在：${exclusive ? "启用" : "禁用"}",
+        tooltip: "独占模式：${exclusive ? "启用" : "禁用"}",
         onPressed: () {
           PlayService.instance.playbackService.useExclusiveMode(!exclusive);
         },
@@ -884,7 +910,19 @@ class _NowPlayingPlaybackModeSwitch extends StatelessWidget {
         };
 
         return IconButton(
-          tooltip: "现在：$modeText",
+          tooltip: modeText,
+          style: ButtonStyle(
+            backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+            overlayColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.pressed)) {
+                return scheme.onSecondaryContainer.withValues(alpha: 0.1);
+              }
+              if (states.contains(WidgetState.hovered)) {
+                return scheme.onSecondaryContainer.withValues(alpha: 0.08);
+              }
+              return null;
+            }),
+          ),
           onPressed: () {
             if (!shuffle && playMode != PlayMode.singleLoop) {
               playbackService.useShuffle(false);

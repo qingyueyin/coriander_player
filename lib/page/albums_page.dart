@@ -4,6 +4,7 @@ import 'package:coriander_player/component/album_tile.dart';
 import 'package:coriander_player/utils.dart';
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/page/uni_page.dart';
+import 'package:coriander_player/page/uni_page_components.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -13,17 +14,38 @@ class AlbumsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final contentList = AudioLibrary.instance.albumCollection.values.toList();
+    final multiSelectController = MultiSelectController<Album>();
     return UniPage<Album>(
       pref: AppPreference.instance.albumsPagePref,
       title: "专辑",
       subtitle: "${contentList.length} 张专辑",
       contentList: contentList,
-      contentBuilder: (context, item, i, multiSelectController) =>
-          AlbumTile(album: item),
+      contentBuilder: (context, item, i, multiSelectController) => AlbumTile(
+        album: item,
+        multiSelectController: multiSelectController,
+      ),
       enableShufflePlay: false,
       enableSortMethod: true,
       enableSortOrder: true,
       enableContentViewSwitch: true,
+      multiSelectController: multiSelectController,
+      multiSelectViewActions: [
+        MultiSelectPlaySelectedAudios(
+          multiSelectController: multiSelectController,
+          toAudios: (selected) =>
+              selected.expand((album) => album.works).toList(),
+        ),
+        AddSelectedAudiosToPlaylist(
+          multiSelectController: multiSelectController,
+          toAudios: (selected) =>
+              selected.expand((album) => album.works).toList(),
+        ),
+        MultiSelectSelectOrClearAll(
+          multiSelectController: multiSelectController,
+          contentList: contentList,
+        ),
+        MultiSelectExit(multiSelectController: multiSelectController),
+      ],
       sortMethods: [
         SortMethodDesc(
           icon: Symbols.title,

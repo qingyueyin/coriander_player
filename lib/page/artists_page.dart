@@ -4,6 +4,7 @@ import 'package:coriander_player/component/artist_tile.dart';
 import 'package:coriander_player/utils.dart';
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/page/uni_page.dart';
+import 'package:coriander_player/page/uni_page_components.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -13,17 +14,38 @@ class ArtistsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final contentList = AudioLibrary.instance.artistCollection.values.toList();
+    final multiSelectController = MultiSelectController<Artist>();
     return UniPage<Artist>(
       pref: AppPreference.instance.artistsPagePref,
       title: "艺术家",
       subtitle: "${contentList.length} 位艺术家",
       contentList: contentList,
-      contentBuilder: (_, item, __, multiSelectController) =>
-          ArtistTile(artist: item),
+      contentBuilder: (_, item, __, multiSelectController) => ArtistTile(
+        artist: item,
+        multiSelectController: multiSelectController,
+      ),
       enableShufflePlay: false,
       enableSortMethod: true,
       enableSortOrder: true,
       enableContentViewSwitch: true,
+      multiSelectController: multiSelectController,
+      multiSelectViewActions: [
+        MultiSelectPlaySelectedAudios(
+          multiSelectController: multiSelectController,
+          toAudios: (selected) =>
+              selected.expand((artist) => artist.works).toList(),
+        ),
+        AddSelectedAudiosToPlaylist(
+          multiSelectController: multiSelectController,
+          toAudios: (selected) =>
+              selected.expand((artist) => artist.works).toList(),
+        ),
+        MultiSelectSelectOrClearAll(
+          multiSelectController: multiSelectController,
+          contentList: contentList,
+        ),
+        MultiSelectExit(multiSelectController: multiSelectController),
+      ],
       sortMethods: [
         SortMethodDesc(
           icon: Symbols.title,

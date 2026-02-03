@@ -2,6 +2,7 @@ import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/utils.dart';
 import 'package:coriander_player/hotkeys_helper.dart';
 import 'package:coriander_player/page/uni_page.dart';
+import 'package:coriander_player/page/uni_page_components.dart';
 import 'package:coriander_player/library/playlist.dart';
 import 'package:coriander_player/app_paths.dart' as app_paths;
 import 'package:coriander_player/enums.dart';
@@ -17,6 +18,8 @@ class PlaylistsPage extends StatefulWidget {
 }
 
 class _PlaylistsPageState extends State<PlaylistsPage> {
+  final multiSelectController = MultiSelectController<Playlist>();
+
   void newPlaylist(BuildContext context) async {
     final name = await showDialog<String>(
       context: context,
@@ -45,50 +48,139 @@ class _PlaylistsPageState extends State<PlaylistsPage> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final menuStyle = MenuStyle(
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+    );
+    final menuItemStyle = ButtonStyle(
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
 
     return UniPage<Playlist>(
       pref: AppPreference.instance.playlistsPagePref,
       title: "歌单",
       subtitle: "${PLAYLISTS.length} 个歌单",
       contentList: PLAYLISTS,
-      contentBuilder: (context, item, i, multiSelectController) => ListTile(
-        title: Text(
-          PLAYLISTS[i].name,
-          softWrap: false,
-          maxLines: 1,
-        ),
-        subtitle: Text(
-          "${PLAYLISTS[i].audios.length}首乐曲",
-          softWrap: false,
-          maxLines: 1,
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              tooltip: "编辑",
-              onPressed: () => editPlaylist(context, PLAYLISTS[i]),
-              icon: const Icon(Symbols.edit),
+      contentBuilder: (context, item, i, multiSelectController) {
+        final playlist = PLAYLISTS[i];
+        final isSelected =
+            multiSelectController?.selected.contains(playlist) == true;
+        final isMultiSelectView =
+            multiSelectController?.enableMultiSelectView == true;
+        return MenuTheme(
+          data: MenuThemeData(style: menuStyle),
+          child: MenuAnchor(
+            consumeOutsideTap: true,
+            style: menuStyle,
+            menuChildren: [
+              MenuItemButton(
+                style: menuItemStyle,
+                onPressed: () => context.push(
+                  app_paths.PLAYLIST_DETAIL_PAGE,
+                  extra: playlist,
+                ),
+                leadingIcon: const Icon(Symbols.open_in_new),
+                child: const Text("打开"),
+              ),
+              MenuItemButton(
+                style: menuItemStyle,
+                onPressed: () => editPlaylist(context, playlist),
+                leadingIcon: const Icon(Symbols.edit),
+                child: const Text("编辑"),
+              ),
+              MenuItemButton(
+                style: menuItemStyle,
+                onPressed: () => setState(() {
+                  PLAYLISTS.remove(playlist);
+                }),
+                leadingIcon: Icon(Symbols.delete, color: scheme.error),
+                child: const Text("删除"),
+              ),
+              if (multiSelectController != null)
+                MenuItemButton(
+                  style: menuItemStyle,
+                  onPressed: () {
+                    multiSelectController.useMultiSelectView(true);
+                    multiSelectController.select(playlist);
+                  },
+                  leadingIcon: const Icon(Symbols.select),
+                  child: const Text("多选"),
+                ),
+            ],
+            builder: (context, controller, _) => AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              decoration: BoxDecoration(
+                color:
+                    isSelected ? scheme.secondaryContainer : Colors.transparent,
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child: ListTile(
+                title: Text(
+                  playlist.name,
+                  softWrap: false,
+                  maxLines: 1,
+                ),
+                subtitle: Text(
+                  "${playlist.audios.length}首乐曲",
+                  softWrap: false,
+                  maxLines: 1,
+                ),
+                trailing: isMultiSelectView
+                    ? null
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: "编辑",
+                            onPressed: () => editPlaylist(context, playlist),
+                            icon: const Icon(Symbols.edit),
+                          ),
+                          const SizedBox(width: 8.0),
+                          IconButton(
+                            tooltip: "删除",
+                            onPressed: () => setState(() {
+                              PLAYLISTS.remove(playlist);
+                            }),
+                            color: scheme.error,
+                            icon: const Icon(Symbols.delete),
+                          ),
+                        ],
+                      ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                onTap: () {
+                  if (controller.isOpen) {
+                    controller.close();
+                    return;
+                  }
+                  if (!isMultiSelectView) {
+                    context.push(
+                      app_paths.PLAYLIST_DETAIL_PAGE,
+                      extra: playlist,
+                    );
+                    return;
+                  }
+                  if (isSelected) {
+                    multiSelectController?.unselect(playlist);
+                  } else {
+                    multiSelectController?.select(playlist);
+                  }
+                },
+                onLongPress: () {
+                  if (multiSelectController == null) return;
+                  if (isMultiSelectView) return;
+                  multiSelectController.useMultiSelectView(true);
+                  multiSelectController.select(playlist);
+                },
+              ),
             ),
-            const SizedBox(width: 8.0),
-            IconButton(
-              tooltip: "删除",
-              onPressed: () => setState(() {
-                PLAYLISTS.remove(PLAYLISTS[i]);
-              }),
-              color: scheme.error,
-              icon: const Icon(Symbols.delete),
-            ),
-          ],
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
-        onTap: () => context.push(
-          app_paths.PLAYLIST_DETAIL_PAGE,
-          extra: PLAYLISTS[i],
-        ),
-      ),
+          ),
+        );
+      },
       primaryAction: FilledButton.icon(
         onPressed: () => newPlaylist(context),
         icon: const Icon(Symbols.add),
@@ -101,6 +193,36 @@ class _PlaylistsPageState extends State<PlaylistsPage> {
       enableSortMethod: true,
       enableSortOrder: true,
       enableContentViewSwitch: true,
+      multiSelectController: multiSelectController,
+      multiSelectViewActions: [
+        ListenableBuilder(
+          listenable: multiSelectController,
+          builder: (context, _) => IconButton.filled(
+            tooltip: "删除选中歌单",
+            onPressed: multiSelectController.selected.isEmpty
+                ? null
+                : () {
+                    setState(() {
+                      PLAYLISTS.removeWhere(
+                        (p) => multiSelectController.selected.contains(p),
+                      );
+                    });
+                    multiSelectController.useMultiSelectView(false);
+                    multiSelectController.clear();
+                  },
+            style: ButtonStyle(
+              backgroundColor: WidgetStatePropertyAll(scheme.error),
+              foregroundColor: WidgetStatePropertyAll(scheme.onError),
+            ),
+            icon: const Icon(Symbols.delete),
+          ),
+        ),
+        MultiSelectSelectOrClearAll(
+          multiSelectController: multiSelectController,
+          contentList: PLAYLISTS,
+        ),
+        MultiSelectExit(multiSelectController: multiSelectController),
+      ],
       sortMethods: [
         SortMethodDesc(
           icon: Symbols.title,

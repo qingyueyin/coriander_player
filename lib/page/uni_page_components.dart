@@ -230,6 +230,117 @@ class AddAllToPlaylist extends StatelessWidget {
   }
 }
 
+class AddSelectedAudiosToPlaylist<T> extends StatelessWidget {
+  const AddSelectedAudiosToPlaylist({
+    super.key,
+    required this.multiSelectController,
+    required this.toAudios,
+  });
+
+  final MultiSelectController<T> multiSelectController;
+  final List<Audio> Function(Set<T> selected) toAudios;
+
+  @override
+  Widget build(BuildContext context) {
+    return MenuAnchor(
+      style: MenuStyle(
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+      ),
+      menuChildren: List.generate(
+        PLAYLISTS.length,
+        (i) => MenuItemButton(
+          style: const ButtonStyle(
+            padding: WidgetStatePropertyAll(
+              EdgeInsets.symmetric(horizontal: 20),
+            ),
+          ),
+          onPressed: () {
+            final selectedAudios = toAudios(multiSelectController.selected);
+            final map = <String, Audio>{};
+            for (final audio in selectedAudios) {
+              map[audio.path] = audio;
+            }
+            for (final audio in map.values) {
+              if (!PLAYLISTS[i].audios.containsKey(audio.path)) {
+                PLAYLISTS[i].audios[audio.path] = audio;
+              }
+            }
+            showTextOnSnackBar(
+              "成功将${map.length}首添加到歌单“${PLAYLISTS[i].name}”",
+            );
+          },
+          child: Text(PLAYLISTS[i].name),
+        ),
+      ),
+      builder: (context, controller, _) => FilledButton.icon(
+        onPressed: multiSelectController.selected.isEmpty
+            ? null
+            : () {
+                if (controller.isOpen) {
+                  controller.close();
+                } else {
+                  controller.open();
+                }
+              },
+        icon: const Icon(Symbols.add),
+        label: const Text("添加到歌单"),
+        style: const ButtonStyle(
+          fixedSize: WidgetStatePropertyAll(Size.fromHeight(40)),
+        ),
+      ),
+    );
+  }
+}
+
+class MultiSelectPlaySelectedAudios<T> extends StatelessWidget {
+  const MultiSelectPlaySelectedAudios({
+    super.key,
+    required this.multiSelectController,
+    required this.toAudios,
+    this.shuffle = false,
+  });
+
+  final MultiSelectController<T> multiSelectController;
+  final List<Audio> Function(Set<T> selected) toAudios;
+  final bool shuffle;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: multiSelectController,
+      builder: (context, _) => FilledButton.icon(
+        onPressed: multiSelectController.selected.isEmpty
+            ? null
+            : () {
+                final selectedAudios = toAudios(multiSelectController.selected);
+                final map = <String, Audio>{};
+                for (final audio in selectedAudios) {
+                  map[audio.path] = audio;
+                }
+                final audios = map.values.toList();
+                if (audios.isEmpty) return;
+
+                if (shuffle) {
+                  PlayService.instance.playbackService.shuffleAndPlay(audios);
+                } else {
+                  PlayService.instance.playbackService.play(0, audios);
+                }
+
+                multiSelectController.useMultiSelectView(false);
+                multiSelectController.clear();
+              },
+        icon: Icon(shuffle ? Symbols.shuffle : Symbols.play_arrow),
+        label: Text(shuffle ? "随机播放" : "播放"),
+        style: const ButtonStyle(
+          fixedSize: WidgetStatePropertyAll(Size.fromHeight(40)),
+        ),
+      ),
+    );
+  }
+}
+
 class MultiSelectSelectOrClearAll<T> extends StatelessWidget {
   final MultiSelectController<T> multiSelectController;
   final List<T> contentList;

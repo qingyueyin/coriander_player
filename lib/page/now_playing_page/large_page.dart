@@ -112,13 +112,38 @@ class _NowPlayingLargeViewSwitch extends StatelessWidget {
                 NowPlayingViewMode.withLyric;
           }
         },
-        icon: Icon(
-          switch (value) {
-            NowPlayingViewMode.withPlaylist => Symbols.lyrics,
-            _ => Symbols.queue_music,
-          },
-        ),
+        icon: switch (value) {
+          NowPlayingViewMode.withPlaylist => const _SwappedLayerIcon(),
+          _ => const Icon(Symbols.queue_music),
+        },
         color: scheme.onSecondaryContainer,
+      ),
+    );
+  }
+}
+
+class _SwappedLayerIcon extends StatelessWidget {
+  const _SwappedLayerIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 24,
+      height: 24,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Icon(Symbols.music_note, size: 20),
+          ),
+          Positioned(
+            left: 0,
+            top: 0,
+            child: Icon(Symbols.format_list_bulleted, size: 18),
+          ),
+        ],
       ),
     );
   }
