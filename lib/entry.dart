@@ -25,6 +25,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:coriander_player/app_paths.dart' as app_paths;
 
 class SlideTransitionPage<T> extends CustomTransitionPage<T> {
@@ -60,9 +61,52 @@ class SlideTransitionPage<T> extends CustomTransitionPage<T> {
   }
 }
 
-class Entry extends StatelessWidget {
-  Entry({super.key, required this.welcome});
+class Entry extends StatefulWidget {
+  const Entry({super.key, required this.welcome});
   final bool welcome;
+
+  @override
+  State<Entry> createState() => _EntryState();
+}
+
+class _EntryState extends State<Entry> with WindowListener, SingleTickerProviderStateMixin {
+  late final AnimationController _restoreAnimController;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<double> _opacityAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    windowManager.addListener(this);
+    
+    _restoreAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+      value: 1.0, // Initially show content fully
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.92, end: 1.0).animate(
+      CurvedAnimation(parent: _restoreAnimController, curve: Curves.easeOutQuart),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _restoreAnimController, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    windowManager.removeListener(this);
+    _restoreAnimController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void onWindowRestore() {
+    // Play animation when restored from minimization
+    _restoreAnimController.value = 0.0;
+    _restoreAnimController.forward();
+  }
 
   ThemeData fromSchemeAndFontFamily({
     required ColorScheme colorScheme,
@@ -98,21 +142,33 @@ class Entry extends StatelessWidget {
       value: ThemeProvider.instance,
       builder: (context, _) {
         final theme = Provider.of<ThemeProvider>(context);
-        return MaterialApp.router(
-          scaffoldMessengerKey: SCAFFOLD_MESSAGER,
-          debugShowCheckedModeBanner: false,
-          theme: fromSchemeAndFontFamily(
-            fontFamily: theme.fontFamily,
-            colorScheme: theme.lightScheme,
+        return AnimatedBuilder(
+          animation: _restoreAnimController,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _scaleAnimation.value,
+              child: Opacity(
+                opacity: _opacityAnimation.value,
+                child: child,
+              ),
+            );
+          },
+          child: MaterialApp.router(
+            scaffoldMessengerKey: SCAFFOLD_MESSAGER,
+            debugShowCheckedModeBanner: false,
+            theme: fromSchemeAndFontFamily(
+              fontFamily: theme.fontFamily,
+              colorScheme: theme.lightScheme,
+            ),
+            darkTheme: fromSchemeAndFontFamily(
+              fontFamily: theme.fontFamily,
+              colorScheme: theme.darkScheme,
+            ),
+            themeMode: theme.themeMode,
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            supportedLocales: supportedLocales,
+            routerConfig: config,
           ),
-          darkTheme: fromSchemeAndFontFamily(
-            fontFamily: theme.fontFamily,
-            colorScheme: theme.darkScheme,
-          ),
-          themeMode: theme.themeMode,
-          localizationsDelegates: GlobalMaterialLocalizations.delegates,
-          supportedLocales: supportedLocales,
-          routerConfig: config,
         );
       },
     );
@@ -121,7 +177,7 @@ class Entry extends StatelessWidget {
   late final GoRouter config = GoRouter(
     navigatorKey: ROUTER_KEY,
     initialLocation:
-        welcome ? app_paths.WELCOMING_PAGE : app_paths.UPDATING_DIALOG,
+        widget.welcome ? app_paths.WELCOMING_PAGE : app_paths.UPDATING_DIALOG,
     routes: [
       ShellRoute(
         builder: (context, state, page) => AppShell(page: page),

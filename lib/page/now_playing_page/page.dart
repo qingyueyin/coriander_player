@@ -287,25 +287,21 @@ class _NowPlayingMoreAction extends StatelessWidget {
       child: MenuAnchor(
         style: menuStyle,
         menuChildren: [
-          SubmenuButton(
-            style: menuItemStyle,
-            menuChildren: List.generate(
-              nowPlaying.splitedArtists.length,
-              (i) => MenuItemButton(
-                style: menuItemStyle,
-                onPressed: () {
-                  final Artist artist = AudioLibrary
-                      .instance.artistCollection[nowPlaying.splitedArtists[i]]!;
-                  context.pushReplacement(
-                    app_paths.ARTIST_DETAIL_PAGE,
-                    extra: artist,
-                  );
-                },
-                leadingIcon: const Icon(Symbols.people),
-                child: Text(nowPlaying.splitedArtists[i]),
-              ),
+          ...List.generate(
+            nowPlaying.splitedArtists.length,
+            (i) => MenuItemButton(
+              style: menuItemStyle,
+              onPressed: () {
+                final Artist artist = AudioLibrary
+                    .instance.artistCollection[nowPlaying.splitedArtists[i]]!;
+                context.pushReplacement(
+                  app_paths.ARTIST_DETAIL_PAGE,
+                  extra: artist,
+                );
+              },
+              leadingIcon: const Icon(Symbols.people),
+              child: Text(nowPlaying.splitedArtists[i]),
             ),
-            child: const Text("艺术家"),
           ),
           MenuItemButton(
             style: menuItemStyle,
@@ -946,14 +942,15 @@ class _NowPlayingMainControls extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _HotkeyPulseIconButton(
+        _GlowingIconButton(
           tooltip: "上一曲",
           onPressed: playbackService.lastAudio,
-          hotkeyAction: HotkeyUiAction.prev,
-          icon: const Icon(Symbols.skip_previous),
-          style: LargeFilledIconButtonStyle(primary: false, scheme: scheme),
+          iconData: Symbols.skip_previous,
+          size: 32,
+          glowColor: scheme.primary.withValues(alpha: 0.5),
+          iconColor: scheme.onSecondaryContainer,
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 32),
         StreamBuilder(
           stream: playbackService.playerStateStream,
           initialData: playbackService.playerState,
@@ -968,27 +965,109 @@ class _NowPlayingMainControls extends StatelessWidget {
               onTap = playbackService.start;
             }
 
-            return IconButton(
+            return _GlowingIconButton(
               tooltip: playerState == PlayerState.playing ? "暂停" : "播放",
               onPressed: onTap,
-              icon: Icon(
-                playerState == PlayerState.playing
-                    ? Symbols.pause
-                    : Symbols.play_arrow,
-              ),
-              style: LargeFilledIconButtonStyle(primary: true, scheme: scheme),
+              iconData: playerState == PlayerState.playing
+                  ? Symbols.pause
+                  : Symbols.play_arrow,
+              size: 56, // Larger size for main control
+              glowColor: scheme.primary.withValues(alpha: 0.6),
+              iconColor: scheme.primary, // Use primary color for active state
+              enableGlow: true,
             );
           },
         ),
-        const SizedBox(width: 16),
-        _HotkeyPulseIconButton(
+        const SizedBox(width: 32),
+        _GlowingIconButton(
           tooltip: "下一曲",
           onPressed: playbackService.nextAudio,
-          hotkeyAction: HotkeyUiAction.next,
-          icon: const Icon(Symbols.skip_next),
-          style: LargeFilledIconButtonStyle(primary: false, scheme: scheme),
+          iconData: Symbols.skip_next,
+          size: 32,
+          glowColor: scheme.primary.withValues(alpha: 0.5),
+          iconColor: scheme.onSecondaryContainer,
         ),
       ],
+    );
+  }
+}
+
+class _GlowingIconButton extends StatefulWidget {
+  final String tooltip;
+  final VoidCallback onPressed;
+  final IconData iconData;
+  final double size;
+  final Color glowColor;
+  final Color iconColor;
+  final bool enableGlow;
+
+  const _GlowingIconButton({
+    required this.tooltip,
+    required this.onPressed,
+    required this.iconData,
+    required this.size,
+    required this.glowColor,
+    required this.iconColor,
+    this.enableGlow = false,
+  });
+
+  @override
+  State<_GlowingIconButton> createState() => _GlowingIconButtonState();
+}
+
+class _GlowingIconButtonState extends State<_GlowingIconButton> {
+  bool _isHovering = false;
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final showGlow = widget.enableGlow || _isHovering;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: widget.onPressed,
+        child: SizedBox(
+          width: widget.size + 16,
+          height: widget.size + 16,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Glow Layer
+              if (showGlow)
+                Positioned.fill(
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(
+                      sigmaX: 12,
+                      sigmaY: 12,
+                    ),
+                    child: Center(
+                      child: Icon(
+                        widget.iconData,
+                        size: widget.size,
+                        color: widget.glowColor,
+                      ),
+                    ),
+                  ),
+                ),
+              // Icon Layer
+              AnimatedScale(
+                duration: const Duration(milliseconds: 100),
+                scale: _isPressed ? 0.9 : 1.0,
+                child: Icon(
+                  widget.iconData,
+                  size: widget.size,
+                  color: widget.iconColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1063,7 +1142,7 @@ class _HotkeyPulseIconButtonState extends State<_HotkeyPulseIconButton> {
   }
 }
 
-/// suiggly slider, position and length
+/// glow slider
 class _NowPlayingSlider extends StatefulWidget {
   const _NowPlayingSlider();
 
@@ -1071,119 +1150,201 @@ class _NowPlayingSlider extends StatefulWidget {
   State<_NowPlayingSlider> createState() => _NowPlayingSliderState();
 }
 
-class _NowPlayingSliderState extends State<_NowPlayingSlider> {
+class _NowPlayingSliderState extends State<_NowPlayingSlider>
+    with SingleTickerProviderStateMixin {
   final dragPosition = ValueNotifier(0.0);
   bool isDragging = false;
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final playbackService = context.watch<PlaybackService>();
     final nowPlayingLength = playbackService.length;
 
-    return Column(
-      children: [
-        SliderTheme(
-          data: const SliderThemeData(
-            showValueIndicator: ShowValueIndicator.onDrag,
-          ),
-          child: StreamBuilder(
-            stream: playbackService.playerStateStream,
-            initialData: playbackService.playerState,
-            builder: (context, playerStateSnapshot) => ListenableBuilder(
-              listenable: dragPosition,
-              builder: (context, _) => StreamBuilder(
-                stream: playbackService.positionStream,
-                initialData: playbackService.position,
-                builder: (context, positionSnapshot) => Slider(
-                  thumbColor: scheme.primary,
-                  activeColor: scheme.primary,
-                  inactiveColor: scheme.outline,
-                  min: 0.0,
-                  max: nowPlayingLength,
-                  value: isDragging
-                      ? dragPosition.value
-                      : positionSnapshot.data! > nowPlayingLength
-                          ? nowPlayingLength
-                          : positionSnapshot.data!,
-                  label: Duration(
-                    milliseconds: (dragPosition.value * 1000).toInt(),
-                  ).toStringHMMSS(),
-                  onChangeStart: (value) {
-                    isDragging = true;
-                    dragPosition.value = value;
-                  },
-                  onChanged: (value) {
-                    dragPosition.value = value;
-                  },
-                  onChangeEnd: (value) {
-                    isDragging = false;
-                    playbackService.seek(value);
-                  },
-                ),
-                // builder: (context, positionSnapshot) => SquigglySlider(
-                //   thumbColor: scheme.primary,
-                //   activeColor: scheme.primary,
-                //   inactiveColor: scheme.outline,
-                //   useLineThumb: true,
-                //   squiggleAmplitude:
-                //       playerStateSnapshot.data == PlayerState.playing ? 6.0 : 0,
-                //   squiggleWavelength: 10.0,
-                //   squiggleSpeed: 0.08,
-                //   min: 0.0,
-                //   max: nowPlayingLength,
-                //   value: isDragging
-                //       ? dragPosition.value
-                //       : positionSnapshot.data! > nowPlayingLength
-                //           ? nowPlayingLength
-                //           : positionSnapshot.data!,
-                //   label: Duration(
-                //     milliseconds: (dragPosition.value * 1000).toInt(),
-                //   ).toStringHMMSS(),
-                //   onChangeStart: (value) {
-                //     isDragging = true;
-                //     dragPosition.value = value;
-                //   },
-                //   onChanged: (value) {
-                //     dragPosition.value = value;
-                //   },
-                //   onChangeEnd: (value) {
-                //     isDragging = false;
-                //     playbackService.seek(value);
-                //   },
-                // ),
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              StreamBuilder(
-                stream: playbackService.positionStream,
-                initialData: playbackService.position,
-                builder: (context, snapshot) {
-                  final pos = snapshot.data!;
-                  return Text(
-                    Duration(
-                      milliseconds: (pos * 1000).toInt(),
-                    ).toStringHMMSS(),
-                    style: TextStyle(color: scheme.onSecondaryContainer),
+    return SizedBox(
+      height: 24, // Slider height
+      child: StreamBuilder(
+        stream: playbackService.playerStateStream,
+        initialData: playbackService.playerState,
+        builder: (context, playerStateSnapshot) => ListenableBuilder(
+          listenable: dragPosition,
+          builder: (context, _) => StreamBuilder(
+            stream: playbackService.positionStream,
+            initialData: playbackService.position,
+            builder: (context, positionSnapshot) {
+              final position = isDragging
+                  ? dragPosition.value
+                  : positionSnapshot.data! > nowPlayingLength
+                      ? nowPlayingLength
+                      : positionSnapshot.data!;
+              final max = nowPlayingLength > 0 ? nowPlayingLength : 1.0;
+              final fraction = (position / max).clamp(0.0, 1.0);
+
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final width = constraints.maxWidth;
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onHorizontalDragStart: (details) {
+                      isDragging = true;
+                      final value =
+                          (details.localPosition.dx / width).clamp(0.0, 1.0) *
+                              max;
+                      dragPosition.value = value;
+                    },
+                    onHorizontalDragUpdate: (details) {
+                      final value =
+                          (details.localPosition.dx / width).clamp(0.0, 1.0) *
+                              max;
+                      dragPosition.value = value;
+                    },
+                    onHorizontalDragEnd: (details) {
+                      isDragging = false;
+                      playbackService.seek(dragPosition.value);
+                    },
+                    onTapDown: (details) {
+                      final value =
+                          (details.localPosition.dx / width).clamp(0.0, 1.0) *
+                              max;
+                      playbackService.seek(value);
+                    },
+                    child: AnimatedBuilder(
+                      animation: _controller,
+                      builder: (context, child) {
+                        return CustomPaint(
+                          painter: _GlowSliderPainter(
+                            fraction: fraction,
+                            color: scheme.primary,
+                            glowColor: scheme.primaryContainer,
+                            animationValue: _controller.value,
+                            inactiveColor: scheme.surfaceContainerHighest,
+                          ),
+                          size: Size(width, 24),
+                        );
+                      },
+                    ),
                   );
                 },
-              ),
-              Text(
-                Duration(
-                  milliseconds: (nowPlayingLength * 1000).toInt(),
-                ).toStringHMMSS(),
-                style: TextStyle(color: scheme.onSecondaryContainer),
-              ),
-            ],
+              );
+            },
           ),
-        )
-      ],
+        ),
+      ),
     );
+  }
+}
+
+class _NowPlayingTimeDisplay extends StatelessWidget {
+  const _NowPlayingTimeDisplay();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final playbackService = PlayService.instance.playbackService;
+
+    return StreamBuilder(
+      stream: playbackService.positionStream,
+      initialData: playbackService.position,
+      builder: (context, snapshot) {
+        final pos = snapshot.data ?? 0.0;
+        final length = playbackService.length;
+
+        return Text(
+          "${Duration(milliseconds: (pos * 1000).toInt()).toStringHMMSS()} / ${Duration(milliseconds: (length * 1000).toInt()).toStringHMMSS()}",
+          style: TextStyle(
+            color: scheme.onSecondaryContainer,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _GlowSliderPainter extends CustomPainter {
+  final double fraction;
+  final Color color;
+  final Color glowColor;
+  final Color inactiveColor;
+  final double animationValue;
+
+  _GlowSliderPainter({
+    required this.fraction,
+    required this.color,
+    required this.glowColor,
+    required this.inactiveColor,
+    required this.animationValue,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.fill;
+
+    final double height = 4.0;
+    final double centerY = size.height / 2;
+    final double activeWidth = size.width * fraction;
+
+    // Inactive track
+    paint.color = inactiveColor;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, centerY - height / 2, size.width, height),
+        Radius.circular(height / 2),
+      ),
+      paint,
+    );
+
+    // Active track (Solid color, no animation/glow on the track itself to reduce visual noise)
+    final Rect activeRect =
+        Rect.fromLTWH(0, centerY - height / 2, activeWidth, height);
+    if (activeWidth > 0) {
+      paint.color = color;
+      paint.shader = null;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(activeRect, Radius.circular(height / 2)),
+        paint,
+      );
+    }
+
+    // Thumb
+    paint.shader = null;
+    paint.color = color;
+    // Draw thumb shadow/glow (Strong glow for the current progress)
+    canvas.drawCircle(
+      Offset(activeWidth, centerY),
+      10, // glow radius
+      Paint()
+        ..color = glowColor.withValues(alpha: 0.6)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+    );
+    // Draw thumb
+    canvas.drawCircle(Offset(activeWidth, centerY), 6, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GlowSliderPainter oldDelegate) {
+    return oldDelegate.fraction != fraction ||
+        oldDelegate.animationValue != animationValue;
   }
 }
 
@@ -1288,6 +1449,7 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
                               width: coverSize,
                               height: coverSize,
                               fit: BoxFit.cover,
+                              gaplessPlayback: true,
                               errorBuilder: (_, __, ___) => FittedBox(
                                 fit: BoxFit.contain,
                                 child: placeholder,

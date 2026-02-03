@@ -6,11 +6,11 @@ class _NowPlayingPage_Large extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const spacer = SizedBox(width: 8.0);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24.0, 8.0, 24.0, 24.0),
-      child: Column(
-        children: [
-          Expanded(
+    return Column(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24.0, 8.0, 24.0, 0),
             child: LayoutBuilder(builder: (context, constraints) {
               return Row(
                 children: [
@@ -38,48 +38,146 @@ class _NowPlayingPage_Large extends StatelessWidget {
               );
             }),
           ),
-          const SizedBox(height: 12.0),
-          const _NowPlayingSlider(),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _DesktopLyricSwitch(),
-                      spacer,
-                      _NowPlayingPlaybackModeSwitch(),
-                      spacer,
-                      _NowPlayingVolDspSlider(),
-                      spacer,
-                      _ExclusiveModeSwitch(),
-                    ],
-                  ),
+        ),
+        const SizedBox(height: 12.0),
+        const _NowPlayingSlider(),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 20),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _DesktopLyricSwitch(),
+                    spacer,
+                    _ExclusiveModeSwitch(),
+                  ],
                 ),
-                _NowPlayingMainControls(),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      NowPlayingPitchControl(),
-                      spacer,
-                      SetLyricSourceBtn(),
-                      spacer,
-                      _NowPlayingLargeViewSwitch(),
-                      spacer,
-                      _NowPlayingMoreAction(),
-                    ],
-                  ),
-                )
-              ],
-            ),
+              ),
+              _AutoHidingControlBar(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _GlowingIconButton(
+                      tooltip: "上一曲",
+                      onPressed: PlayService.instance.playbackService.lastAudio,
+                      iconData: Symbols.skip_previous,
+                      size: 32,
+                      glowColor: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.5),
+                      iconColor:
+                          Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
+                    spacer,
+                    StreamBuilder(
+                      stream: PlayService
+                          .instance.playbackService.playerStateStream,
+                      initialData:
+                          PlayService.instance.playbackService.playerState,
+                      builder: (context, snapshot) {
+                        final playerState = snapshot.data!;
+                        late void Function() onTap;
+                        if (playerState == PlayerState.playing) {
+                          onTap = PlayService.instance.playbackService.pause;
+                        } else if (playerState == PlayerState.completed) {
+                          onTap =
+                              PlayService.instance.playbackService.playAgain;
+                        } else {
+                          onTap = PlayService.instance.playbackService.start;
+                        }
+
+                        return _GlowingIconButton(
+                          tooltip:
+                              playerState == PlayerState.playing ? "暂停" : "播放",
+                          onPressed: onTap,
+                          iconData: playerState == PlayerState.playing
+                              ? Symbols.pause
+                              : Symbols.play_arrow,
+                          size: 32,
+                          glowColor: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.5),
+                          iconColor: Theme.of(context)
+                              .colorScheme
+                              .onSecondaryContainer,
+                        );
+                      },
+                    ),
+                    spacer,
+                    _GlowingIconButton(
+                      tooltip: "下一曲",
+                      onPressed: PlayService.instance.playbackService.nextAudio,
+                      iconData: Symbols.skip_next,
+                      size: 32,
+                      glowColor: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.5),
+                      iconColor:
+                          Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
+                    spacer,
+                    const _NowPlayingTimeDisplay(),
+                  ],
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    NowPlayingPitchControl(),
+                    spacer,
+                    SetLyricSourceBtn(),
+                    spacer,
+                    _NowPlayingLargeViewSwitch(),
+                    spacer,
+                    _NowPlayingMoreAction(),
+                  ],
+                ),
+              )
+            ],
           ),
-        ],
+        ),
+      ],
+    );
+  }
+}
+
+class _AutoHidingControlBar extends StatefulWidget {
+  final Widget child;
+  const _AutoHidingControlBar({required this.child});
+
+  @override
+  State<_AutoHidingControlBar> createState() => _AutoHidingControlBarState();
+}
+
+class _AutoHidingControlBarState extends State<_AutoHidingControlBar> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      hitTestBehavior: HitTestBehavior.translucent,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(32),
+        ),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: _isHovering ? 1.0 : 0.0,
+          child: widget.child,
+        ),
       ),
     );
   }

@@ -251,20 +251,25 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      key: LYRIC_VIEW_KEY,
-      controller: scrollController,
-      slivers: [
-        if (widget.centerVertically) const SliverFillRemaining(),
-        SliverToBoxAdapter(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: lyricTiles,
+    return LayoutBuilder(builder: (context, constraints) {
+      final spacerHeight = constraints.maxHeight / 2.0;
+      return CustomScrollView(
+        key: LYRIC_VIEW_KEY,
+        controller: scrollController,
+        slivers: [
+          if (widget.centerVertically)
+            SliverToBoxAdapter(child: SizedBox(height: spacerHeight)),
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: lyricTiles,
+            ),
           ),
-        ),
-        if (widget.centerVertically) const SliverFillRemaining(),
-      ],
-    );
+          if (widget.centerVertically)
+            SliverToBoxAdapter(child: SizedBox(height: spacerHeight)),
+        ],
+      );
+    });
   }
 
   @override
