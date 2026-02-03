@@ -173,12 +173,24 @@ class BassPlayer {
 
   void _initEQ() {
     if (_fstream == null) return;
+    // Clear old handles just in case, though they are invalid if stream changed
     _eqHandles.clear();
-    for (int i = 0; i < 10; i++) {
-      final fx =
-          _bass.BASS_ChannelSetFX(_fstream!, BASS.BASS_FX_DX8_PARAMEQ, 0);
-      _eqHandles.add(fx);
-      _updateEQ(i);
+
+    try {
+      for (int i = 0; i < 10; i++) {
+        final fx =
+            _bass.BASS_ChannelSetFX(_fstream!, BASS.BASS_FX_DX8_PARAMEQ, 0);
+
+        if (fx == 0) {
+          final err = _bass.BASS_ErrorGetCode();
+          LOGGER.w("Failed to set EQ band $i: BASS Error $err");
+        }
+
+        _eqHandles.add(fx);
+        _updateEQ(i);
+      }
+    } catch (e) {
+      LOGGER.e("Error initializing EQ: $e");
     }
   }
 
@@ -187,13 +199,21 @@ class BassPlayer {
     final fx = _eqHandles[band];
     if (fx == 0) return;
 
-    final params = ffi.calloc<BASS.BASS_DX8_PARAMEQ>();
-    params.ref.fCenter = _eqCenters[band];
-    params.ref.fBandwidth = 2.5;
-    params.ref.fGain = _eqGains[band];
+    try {
+      final params = ffi.calloc<BASS.BASS_DX8_PARAMEQ>();
+      params.ref.fCenter = _eqCenters[band];
+      params.ref.fBandwidth = 2.5;
+      params.ref.fGain = _eqGains[band];
 
-    _bass.BASS_FXSetParameters(fx, params.cast());
-    ffi.calloc.free(params);
+      final result = _bass.BASS_FXSetParameters(fx, params.cast());
+      if (result == 0) {
+        // final err = _bass.BASS_ErrorGetCode();
+        // LOGGER.w("Failed to set EQ parameters for band $band: Error $err");
+      }
+      ffi.calloc.free(params);
+    } catch (e) {
+      LOGGER.e("Error updating EQ band $band: $e");
+    }
   }
 
   void _bassInit() {
@@ -491,7 +511,11 @@ class BassPlayer {
       _fstream = handle;
       _fPath = path;
 
-      _initEQ();
+      try {
+        _initEQ();
+      } catch (e) {
+        LOGGER.e("SetSource _initEQ failed: $e");
+      }
 
       if (_rate != 1.0) {
         setRate(_rate);
