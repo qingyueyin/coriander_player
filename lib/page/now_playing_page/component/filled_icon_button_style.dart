@@ -24,7 +24,7 @@ class LargeFilledIconButtonStyle extends ButtonStyle {
   WidgetStateProperty<Color?>? get foregroundColor =>
       WidgetStateProperty.resolveWith((Set<WidgetState> states) {
         if (states.contains(WidgetState.disabled)) {
-          return scheme.onSurface.withOpacity(0.38);
+          return scheme.onSurface.withValues(alpha: 0.38);
         }
         return scheme.onSecondaryContainer;
       });
@@ -34,13 +34,13 @@ class LargeFilledIconButtonStyle extends ButtonStyle {
       WidgetStateProperty.resolveWith((Set<WidgetState> states) {
         final color = scheme.onSecondaryContainer;
         if (states.contains(WidgetState.pressed)) {
-          return color.withOpacity(0.14);
+          return color.withValues(alpha: 0.1);
         }
         if (states.contains(WidgetState.hovered)) {
-          return color.withOpacity(0.10);
+          return color.withValues(alpha: 0.05);
         }
         if (states.contains(WidgetState.focused)) {
-          return color.withOpacity(0.14);
+          return color.withValues(alpha: 0.1);
         }
         return Colors.transparent;
       });

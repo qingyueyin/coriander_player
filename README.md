@@ -39,10 +39,6 @@
 - **支持播放 mka**：已加载 BASSWebM.dll，支持播放 WebM 格式的音乐。
 - **快捷键悬浮提示**：快捷键操作显示短暂提示；音量菜单内快捷键也会显示气泡。
 
-## TODO
-
-- [docs/TODO.md](file:///d:/All/Documents/Projects/coriander_player/docs/TODO.md)
-
 ## 感谢
 
 - [music_api](https://github.com/yhsj0919/music_api.git)：实现歌曲的匹配和歌词的获取

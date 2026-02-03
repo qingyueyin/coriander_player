@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:coriander_player/component/rectangle_progress_indicator.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
 import 'package:coriander_player/component/motion.dart';
@@ -60,6 +62,22 @@ class _NowPlayingForeground extends StatefulWidget {
 
 class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
   bool _hovered = false;
+  bool _controlsVisible = false;
+  Timer? _controlsHideTimer;
+
+  void _setControlsVisible(bool visible) {
+    if (_controlsVisible == visible) return;
+    setState(() => _controlsVisible = visible);
+  }
+
+  void _scheduleHideControls() {
+    _controlsHideTimer?.cancel();
+    _controlsHideTimer = Timer(const Duration(milliseconds: 650), () {
+      if (!mounted) return;
+      if (_hovered) return;
+      _setControlsVisible(false);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +94,15 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
         type: MaterialType.transparency,
         borderRadius: BorderRadius.circular(8.0),
         child: InkWell(
-          onHover: (v) => setState(() => _hovered = v),
+          onHover: (v) {
+            _controlsHideTimer?.cancel();
+            setState(() => _hovered = v);
+            if (v) {
+              _setControlsVisible(true);
+            } else {
+              _scheduleHideControls();
+            }
+          },
           onTap: () => context.push(app_paths.NOW_PLAYING_PAGE),
           borderRadius: BorderRadius.circular(8.0),
           child: Padding(
@@ -95,6 +121,34 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
                 return LayoutBuilder(builder: (context, constraints) {
                   final dense = constraints.maxWidth <= 520;
                   final minimal = constraints.maxWidth <= 440;
+                  final hideControls = !_controlsVisible;
+                  final controls = Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!dense)
+                        IconButton(
+                          tooltip: "上一曲",
+                          onPressed: playbackService.lastAudio,
+                          icon: const Icon(Symbols.skip_previous),
+                          color: scheme.onSecondaryContainer,
+                        ),
+                      if (!dense)
+                        IconButton(
+                          tooltip: "下一曲",
+                          onPressed: playbackService.nextAudio,
+                          icon: const Icon(Symbols.skip_next),
+                          color: scheme.onSecondaryContainer,
+                        ),
+                      if (!minimal) _MiniShuffleButton(enabled: !dense),
+                      _MiniPlayPauseButton(
+                        dense: dense,
+                        onSecondaryContainer: scheme.onSecondaryContainer,
+                      ),
+                      if (!dense) const SizedBox(width: 8.0),
+                      if (!dense)
+                        _MiniTimeText(color: scheme.onSecondaryContainer),
+                    ],
+                  );
                   return Row(
                     children: [
                       nowPlaying != null
@@ -153,30 +207,21 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
                         ),
                       ),
                       const SizedBox(width: 8.0),
-                      if (!minimal) _MiniVolumeButton(enabled: !dense),
-                      if (!dense) const SizedBox(width: 4.0),
-                      if (!dense)
-                        IconButton(
-                          tooltip: "上一曲",
-                          onPressed: playbackService.lastAudio,
-                          icon: const Icon(Symbols.skip_previous),
-                          color: scheme.onSecondaryContainer,
+                      IgnorePointer(
+                        ignoring: hideControls,
+                        child: AnimatedSlide(
+                          duration: MotionDuration.fast,
+                          curve: MotionCurve.standard,
+                          offset:
+                              hideControls ? const Offset(0.02, 0.0) : Offset.zero,
+                          child: AnimatedOpacity(
+                            duration: MotionDuration.fast,
+                            curve: MotionCurve.standard,
+                            opacity: hideControls ? 0.0 : 1.0,
+                            child: controls,
+                          ),
                         ),
-                      if (!dense)
-                        IconButton(
-                          tooltip: "下一曲",
-                          onPressed: playbackService.nextAudio,
-                          icon: const Icon(Symbols.skip_next),
-                          color: scheme.onSecondaryContainer,
-                        ),
-                      if (!minimal) _MiniShuffleButton(enabled: !dense),
-                      _MiniPlayPauseButton(
-                        dense: dense,
-                        onSecondaryContainer: scheme.onSecondaryContainer,
                       ),
-                      if (!dense) const SizedBox(width: 8.0),
-                      if (!dense)
-                        _MiniTimeText(color: scheme.onSecondaryContainer),
                     ],
                   );
                 });
@@ -186,6 +231,12 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _controlsHideTimer?.cancel();
+    super.dispose();
   }
 }
 
@@ -285,63 +336,6 @@ class _MiniShuffleButton extends StatelessWidget {
           onPressed: onPressed,
           icon: const Icon(Symbols.shuffle),
           color: value ? scheme.primary : scheme.onSecondaryContainer,
-        );
-      },
-    );
-  }
-}
-
-class _MiniVolumeButton extends StatefulWidget {
-  const _MiniVolumeButton({required this.enabled});
-
-  final bool enabled;
-
-  @override
-  State<_MiniVolumeButton> createState() => _MiniVolumeButtonState();
-}
-
-class _MiniVolumeButtonState extends State<_MiniVolumeButton> {
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final playbackService = PlayService.instance.playbackService;
-    return MenuAnchor(
-      alignmentOffset: const Offset(-8.0, -12.0),
-      menuChildren: [
-        SizedBox(
-          width: 220,
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-            child: ListenableBuilder(
-              listenable: playbackService,
-              builder: (context, _) => Slider(
-                min: 0,
-                max: 1,
-                value: playbackService.volumeDsp.clamp(0.0, 1.0),
-                onChanged: widget.enabled ? playbackService.setVolumeDsp : null,
-                activeColor: scheme.primary,
-                inactiveColor: scheme.outline,
-                thumbColor: scheme.primary,
-              ),
-            ),
-          ),
-        ),
-      ],
-      builder: (context, controller, _) {
-        return IconButton(
-          tooltip: "音量",
-          onPressed: widget.enabled
-              ? () {
-                  if (controller.isOpen) {
-                    controller.close();
-                  } else {
-                    controller.open();
-                  }
-                }
-              : null,
-          icon: const Icon(Symbols.volume_up),
-          color: scheme.onSecondaryContainer,
         );
       },
     );

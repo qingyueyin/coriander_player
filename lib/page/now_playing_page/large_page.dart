@@ -12,12 +12,9 @@ class _NowPlayingPage_Large extends StatelessWidget {
         children: [
           Expanded(
             child: LayoutBuilder(builder: (context, constraints) {
-              final leftWidth =
-                  (constraints.maxWidth * 0.44).clamp(380.0, 540.0);
               return Row(
                 children: [
-                  SizedBox(width: leftWidth, child: const _NowPlayingInfo()),
-                  const SizedBox(width: 24.0),
+                  const Expanded(child: Center(child: _NowPlayingInfo())),
                   Expanded(
                     child: ValueListenableBuilder(
                       valueListenable: NOW_PLAYING_VIEW_MODE,
@@ -26,7 +23,13 @@ class _NowPlayingPage_Large extends StatelessWidget {
                         child: switch (value) {
                           NowPlayingViewMode.withPlaylist =>
                             const CurrentPlaylistView(),
-                          _ => const VerticalLyricView(),
+                          _ => Center(
+                              child: ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxWidth: 820.0),
+                                child: const VerticalLyricView(),
+                              ),
+                            ),
                         },
                       ),
                     ),
