@@ -2,6 +2,7 @@ import 'package:coriander_player/component/album_tile.dart';
 import 'package:coriander_player/component/artist_tile.dart';
 import 'package:coriander_player/component/audio_tile.dart';
 import 'package:coriander_player/hotkeys_helper.dart';
+import 'package:coriander_player/library/union_search_result.dart';
 import 'package:coriander_player/page/search_page/search_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';

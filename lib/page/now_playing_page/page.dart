@@ -239,7 +239,7 @@ class _ExclusiveModeSwitch extends StatelessWidget {
     return ValueListenableBuilder(
       valueListenable: PlayService.instance.playbackService.wasapiExclusive,
       builder: (context, exclusive, _) => IconButton(
-        tooltip: "独占模式：${exclusive ? "启用" : "禁用"}",
+        tooltip: exclusive ? "独占模式：启用" : "独占模式",
         onPressed: () {
           PlayService.instance.playbackService.useExclusiveMode(!exclusive);
         },
@@ -382,7 +382,7 @@ class _DesktopLyricSwitch extends StatelessWidget {
         return FutureBuilder(
           future: desktopLyricService.desktopLyric,
           builder: (context, snapshot) => IconButton(
-            tooltip: "桌面歌词；${snapshot.data == null ? "禁用" : "启用"}",
+            tooltip: snapshot.data != null ? "桌面歌词；启用" : "桌面歌词",
             onPressed: snapshot.data == null
                 ? desktopLyricService.startDesktopLyric
                 : desktopLyricService.isLocked
@@ -911,18 +911,6 @@ class _NowPlayingPlaybackModeSwitch extends StatelessWidget {
 
         return IconButton(
           tooltip: modeText,
-          style: ButtonStyle(
-            backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
-            overlayColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.pressed)) {
-                return scheme.onSecondaryContainer.withValues(alpha: 0.1);
-              }
-              if (states.contains(WidgetState.hovered)) {
-                return scheme.onSecondaryContainer.withValues(alpha: 0.08);
-              }
-              return null;
-            }),
-          ),
           onPressed: () {
             if (!shuffle && playMode != PlayMode.singleLoop) {
               playbackService.useShuffle(false);

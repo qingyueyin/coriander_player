@@ -4,6 +4,7 @@ import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/app_settings.dart';
 import 'package:coriander_player/component/horizontal_lyric_view.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
+import 'package:coriander_player/component/search_dialog.dart';
 import 'package:coriander_player/hotkeys_helper.dart';
 import 'package:coriander_player/immersive_mode.dart';
 import 'package:coriander_player/library/playlist.dart';
@@ -61,6 +62,11 @@ class _TitleBar_Small extends StatelessWidget {
                 ),
               ),
             ),
+            IconButton(
+              tooltip: "搜索",
+              onPressed: () => SearchDialog.show(context),
+              icon: const Icon(Symbols.search),
+            ),
             const WindowControlls(),
           ],
         ),
@@ -102,6 +108,11 @@ class _TitleBar_Medium extends StatelessWidget {
               ],
             ),
           ),
+        ),
+        IconButton(
+          tooltip: "搜索",
+          onPressed: () => SearchDialog.show(context),
+          icon: const Icon(Symbols.search),
         ),
         const WindowControlls(),
         const SizedBox(width: 8.0),
@@ -152,6 +163,11 @@ class _TitleBar_Large extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+          IconButton(
+            tooltip: "搜索",
+            onPressed: () => SearchDialog.show(context),
+            icon: const Icon(Symbols.search),
           ),
           const WindowControlls(),
         ],

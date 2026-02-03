@@ -101,20 +101,15 @@ class _SideNavState extends State<SideNav> {
                     onDestinationSelected: onDestinationSelected,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(28, 10, 12, 10),
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
                         child: Row(
                           children: [
-                            Expanded(
-                              child: Text(
-                                'Coriander Music',
-                                style: Theme.of(context).textTheme.titleSmall,
-                              ),
-                            ),
                             IconButton(
                               onPressed: toggleSidebar,
-                              icon: const Icon(Symbols.dock_to_left),
+                              icon: const Icon(Symbols.menu_open),
                               tooltip: "收起侧边栏",
                             ),
+                            const Spacer(),
                           ],
                         ),
                       ),

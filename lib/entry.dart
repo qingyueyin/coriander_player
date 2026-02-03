@@ -1,4 +1,5 @@
 import 'package:coriander_player/library/audio_library.dart';
+import 'package:coriander_player/library/union_search_result.dart';
 import 'package:coriander_player/component/app_shell.dart';
 import 'package:coriander_player/page/album_detail_page.dart';
 import 'package:coriander_player/page/albums_page.dart';
@@ -86,7 +87,8 @@ class Entry extends StatelessWidget {
       dividerColor: colorScheme.onSurface.withOpacity(0.12),
       applyElevationOverlayColor: isDark,
       useMaterial3: true,
-      dialogTheme: DialogThemeData(backgroundColor: colorScheme.surface), tabBarTheme: TabBarThemeData(indicatorColor: onPrimarySurfaceColor),
+      dialogTheme: DialogThemeData(backgroundColor: colorScheme.surface),
+      tabBarTheme: TabBarThemeData(indicatorColor: onPrimarySurfaceColor),
     );
   }
 
@@ -225,10 +227,13 @@ class Entry extends StatelessWidget {
               GoRoute(
                 path: "result",
                 pageBuilder: (context, state) {
-                  final result = state.extra as UnionSearchResult;
-                  return SlideTransitionPage(
-                    child: SearchResultPage(searchResult: result),
-                  );
+                  final extra = state.extra;
+                  if (extra is UnionSearchResult) {
+                    return SlideTransitionPage(
+                      child: SearchResultPage(searchResult: extra),
+                    );
+                  }
+                  return const SlideTransitionPage(child: SearchPage());
                 },
               ),
             ],

@@ -113,7 +113,7 @@ class _NowPlayingLargeViewSwitch extends StatelessWidget {
           }
         },
         icon: switch (value) {
-          NowPlayingViewMode.withPlaylist => const _SwappedLayerIcon(),
+          NowPlayingViewMode.withPlaylist => const _MergedPlaylistIcon(),
           _ => const Icon(Symbols.queue_music),
         },
         color: scheme.onSecondaryContainer,
@@ -122,29 +122,106 @@ class _NowPlayingLargeViewSwitch extends StatelessWidget {
   }
 }
 
-class _SwappedLayerIcon extends StatelessWidget {
-  const _SwappedLayerIcon();
+class _MergedPlaylistIcon extends StatelessWidget {
+  const _MergedPlaylistIcon();
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 24,
-      height: 24,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Icon(Symbols.music_note, size: 20),
-          ),
-          Positioned(
-            left: 0,
-            top: 0,
-            child: Icon(Symbols.format_list_bulleted, size: 18),
-          ),
-        ],
+    final scheme = Theme.of(context).colorScheme;
+    return CustomPaint(
+      size: const Size(24, 24),
+      painter: _MergedPlaylistIconPainter(
+        noteColor: scheme.primary,
+        listColor: scheme.onSecondaryContainer,
       ),
     );
   }
+}
+
+class _MergedPlaylistIconPainter extends CustomPainter {
+  final Color noteColor;
+  final Color listColor;
+
+  _MergedPlaylistIconPainter({
+    required this.noteColor,
+    required this.listColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.fill
+      ..strokeCap = StrokeCap.round;
+
+    // Drawing parameters
+    const double barHeight = 3.0;
+    const double startX = 11.0;
+    const double endX = 22.0;
+    const double headRadius = 3.5;
+
+    // Y positions for the three bars (centered vertically approx)
+    const double topY = 6.0;
+    const double midY = 12.0;
+    const double botY = 18.0;
+
+    // 1. Draw List Lines (Right side)
+    paint.color = listColor;
+
+    // Top Bar
+    canvas.drawRRect(
+      RRect.fromLTRBR(
+        startX,
+        topY - barHeight / 2,
+        endX,
+        topY + barHeight / 2,
+        const Radius.circular(barHeight / 2),
+      ),
+      paint,
+    );
+
+    // Mid Bar
+    canvas.drawRRect(
+      RRect.fromLTRBR(
+        startX,
+        midY - barHeight / 2,
+        endX,
+        midY + barHeight / 2,
+        const Radius.circular(barHeight / 2),
+      ),
+      paint,
+    );
+
+    // Bot Bar
+    canvas.drawRRect(
+      RRect.fromLTRBR(
+        startX,
+        botY - barHeight / 2,
+        endX,
+        botY + barHeight / 2,
+        const Radius.circular(barHeight / 2),
+      ),
+      paint,
+    );
+
+    // 2. Draw Music Note (Left side)
+    paint.color = noteColor;
+
+    // Note Head
+    const headCenter = Offset(6.0, 18.0);
+    canvas.drawCircle(headCenter, headRadius, paint);
+
+    // Stem
+    const double stemWidth = 2.5;
+    final stemRect = RRect.fromLTRBR(
+      headCenter.dx + headRadius - stemWidth,
+      4.0, // Top of stem
+      headCenter.dx + headRadius,
+      18.0, // Bottom of stem (center of head)
+      const Radius.circular(1.0),
+    );
+    canvas.drawRRect(stemRect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
