@@ -50,9 +50,6 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   ImageProvider<Object>? nowPlayingCover;
   Timer? _cursorHideTimer;
   bool _cursorHidden = false;
-  Timer? _controlsHideTimer;
-  bool _controlsVisible = true;
-  bool _pointerOnControls = false;
   bool _lastImmersive = false;
 
   void _bumpCursor() {
@@ -66,38 +63,6 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
       if (!mounted) return;
       setState(() {
         _cursorHidden = true;
-      });
-    });
-  }
-
-  void _setPointerOnControls(bool value) {
-    if (_pointerOnControls == value) return;
-    setState(() {
-      _pointerOnControls = value;
-      if (value) {
-        _controlsVisible = true;
-      }
-    });
-    if (value) {
-      _controlsHideTimer?.cancel();
-    } else {
-      _bumpControls();
-    }
-  }
-
-  void _bumpControls() {
-    if (_pointerOnControls) return;
-    _controlsHideTimer?.cancel();
-    if (!_controlsVisible) {
-      setState(() {
-        _controlsVisible = true;
-      });
-    }
-    _controlsHideTimer = Timer(const Duration(milliseconds: 1800), () {
-      if (!mounted) return;
-      if (_pointerOnControls) return;
-      setState(() {
-        _controlsVisible = false;
       });
     });
   }
@@ -124,7 +89,6 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   void dispose() {
     playbackService.removeListener(updateCover);
     _cursorHideTimer?.cancel();
-    _controlsHideTimer?.cancel();
     super.dispose();
   }
 
@@ -140,16 +104,6 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
         final immersive = ImmersiveModeController.instance.enabled;
         if (immersive != _lastImmersive) {
           _lastImmersive = immersive;
-          if (immersive) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              _bumpControls();
-            });
-          } else {
-            _controlsHideTimer?.cancel();
-            _controlsVisible = true;
-            _pointerOnControls = false;
-          }
         }
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 520),
@@ -189,15 +143,12 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
               backgroundColor: scheme.secondaryContainer,
               body: Listener(
                 onPointerDown: (_) {
-                  if (immersive) _bumpControls();
                   _bumpCursor();
                 },
                 onPointerMove: (_) {
-                  if (immersive) _bumpControls();
                   _bumpCursor();
                 },
                 onPointerHover: (_) {
-                  if (immersive) _bumpControls();
                   _bumpCursor();
                 },
                 child: Stack(
@@ -1268,108 +1219,108 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 520.0),
       child: LayoutBuilder(builder: (context, constraints) {
-          const infoPaddingTop = 0.0;
-          const infoSpacing = 14.0;
-          const textBlockHeight = 86.0;
+        const infoPaddingTop = 0.0;
+        const infoSpacing = 14.0;
+        const textBlockHeight = 86.0;
 
-          final maxWidth = constraints.maxWidth;
-          final maxHeight = constraints.maxHeight.isFinite
-              ? constraints.maxHeight
-              : (520.0 + textBlockHeight + infoPaddingTop + infoSpacing);
+        final maxWidth = constraints.maxWidth;
+        final maxHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : (520.0 + textBlockHeight + infoPaddingTop + infoSpacing);
 
-          final coverMax =
-              (maxHeight - infoPaddingTop - infoSpacing - textBlockHeight)
-                  .clamp(160.0, 420.0)
-                  .toDouble();
-          final coverWidthLimit = maxWidth.clamp(160.0, 520.0).toDouble();
-          final coverSize =
-              coverWidthLimit < coverMax ? coverWidthLimit : coverMax;
+        final coverMax =
+            (maxHeight - infoPaddingTop - infoSpacing - textBlockHeight)
+                .clamp(160.0, 420.0)
+                .toDouble();
+        final coverWidthLimit = maxWidth.clamp(160.0, 520.0).toDouble();
+        final coverSize =
+            coverWidthLimit < coverMax ? coverWidthLimit : coverMax;
 
-          final coverWidget = nowPlayingCover == null
-              ? FittedBox(fit: BoxFit.contain, child: placeholder)
-              : FutureBuilder(
-                  future: nowPlayingCover,
-                  builder: (context, snapshot) =>
-                      switch (snapshot.connectionState) {
-                    ConnectionState.done => snapshot.data == null
-                        ? FittedBox(fit: BoxFit.contain, child: placeholder)
-                        : Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12.0),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.2),
-                                  blurRadius: 24,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12.0),
-                              child: Image(
-                                image: snapshot.data!,
-                                width: coverSize,
-                                height: coverSize,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => FittedBox(
-                                  fit: BoxFit.contain,
-                                  child: placeholder,
-                                ),
+        final coverWidget = nowPlayingCover == null
+            ? FittedBox(fit: BoxFit.contain, child: placeholder)
+            : FutureBuilder(
+                future: nowPlayingCover,
+                builder: (context, snapshot) =>
+                    switch (snapshot.connectionState) {
+                  ConnectionState.done => snapshot.data == null
+                      ? FittedBox(fit: BoxFit.contain, child: placeholder)
+                      : Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12.0),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 24,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12.0),
+                            child: Image(
+                              image: snapshot.data!,
+                              width: coverSize,
+                              height: coverSize,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => FittedBox(
+                                fit: BoxFit.contain,
+                                child: placeholder,
                               ),
                             ),
                           ),
-                    _ => loadingWidget,
-                  },
-                );
+                        ),
+                  _ => loadingWidget,
+                },
+              );
 
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: coverSize,
-                height: coverSize,
-                child: RepaintBoundary(child: coverWidget),
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: coverSize,
+              height: coverSize,
+              child: RepaintBoundary(child: coverWidget),
+            ),
+            const SizedBox(height: 24.0),
+            Text(
+              nowPlaying == null ? "Coriander Music" : nowPlaying.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: scheme.onSecondaryContainer,
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+                height: 1.2,
               ),
-              const SizedBox(height: 24.0),
-              Text(
-                nowPlaying == null ? "Coriander Music" : nowPlaying.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: scheme.onSecondaryContainer,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 24,
-                  height: 1.2,
-                ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              nowPlaying == null ? "Enjoy Music" : nowPlaying.artist,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: scheme.onSecondaryContainer.withValues(alpha: 0.8),
+                fontSize: 16,
+                height: 1.2,
               ),
-              const SizedBox(height: 8),
-              Text(
-                nowPlaying == null ? "Enjoy Music" : nowPlaying.artist,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: scheme.onSecondaryContainer.withValues(alpha: 0.8),
-                  fontSize: 16,
-                  height: 1.2,
-                ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              nowPlaying == null ? "" : nowPlaying.album,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: scheme.onSecondaryContainer.withValues(alpha: 0.6),
+                fontSize: 14,
+                height: 1.2,
               ),
-              const SizedBox(height: 4),
-              Text(
-                nowPlaying == null ? "" : nowPlaying.album,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: scheme.onSecondaryContainer.withValues(alpha: 0.6),
-                  fontSize: 14,
-                  height: 1.2,
-                ),
-              ),
-            ],
-          );
-        }),
-      );
+            ),
+          ],
+        );
+      }),
+    );
   }
 
   @override

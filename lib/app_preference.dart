@@ -110,6 +110,8 @@ class AppPreference {
 
   int startPage = 0;
 
+  bool sidebarExpanded = true;
+
   var playbackPref = PlaybackPreference(PlayMode.forward, 1.0);
 
   var nowPlayingPagePref = NowPlayingPagePreference(
@@ -131,6 +133,7 @@ class AppPreference {
         "playlistsPagePref": playlistsPagePref.toMap(),
         "playlistDetailPagePref": playlistDetailPagePref.toMap(),
         "startPage": startPage,
+        "sidebarExpanded": sidebarExpanded,
         "playbackPref": playbackPref.toMap(),
         "nowPlayingPagePref": nowPlayingPagePref.toMap(),
       };
@@ -175,6 +178,7 @@ class AppPreference {
         prefMap["playlistDetailPagePref"],
       );
       instance.startPage = prefMap["startPage"];
+      instance.sidebarExpanded = prefMap["sidebarExpanded"] ?? true;
       instance.playbackPref =
           PlaybackPreference.fromMap(prefMap["playbackPref"]);
       instance.nowPlayingPagePref =

@@ -10,29 +10,97 @@ import 'package:coriander_player/utils.dart';
 import 'package:music_api/api/kugou/kugou.dart';
 import 'package:music_api/api/netease/netease.dart';
 import 'package:music_api/api/qq/qq.dart';
+import 'package:path/path.dart' as p;
 
 enum ResultSource { qq, kugou, netease }
 
-double _computeScore(Audio audio, String title, String artists, String album) {
-  int maxScore = audio.title.length + audio.artist.length + audio.album.length;
+String _normalizeKeyword(String raw) {
+  final s = raw
+      .replaceAll(RegExp(r'\.(flac|mp3|wav|m4a|aac|ogg|opus|ape)$', caseSensitive: false), '')
+      .replaceAll(RegExp(r'[_\.·]+'), ' ')
+      .replaceAll(RegExp(r'[‐‑‒–—−]'), '-')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+  return s.toLowerCase();
+}
+
+int _prefixMatchScore(String a, String b) {
+  final len = min(a.length, b.length);
   int score = 0;
+  for (int i = 0; i < len; ++i) {
+    if (a[i] == b[i]) {
+      score += 1;
+    } else {
+      break;
+    }
+  }
+  return score;
+}
 
-  int minTitleLength = min(audio.title.length, title.length);
-  for (int i = 0; i < minTitleLength; ++i) {
-    if (audio.title[i] == title[i]) score += 1;
+String _audioFileStem(Audio audio) {
+  try {
+    return _normalizeKeyword(p.basenameWithoutExtension(audio.path));
+  } catch (_) {
+    return '';
+  }
+}
+
+double _computeScore(Audio audio, String title, String artists, String album) {
+  final audioTitle = _normalizeKeyword(audio.title);
+  final audioArtist = _normalizeKeyword(audio.artist);
+  final audioAlbum = _normalizeKeyword(audio.album);
+  final audioStem = _audioFileStem(audio);
+
+  final resultTitle = _normalizeKeyword(title);
+  final resultArtists = _normalizeKeyword(artists);
+  final resultAlbum = _normalizeKeyword(album);
+
+  int score = 0;
+  int maxScore = 0;
+
+  score += _prefixMatchScore(audioTitle, resultTitle);
+  maxScore += audioTitle.length;
+
+  score += _prefixMatchScore(audioArtist, resultArtists);
+  maxScore += audioArtist.length;
+
+  score += _prefixMatchScore(audioAlbum, resultAlbum);
+  maxScore += audioAlbum.length;
+
+  if (audioStem.isNotEmpty) {
+    score += (_prefixMatchScore(audioStem, resultTitle) * 2);
+    maxScore += (audioStem.length * 2);
   }
 
-  int minArtistLength = min(audio.artist.length, artists.length);
-  for (int i = 0; i < minArtistLength; ++i) {
-    if (audio.artist[i] == artists[i]) score += 1;
-  }
-
-  int minAlbumLength = min(audio.album.length, album.length);
-  for (int i = 0; i < minAlbumLength; ++i) {
-    if (audio.album[i] == album[i]) score += 1;
-  }
-
+  if (maxScore <= 0) return 0.0;
   return score / maxScore;
+}
+
+List<String> _buildQueryCandidates(Audio audio) {
+  final title = _normalizeKeyword(audio.title);
+  final artist = _normalizeKeyword(audio.artist);
+  final stem = _audioFileStem(audio);
+
+  final set = <String>{};
+  if (title.isNotEmpty && artist.isNotEmpty && artist != 'unknown') {
+    set.add('$title $artist'.trim());
+  }
+  if (title.isNotEmpty) {
+    set.add(title);
+  }
+  if (stem.isNotEmpty && stem != title) {
+    set.add(stem);
+  }
+
+  if (stem.contains(' - ')) {
+    final parts = stem.split(' - ').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    if (parts.length >= 2) {
+      set.add(parts.last);
+      set.add('${parts.last} ${parts.first}'.trim());
+    }
+  }
+
+  return set.where((q) => q.isNotEmpty).toList();
 }
 
 class SongSearchResult {
@@ -125,45 +193,72 @@ class SongSearchResult {
   }
 }
 
+Future<List<SongSearchResult>> _uniSearchOnce(Audio audio, String query) async {
+  List<SongSearchResult> result = [];
+
+  final Map kugouAnswer = (await KuGou.searchSong(keyword: query)).data;
+  final List kugouResultList = kugouAnswer["data"]["info"];
+  for (int j = 0; j < kugouResultList.length; j++) {
+    if (j >= 5) break;
+    result.add(SongSearchResult.fromKugouSearchResult(
+      kugouResultList[j],
+      audio,
+    ));
+  }
+
+  final Map neteaseAnswer = (await Netease.search(keyWord: query)).data;
+  final List neteaseResultList = neteaseAnswer["result"]["songs"];
+  for (int k = 0; k < neteaseResultList.length; k++) {
+    if (k >= 5) break;
+    result.add(SongSearchResult.fromNeteaseSearchResult(
+      neteaseResultList[k],
+      audio,
+    ));
+  }
+
+  final Map qqAnswer = (await QQ.search(keyWord: query)).data;
+  final List qqResultList = qqAnswer["req"]["data"]["body"]["item_song"];
+  for (int i = 0; i < qqResultList.length; i++) {
+    if (i >= 5) break;
+    result.add(SongSearchResult.fromQQSearchResult(
+      qqResultList[i],
+      audio,
+    ));
+  }
+
+  return result;
+}
+
 Future<List<SongSearchResult>> uniSearch(Audio audio) async {
-  final query = audio.title;
+  final queries = _buildQueryCandidates(audio);
   try {
-    List<SongSearchResult> result = [];
+    final merged = <String, SongSearchResult>{};
+    double bestScore = 0.0;
 
-    final Map kugouAnswer = (await KuGou.searchSong(keyword: query)).data;
-    final List kugouResultList = kugouAnswer["data"]["info"];
-    for (int j = 0; j < kugouResultList.length; j++) {
-      if (j >= 5) break;
-      result.add(SongSearchResult.fromKugouSearchResult(
-        kugouResultList[j],
-        audio,
-      ));
+    for (final query in queries) {
+      final batch = await _uniSearchOnce(audio, query);
+      for (final item in batch) {
+        final key = switch (item.source) {
+          ResultSource.qq => 'qq:${item.qqSongId ?? '${item.title}|${item.artists}|${item.album}'}',
+          ResultSource.netease => 'netease:${item.neteaseSongId ?? '${item.title}|${item.artists}|${item.album}'}',
+          ResultSource.kugou => 'kugou:${item.kugouSongHash ?? '${item.title}|${item.artists}|${item.album}'}',
+        };
+        final existing = merged[key];
+        if (existing == null || item.score > existing.score) {
+          merged[key] = item;
+        }
+        if (item.score > bestScore) bestScore = item.score;
+      }
+      if (bestScore >= 0.52) {
+        break;
+      }
     }
 
-    final Map neteaseAnswer = (await Netease.search(keyWord: query)).data;
-    final List neteaseResultList = neteaseAnswer["result"]["songs"];
-    for (int k = 0; k < neteaseResultList.length; k++) {
-      if (k >= 5) break;
-      result.add(SongSearchResult.fromNeteaseSearchResult(
-        neteaseResultList[k],
-        audio,
-      ));
-    }
-
-    final Map qqAnswer = (await QQ.search(keyWord: query)).data;
-    final List qqResultList = qqAnswer["req"]["data"]["body"]["item_song"];
-    for (int i = 0; i < qqResultList.length; i++) {
-      if (i >= 5) break;
-      result.add(SongSearchResult.fromQQSearchResult(
-        qqResultList[i],
-        audio,
-      ));
-    }
-
+    final result = merged.values.toList();
     result.sort((a, b) => b.score.compareTo(a.score));
     return result;
   } catch (err, trace) {
-    LOGGER.e("query: $query");
+    LOGGER.e("queries: $queries");
     LOGGER.e(err, stackTrace: trace);
   }
   return Future.value([]);

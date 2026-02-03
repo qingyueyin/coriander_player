@@ -24,8 +24,15 @@ final destinations = <DestinationDesc>[
   DestinationDesc(Symbols.settings, "设置", app_paths.SETTINGS_PAGE),
 ];
 
-class SideNav extends StatelessWidget {
+class SideNav extends StatefulWidget {
   const SideNav({super.key});
+
+  @override
+  State<SideNav> createState() => _SideNavState();
+}
+
+class _SideNavState extends State<SideNav> {
+  final sidebarExpanded = ValueNotifier(AppPreference.instance.sidebarExpanded);
 
   @override
   Widget build(BuildContext context) {
@@ -47,11 +54,17 @@ class SideNav extends StatelessWidget {
       if (scaffold.hasDrawer) scaffold.closeDrawer();
     }
 
+    void toggleSidebar() {
+      final newVal = !sidebarExpanded.value;
+      sidebarExpanded.value = newVal;
+      AppPreference.instance.sidebarExpanded = newVal;
+      AppPreference.instance.save();
+    }
+
     return ResponsiveBuilder(
       builder: (context, screenType) {
         switch (screenType) {
           case ScreenType.small:
-          case ScreenType.large:
             return NavigationDrawer(
               backgroundColor: scheme.surfaceContainer,
               selectedIndex: selected,
@@ -76,6 +89,65 @@ class SideNav extends StatelessWidget {
                   label: Text(destinations[i].label),
                 ),
               ),
+            );
+          case ScreenType.large:
+            return ValueListenableBuilder(
+              valueListenable: sidebarExpanded,
+              builder: (context, expanded, _) {
+                if (expanded) {
+                  return NavigationDrawer(
+                    backgroundColor: scheme.surfaceContainer,
+                    selectedIndex: selected,
+                    onDestinationSelected: onDestinationSelected,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(28, 10, 12, 10),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Coriander Music',
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: toggleSidebar,
+                              icon: const Icon(Symbols.dock_to_left),
+                              tooltip: "收起侧边栏",
+                            ),
+                          ],
+                        ),
+                      ),
+                      ...List.generate(
+                        destinations.length,
+                        (i) => NavigationDrawerDestination(
+                          icon: Icon(destinations[i].icon),
+                          label: Text(destinations[i].label),
+                        ),
+                      ),
+                    ],
+                  );
+                } else {
+                  return NavigationRail(
+                    backgroundColor: scheme.surfaceContainer,
+                    selectedIndex: selected,
+                    onDestinationSelected: onDestinationSelected,
+                    extended: false,
+                    leading: IconButton(
+                      onPressed: toggleSidebar,
+                      icon: const Icon(Symbols.menu),
+                      tooltip: "展开侧边栏",
+                    ),
+                    destinations: List.generate(
+                      destinations.length,
+                      (i) => NavigationRailDestination(
+                        icon: Icon(destinations[i].icon),
+                        label: Text(destinations[i].label),
+                      ),
+                    ),
+                  );
+                }
+              },
             );
         }
       },
