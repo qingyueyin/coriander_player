@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show FontFeature;
 
 import 'package:coriander_player/component/rectangle_progress_indicator.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
@@ -103,7 +104,8 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
         duration: MotionDuration.fast,
         curve: MotionCurve.standard,
         decoration: BoxDecoration(
-          color: _hovered ? scheme.onSecondaryContainer.withOpacity(0.06) : null,
+          color:
+              _hovered ? scheme.onSecondaryContainer.withOpacity(0.06) : null,
           borderRadius: BorderRadius.circular(8.0),
         ),
         child: Material(
@@ -134,121 +136,125 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
                     color: scheme.onSecondaryContainer,
                   );
 
-                return LayoutBuilder(builder: (context, constraints) {
-                  final dense = constraints.maxWidth <= 520;
-                  final minimal = constraints.maxWidth <= 440;
-                  final hideControls = !_controlsVisible;
-                  final controls = Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (!dense)
-                        IconButton(
-                          tooltip: "上一曲",
-                          onPressed: playbackService.lastAudio,
-                          icon: const Icon(
-                            Symbols.skip_previous,
-                            fill: 0.0,
-                            weight: 400.0,
+                  return LayoutBuilder(builder: (context, constraints) {
+                    final dense = constraints.maxWidth <= 520;
+                    final minimal = constraints.maxWidth <= 440;
+                    final hideControls = !_controlsVisible;
+                    final controls = Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (!dense)
+                          IconButton(
+                            tooltip: "上一曲",
+                            onPressed: playbackService.lastAudio,
+                            icon: const Icon(
+                              Symbols.skip_previous,
+                              fill: 0.0,
+                              weight: 400.0,
+                            ),
+                            color: scheme.onSecondaryContainer,
                           ),
-                          color: scheme.onSecondaryContainer,
-                        ),
-                      if (!dense)
-                        IconButton(
-                          tooltip: "下一曲",
-                          onPressed: playbackService.nextAudio,
-                          icon: const Icon(
-                            Symbols.skip_next,
-                            fill: 0.0,
-                            weight: 400.0,
+                        if (!dense)
+                          IconButton(
+                            tooltip: "下一曲",
+                            onPressed: playbackService.nextAudio,
+                            icon: const Icon(
+                              Symbols.skip_next,
+                              fill: 0.0,
+                              weight: 400.0,
+                            ),
+                            color: scheme.onSecondaryContainer,
                           ),
-                          color: scheme.onSecondaryContainer,
+                        if (!minimal) _MiniShuffleButton(enabled: !dense),
+                        _MiniPlayPauseButton(
+                          dense: dense,
+                          onSecondaryContainer: scheme.onSecondaryContainer,
                         ),
-                      if (!minimal) _MiniShuffleButton(enabled: !dense),
-                      _MiniPlayPauseButton(
-                        dense: dense,
-                        onSecondaryContainer: scheme.onSecondaryContainer,
-                      ),
-                      if (!dense) const SizedBox(width: 8.0),
-                      if (!dense)
-                        _MiniTimeText(color: scheme.onSecondaryContainer),
-                    ],
-                  );
-                  return Row(
-                    children: [
-                      nowPlaying != null
-                          ? FutureBuilder(
-                              future: nowPlaying.cover,
-                              builder: (context, snapshot) =>
-                                  switch (snapshot.connectionState) {
-                                ConnectionState.done => snapshot.data == null
-                                    ? placeholder
-                                    : ClipRRect(
-                                        borderRadius:
-                                            BorderRadius.circular(8.0),
-                                        child: Image(
-                                          image: snapshot.data!,
-                                          width: 48.0,
-                                          height: 48.0,
-                                          errorBuilder: (_, __, ___) =>
-                                              placeholder,
+                        if (!dense) const SizedBox(width: 8.0),
+                        if (!dense)
+                          _MiniTimeText(color: scheme.onSecondaryContainer),
+                      ],
+                    );
+                    return Row(
+                      children: [
+                        nowPlaying != null
+                            ? FutureBuilder(
+                                future: nowPlaying.cover,
+                                builder: (context, snapshot) =>
+                                    switch (snapshot.connectionState) {
+                                  ConnectionState.done => snapshot.data == null
+                                      ? placeholder
+                                      : Hero(
+                                          tag: nowPlaying.path,
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(8.0),
+                                            child: Image(
+                                              image: snapshot.data!,
+                                              width: 48.0,
+                                              height: 48.0,
+                                              errorBuilder: (_, __, ___) =>
+                                                  placeholder,
+                                            ),
+                                          ),
                                         ),
+                                  _ => const SizedBox(
+                                      width: 48,
+                                      height: 48,
+                                      child: Center(
+                                        child: CircularProgressIndicator(),
                                       ),
-                                _ => const SizedBox(
-                                    width: 48,
-                                    height: 48,
-                                    child: Center(
-                                      child: CircularProgressIndicator(),
                                     ),
-                                  ),
-                              },
-                            )
-                          : placeholder,
-                      const SizedBox(width: 8.0),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              nowPlaying != null
-                                  ? nowPlaying.title
-                                  : "Coriander Player",
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style:
-                                  TextStyle(color: scheme.onSecondaryContainer),
-                            ),
-                            Text(
-                              nowPlaying != null
-                                  ? "${nowPlaying.artist} - ${nowPlaying.album}"
-                                  : "Enjoy music",
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style:
-                                  TextStyle(color: scheme.onSecondaryContainer),
-                            ),
-                          ],
+                                },
+                              )
+                            : placeholder,
+                        const SizedBox(width: 8.0),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                nowPlaying != null
+                                    ? nowPlaying.title
+                                    : "Coriander Player",
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: scheme.onSecondaryContainer),
+                              ),
+                              Text(
+                                nowPlaying != null
+                                    ? "${nowPlaying.artist} - ${nowPlaying.album}"
+                                    : "Enjoy music",
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: scheme.onSecondaryContainer),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8.0),
-                      IgnorePointer(
-                        ignoring: hideControls,
-                        child: AnimatedSlide(
-                          duration: MotionDuration.fast,
-                          curve: MotionCurve.standard,
-                          offset:
-                              hideControls ? const Offset(0.02, 0.0) : Offset.zero,
-                          child: AnimatedOpacity(
+                        const SizedBox(width: 8.0),
+                        IgnorePointer(
+                          ignoring: hideControls,
+                          child: AnimatedSlide(
                             duration: MotionDuration.fast,
                             curve: MotionCurve.standard,
-                            opacity: hideControls ? 0.0 : 1.0,
-                            child: controls,
+                            offset: hideControls
+                                ? const Offset(0.02, 0.0)
+                                : Offset.zero,
+                            child: AnimatedOpacity(
+                              duration: MotionDuration.fast,
+                              curve: MotionCurve.standard,
+                              opacity: hideControls ? 0.0 : 1.0,
+                              child: controls,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                });
+                      ],
+                    );
+                  });
                 },
               ),
             ),
@@ -277,36 +283,98 @@ class _MiniPlayPauseButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final playbackService = PlayService.instance.playbackService;
-    return StreamBuilder(
-      stream: playbackService.playerStateStream,
-      initialData: playbackService.playerState,
+    return _AnimatedPlayPauseIconButton(
+      dense: dense,
+      color: onSecondaryContainer,
+      onPlay: playbackService.start,
+      onPause: playbackService.pause,
+      onReplay: playbackService.playAgain,
+      playerStateStream: playbackService.playerStateStream,
+      initialState: playbackService.playerState,
+    );
+  }
+}
+
+class _AnimatedPlayPauseIconButton extends StatefulWidget {
+  const _AnimatedPlayPauseIconButton({
+    required this.dense,
+    required this.color,
+    required this.onPlay,
+    required this.onPause,
+    required this.onReplay,
+    required this.playerStateStream,
+    required this.initialState,
+  });
+
+  final bool dense;
+  final Color color;
+  final VoidCallback onPlay;
+  final VoidCallback onPause;
+  final VoidCallback onReplay;
+  final Stream<PlayerState> playerStateStream;
+  final PlayerState initialState;
+
+  @override
+  State<_AnimatedPlayPauseIconButton> createState() =>
+      _AnimatedPlayPauseIconButtonState();
+}
+
+class _AnimatedPlayPauseIconButtonState
+    extends State<_AnimatedPlayPauseIconButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 220));
+  late PlayerState _state = widget.initialState;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_state == PlayerState.playing) {
+      _controller.value = 1.0;
+    } else {
+      _controller.value = 0.0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<PlayerState>(
+      stream: widget.playerStateStream,
+      initialData: _state,
       builder: (context, snapshot) {
-        late void Function() onPressed;
-        if (snapshot.data! == PlayerState.playing) {
-          onPressed = playbackService.pause;
-        } else if (snapshot.data! == PlayerState.completed) {
-          onPressed = playbackService.playAgain;
+        _state = snapshot.data ?? _state;
+        final isPlaying = _state == PlayerState.playing;
+        _controller.animateTo(isPlaying ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 240),
+            curve: const Cubic(0.2, 0.0, 0.0, 1.0));
+
+        late VoidCallback onPressed;
+        if (_state == PlayerState.playing) {
+          onPressed = widget.onPause;
+        } else if (_state == PlayerState.completed) {
+          onPressed = widget.onReplay;
         } else {
-          onPressed = playbackService.start;
+          onPressed = widget.onPlay;
         }
 
-        final icon = snapshot.data! == PlayerState.playing
-            ? Symbols.pause
-            : Symbols.play_arrow;
-        if (dense) {
-          return IconButton(
-            tooltip: snapshot.data! == PlayerState.playing ? "暂停" : "播放",
-            onPressed: onPressed,
-            icon: Icon(icon, fill: 0.0, weight: 400.0),
-            color: onSecondaryContainer,
-          );
-        }
+        final icon = AnimatedIcon(
+          icon: AnimatedIcons.play_pause,
+          progress: _controller,
+          color: widget.color,
+          size: widget.dense ? 24.0 : 28.0,
+        );
 
         return IconButton(
-          tooltip: snapshot.data! == PlayerState.playing ? "暂停" : "播放",
+          tooltip: isPlaying ? "暂停" : "播放",
           onPressed: onPressed,
-          icon: Icon(icon, fill: 0.0, weight: 400.0),
-          color: onSecondaryContainer,
+          icon: icon,
+          color: widget.color,
         );
       },
     );
@@ -335,7 +403,10 @@ class _MiniTimeText extends StatelessWidget {
             .replaceFirst(RegExp(r'^0:'), '');
         return Text(
           "$posText / $lenText",
-          style: TextStyle(color: color),
+          style: TextStyle(
+            color: color,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
         );
       },
     );

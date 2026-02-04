@@ -91,9 +91,19 @@ class LyricViewTile extends StatelessWidget {
       alignment: alignment,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 280),
-        curve: const Cubic(0.4, 0, 0.2, 1),
+        curve: const Cubic(0.2, 0.0, 0.0, 1.0),
         opacity: opacity,
-        child: content,
+        child: AnimatedSlide(
+          duration: const Duration(milliseconds: 220),
+          curve: const Cubic(0.2, 0.0, 0.0, 1.0),
+          offset: isMainLine ? Offset.zero : const Offset(0.0, 0.01),
+          child: AnimatedScale(
+            duration: const Duration(milliseconds: 220),
+            curve: const Cubic(0.2, 0.0, 0.0, 1.0),
+            scale: isMainLine ? 1.0 : 0.98,
+            child: content,
+          ),
+        ),
       ),
     );
   }

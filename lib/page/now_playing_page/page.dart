@@ -123,31 +123,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
           child: KeyedSubtree(
             key: ValueKey(immersive),
             child: Scaffold(
-              appBar: immersive
-                  ? null
-                  : PreferredSize(
-                      preferredSize: const Size.fromHeight(56.0),
-                      child: ClipRect(
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                          child: Container(
-                            color: scheme.surface.withOpacity(0.12),
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 8.0),
-                            child: const Row(
-                              children: [
-                                NavBackBtn(),
-                                Expanded(
-                                  child:
-                                      DragToMoveArea(child: SizedBox.expand()),
-                                ),
-                                WindowControlls(),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+              appBar: null,
               backgroundColor: Colors.transparent,
               body: Listener(
                 onPointerDown: (_) {
@@ -181,17 +157,17 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                             end: Alignment.bottomCenter,
                             colors: switch (brightness) {
                               Brightness.dark => [
-                                  Colors.black.withValues(alpha: 0.62),
-                                  Colors.black.withValues(alpha: 0.26),
-                                  Colors.black.withValues(alpha: 0.62),
+                                  Colors.black.withValues(alpha: 0.44),
+                                  Colors.black.withValues(alpha: 0.14),
+                                  Colors.black.withValues(alpha: 0.44),
                                 ],
                               Brightness.light => [
-                                  Colors.white.withValues(alpha: 0.58),
-                                  Colors.white.withValues(alpha: 0.20),
-                                  Colors.white.withValues(alpha: 0.58),
+                                  Colors.white.withValues(alpha: 0.40),
+                                  Colors.white.withValues(alpha: 0.12),
+                                  Colors.white.withValues(alpha: 0.40),
                                 ],
                             },
-                            stops: const [0.0, 0.5, 1.0],
+                            stops: const [0.0, 0.6, 1.0],
                           ),
                         ),
                         child: const SizedBox.expand(),
@@ -1497,11 +1473,26 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12.0),
                             boxShadow: [
+                              // 1. 环境光晕 (Ambient Glow)
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
+                                color: scheme.primary.withOpacity(0.25),
+                                spreadRadius: -4,
+                                blurRadius: 24,
+                                offset: const Offset(0, 8),
+                              ),
+                              // 2. 轮廓描边 (Outline)
+                              BoxShadow(
+                                color: scheme.primary.withOpacity(0.15),
                                 spreadRadius: 1,
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                                blurRadius: 0,
+                                offset: Offset.zero,
+                              ),
+                              // 3. 深邃阴影 (Depth Shadow)
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.20),
+                                spreadRadius: 0,
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
                               ),
                             ],
                           ),
@@ -1561,7 +1552,10 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
                 SizedBox(
                   width: coverSize,
                   height: coverSize,
-                  child: RepaintBoundary(child: coverWidget),
+                  child: Hero(
+                    tag: nowPlaying?.path ?? 'now_playing_cover',
+                    child: RepaintBoundary(child: coverWidget),
+                  ),
                 ),
                 const SizedBox(height: 24.0),
                 Text(

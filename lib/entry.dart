@@ -326,19 +326,7 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
         path: app_paths.NOW_PLAYING_PAGE,
         pageBuilder: (context, state) => CustomTransitionPage(
           maintainState: false,
-          transitionsBuilder: (context, animation, _, child) {
-            final tween = Tween(
-              begin: const Offset(0, 1),
-              end: const Offset(0, 0),
-            );
-
-            return SlideTransition(
-              position: tween.animate(
-                CurvedAnimation(parent: animation, curve: Curves.fastOutSlowIn),
-              ),
-              child: child,
-            );
-          },
+          transitionsBuilder: (context, animation, _, child) => child,
           child: const NowPlayingPage(),
         ),
       ),

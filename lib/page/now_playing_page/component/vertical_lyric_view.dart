@@ -134,7 +134,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
   final scrollController = ScrollController();
   LyricViewController? _lyricViewController;
   Timer? _ensureVisibleTimer;
-  static const _scrollCurve = Cubic(0.4, 0, 0.2, 1);
+  static const _scrollCurve = Cubic(0.2, 0.0, 0.0, 1.0);
   static const double _fadeExtent = 0.12;
   static const double _inactiveOpacity = 0.38;
   static const double _scrollMsPerPixel = 0.55;
