@@ -1,5 +1,7 @@
 // ignore_for_file: camel_case_types
 
+import 'dart:ui';
+
 import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/app_settings.dart';
 import 'package:coriander_player/component/horizontal_lyric_view.dart';
@@ -41,33 +43,39 @@ class _TitleBar_Small extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return SizedBox(
-      height: 56.0,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-        child: Row(
-          children: [
-            const _OpenDrawerBtn(),
-            const SizedBox(width: 8.0),
-            const NavBackBtn(),
-            Expanded(
-              child: DragToMoveArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Text(
-                    "Coriander Player",
-                    style: TextStyle(color: scheme.onSurface, fontSize: 16),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          color: scheme.surface.withOpacity(0.12),
+          height: 56.0,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Row(
+              children: [
+                const _OpenDrawerBtn(),
+                const SizedBox(width: 8.0),
+                const NavBackBtn(),
+                Expanded(
+                  child: DragToMoveArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        "Coriander Player",
+                        style: TextStyle(color: scheme.onSurface, fontSize: 16),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                IconButton(
+                  tooltip: "搜索",
+                  onPressed: () => SearchDialog.show(context),
+                  icon: const Icon(Symbols.search),
+                ),
+                const WindowControlls(),
+              ],
             ),
-            IconButton(
-              tooltip: "搜索",
-              onPressed: () => SearchDialog.show(context),
-              icon: const Icon(Symbols.search),
-            ),
-            const WindowControlls(),
-          ],
+          ),
         ),
       ),
     );
@@ -81,41 +89,49 @@ class _TitleBar_Medium extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Row(
-      children: [
-        const SizedBox(
-          width: 80,
-          child: Center(child: NavBackBtn()),
-        ),
-        Expanded(
-          child: DragToMoveArea(
-            child: Row(
-              children: [
-                Text(
-                  "Coriander Player",
-                  style: TextStyle(color: scheme.onSurface, fontSize: 16),
-                ),
-                const Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
-                    child: HorizontalLyricView(),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          color: scheme.surface.withOpacity(0.12),
+          child: Row(
+            children: [
+              const SizedBox(
+                width: 80,
+                child: Center(child: NavBackBtn()),
+              ),
+              Expanded(
+                child: DragToMoveArea(
+                  child: Row(
+                    children: [
+                      Text(
+                        "Coriander Player",
+                        style: TextStyle(color: scheme.onSurface, fontSize: 16),
+                      ),
+                      const Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 8.0,
+                          ),
+                          child: HorizontalLyricView(),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              IconButton(
+                tooltip: "搜索",
+                onPressed: () => SearchDialog.show(context),
+                icon: const Icon(Symbols.search),
+              ),
+              const WindowControlls(),
+              const SizedBox(width: 8.0),
+            ],
           ),
         ),
-        IconButton(
-          tooltip: "搜索",
-          onPressed: () => SearchDialog.show(context),
-          icon: const Icon(Symbols.search),
-        ),
-        const WindowControlls(),
-        const SizedBox(width: 8.0),
-      ],
+      ),
     );
   }
 }
@@ -127,26 +143,31 @@ class _TitleBar_Large extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      child: Row(
-        children: [
-          const NavBackBtn(),
-          const SizedBox(width: 8.0),
-          Expanded(
-            child: DragToMoveArea(
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 248,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          color: scheme.surface.withOpacity(0.12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Row(
+              children: [
+                const NavBackBtn(),
+                const SizedBox(width: 8.0),
+                Expanded(
+                  child: DragToMoveArea(
                     child: Row(
                       children: [
-                        Image.asset("app_icon.ico", width: 24, height: 24),
-                        const SizedBox(width: 8.0),
-                        Text(
-                          "Coriander Player",
-                          style: TextStyle(
-                            color: scheme.onSurface,
+                        SizedBox(
+                          width: 248,
+                          child: Row(
+                            children: [
+                              Image.asset("app_icon.ico", width: 24, height: 24),
+                              const SizedBox(width: 8.0),
+                              Text(
+                                "Coriander Player",
+                                style: TextStyle(
+                                  color: scheme.onSurface,
                             fontSize: 16,
                           ),
                         ),
@@ -163,20 +184,23 @@ class _TitleBar_Large extends StatelessWidget {
               ),
             ),
           ),
-          IconButton(
-            tooltip: "搜索",
-            onPressed: () => SearchDialog.show(context),
-            icon: const Icon(Symbols.search),
+                IconButton(
+                  tooltip: "搜索",
+                  onPressed: () => SearchDialog.show(context),
+                  icon: const Icon(Symbols.search),
+                ),
+                const WindowControlls(),
+              ],
+            ),
           ),
-          const WindowControlls(),
-        ],
+        ),
       ),
     );
   }
 }
 
 class _OpenDrawerBtn extends StatelessWidget {
-  const _OpenDrawerBtn();
+  const _OpenDrawerBtn({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -335,14 +359,15 @@ class _WindowControllsState extends State<WindowControlls> with WindowListener {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8.0,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
           tooltip: "最小化",
           onPressed: windowManager.minimize,
           icon: const Icon(Symbols.remove),
         ),
+        const SizedBox(width: 8.0),
         IconButton(
           tooltip: _isMaximized ? "还原" : "最大化",
           onPressed: _isProcessing ? null : _toggleMaximized,
@@ -350,8 +375,9 @@ class _WindowControllsState extends State<WindowControlls> with WindowListener {
             _isMaximized ? Symbols.fullscreen_exit : Symbols.fullscreen,
           ),
         ),
+        const SizedBox(width: 8.0),
         IconButton(
-          tooltip: "退出",
+          tooltip: "关闭",
           onPressed: _shutdownAndExit,
           icon: const Icon(Symbols.close),
         ),

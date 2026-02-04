@@ -83,40 +83,56 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return AnimatedContainer(
-      duration: MotionDuration.fast,
-      curve: MotionCurve.standard,
-      decoration: BoxDecoration(
-        color: _hovered ? scheme.onSecondaryContainer.withOpacity(0.06) : null,
-        borderRadius: BorderRadius.circular(8.0),
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        borderRadius: BorderRadius.circular(8.0),
-        child: InkWell(
-          onHover: (v) {
-            _controlsHideTimer?.cancel();
-            setState(() => _hovered = v);
-            if (v) {
-              _setControlsVisible(true);
-            } else {
-              _scheduleHideControls();
+    return IconButtonTheme(
+      data: IconButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return scheme.onSecondaryContainer.withValues(alpha: 0.04);
             }
-          },
-          onTap: () => context.push(app_paths.NOW_PLAYING_PAGE),
+            if (states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.focused)) {
+              return scheme.onSecondaryContainer.withValues(alpha: 0.02);
+            }
+            return Colors.transparent;
+          }),
+        ),
+      ),
+      child: AnimatedContainer(
+        duration: MotionDuration.fast,
+        curve: MotionCurve.standard,
+        decoration: BoxDecoration(
+          color: _hovered ? scheme.onSecondaryContainer.withOpacity(0.06) : null,
           borderRadius: BorderRadius.circular(8.0),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: ListenableBuilder(
-              listenable: PlayService.instance.playbackService,
-              builder: (context, _) {
-                final playbackService = PlayService.instance.playbackService;
-                final nowPlaying = playbackService.nowPlaying;
-                final placeholder = Icon(
-                  Symbols.broken_image,
-                  size: 48.0,
-                  color: scheme.onSecondaryContainer,
-                );
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          borderRadius: BorderRadius.circular(8.0),
+          child: InkWell(
+            onHover: (v) {
+              _controlsHideTimer?.cancel();
+              setState(() => _hovered = v);
+              if (v) {
+                _setControlsVisible(true);
+              } else {
+                _scheduleHideControls();
+              }
+            },
+            onTap: () => context.push(app_paths.NOW_PLAYING_PAGE),
+            borderRadius: BorderRadius.circular(8.0),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: ListenableBuilder(
+                listenable: PlayService.instance.playbackService,
+                builder: (context, _) {
+                  final playbackService = PlayService.instance.playbackService;
+                  final nowPlaying = playbackService.nowPlaying;
+                  final placeholder = Icon(
+                    Symbols.broken_image,
+                    size: 48.0,
+                    color: scheme.onSecondaryContainer,
+                  );
 
                 return LayoutBuilder(builder: (context, constraints) {
                   final dense = constraints.maxWidth <= 520;
@@ -129,14 +145,22 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
                         IconButton(
                           tooltip: "上一曲",
                           onPressed: playbackService.lastAudio,
-                          icon: const Icon(Symbols.skip_previous),
+                          icon: const Icon(
+                            Symbols.skip_previous,
+                            fill: 0.0,
+                            weight: 400.0,
+                          ),
                           color: scheme.onSecondaryContainer,
                         ),
                       if (!dense)
                         IconButton(
                           tooltip: "下一曲",
                           onPressed: playbackService.nextAudio,
-                          icon: const Icon(Symbols.skip_next),
+                          icon: const Icon(
+                            Symbols.skip_next,
+                            fill: 0.0,
+                            weight: 400.0,
+                          ),
                           color: scheme.onSecondaryContainer,
                         ),
                       if (!minimal) _MiniShuffleButton(enabled: !dense),
@@ -225,7 +249,8 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
                     ],
                   );
                 });
-              },
+                },
+              ),
             ),
           ),
         ),
@@ -272,7 +297,7 @@ class _MiniPlayPauseButton extends StatelessWidget {
           return IconButton(
             tooltip: snapshot.data! == PlayerState.playing ? "暂停" : "播放",
             onPressed: onPressed,
-            icon: Icon(icon),
+            icon: Icon(icon, fill: 0.0, weight: 400.0),
             color: onSecondaryContainer,
           );
         }
@@ -280,7 +305,7 @@ class _MiniPlayPauseButton extends StatelessWidget {
         return IconButton(
           tooltip: snapshot.data! == PlayerState.playing ? "暂停" : "播放",
           onPressed: onPressed,
-          icon: Icon(icon),
+          icon: Icon(icon, fill: 0.0, weight: 400.0),
           color: onSecondaryContainer,
         );
       },
@@ -334,7 +359,7 @@ class _MiniShuffleButton extends StatelessWidget {
         return IconButton(
           tooltip: value ? "关闭随机" : "开启随机",
           onPressed: onPressed,
-          icon: const Icon(Symbols.shuffle),
+          icon: const Icon(Symbols.shuffle, fill: 0.0, weight: 400.0),
           color: value ? scheme.primary : scheme.onSecondaryContainer,
         );
       },

@@ -153,16 +153,16 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Save Preset"),
+        title: const Text("保存预设"),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(labelText: "Preset Name"),
+          decoration: const InputDecoration(labelText: "预设名称"),
           autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text("Cancel"),
+            child: const Text("取消"),
           ),
           TextButton(
             onPressed: () {
@@ -173,7 +173,7 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
                 setState(() {}); // Refresh UI
               }
             },
-            child: const Text("Save"),
+            child: const Text("保存"),
           ),
         ],
       ),
@@ -216,7 +216,7 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
                     controller.open();
                   }
                 },
-                tooltip: "Presets",
+                tooltip: "预设",
                 icon: const Icon(Symbols.queue_music),
               );
             },
@@ -224,7 +224,7 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
               if (presets.isEmpty)
                 const MenuItemButton(
                   onPressed: null,
-                  child: Text("No presets"),
+                  child: Text("无预设"),
                 ),
               ...presets.map(
                 (preset) => MenuItemButton(
@@ -232,7 +232,7 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
                   trailingIcon: IconButton(
                     onPressed: () => _deletePreset(preset),
                     icon: const Icon(Symbols.close, size: 16),
-                    tooltip: "Delete",
+                    tooltip: "删除",
                   ),
                   child: Text(preset.name),
                 ),
@@ -241,13 +241,13 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
               MenuItemButton(
                 onPressed: _savePreset,
                 leadingIcon: const Icon(Symbols.save),
-                child: const Text("Save current as preset..."),
+                child: const Text("保存当前为预设..."),
               ),
             ],
           ),
           IconButton(
             onPressed: _importWaveletEq,
-            tooltip: "Import Wavelet AutoEq",
+            tooltip: "导入 Wavelet AutoEq",
             icon: const Icon(Symbols.file_upload),
           ),
           if (!playbackService.isBassFxLoaded)

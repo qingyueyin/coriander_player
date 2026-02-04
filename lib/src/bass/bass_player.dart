@@ -189,8 +189,8 @@ class BassPlayer {
   Stream<PlayerState> get playerStateStream =>
       _playerStateStreamController.stream;
 
-  Timer _getPositionUpdater() {
-    return Timer.periodic(const Duration(milliseconds: 33), (timer) {
+  Timer _getPositionUpdater(Duration period) {
+    return Timer.periodic(period, (timer) {
       _positionStreamController.add(position);
 
       /// check if the channel has completed
@@ -924,7 +924,8 @@ class BassPlayer {
       }
     }
     _playerStateStreamController.add(playerState);
-    _positionUpdater = _getPositionUpdater();
+    _positionUpdater?.cancel();
+    _positionUpdater = _getPositionUpdater(const Duration(milliseconds: 33));
   }
 
   /// start/resume channel
@@ -954,7 +955,8 @@ class BassPlayer {
     }
 
     _playerStateStreamController.add(playerState);
-    _positionUpdater = _getPositionUpdater();
+    _positionUpdater?.cancel();
+    _positionUpdater = _getPositionUpdater(const Duration(milliseconds: 33));
     _logAudioState("start(done)");
   }
 
@@ -962,6 +964,8 @@ class BassPlayer {
     if (_bassWasapi.BASS_WASAPI_Stop(bass.TRUE) == bass.TRUE) {
       _playerStateStreamController.add(playerState);
       _positionUpdater?.cancel();
+      _positionUpdater = _getPositionUpdater(const Duration(milliseconds: 120));
+      _positionStreamController.add(position);
     }
   }
 
@@ -992,6 +996,8 @@ class BassPlayer {
 
     _playerStateStreamController.add(playerState);
     _positionUpdater?.cancel();
+    _positionUpdater = _getPositionUpdater(const Duration(milliseconds: 120));
+    _positionStreamController.add(position);
     _logAudioState("pause(done)");
   }
 
@@ -1026,6 +1032,7 @@ class BassPlayer {
           throw const FormatException("Some other mystery problem!");
       }
     }
+    _positionStreamController.add(this.position);
     _logAudioState("seek(end,$position)");
   }
 

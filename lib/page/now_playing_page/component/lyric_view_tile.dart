@@ -173,7 +173,7 @@ class _SyncLineContent extends StatelessWidget {
           final posInMs = (snapshot.data ?? 0) * 1000;
           return RichText(
             softWrap: true,
-            overflow: TextOverflow.visible,
+            overflow: TextOverflow.clip,
             textAlign: switch (alignment) {
               LyricTextAlign.left => TextAlign.left,
               LyricTextAlign.center => TextAlign.center,
@@ -183,37 +183,52 @@ class _SyncLineContent extends StatelessWidget {
               children: List.generate(
                 syncLine.words.length,
                 (i) {
-                  final posFromWordStart = max(
-                    posInMs - syncLine.words[i].start.inMilliseconds,
-                    0,
-                  );
-                  final progress = min(
-                    posFromWordStart / syncLine.words[i].length.inMilliseconds,
-                    1.0,
-                  );
+                  final word = syncLine.words[i];
+                  final wordLenMs = word.length.inMilliseconds;
+                  final wordStartMs = word.start.inMilliseconds.toDouble();
+                  final wordEndMs = wordStartMs + wordLenMs;
+                  final progress = wordLenMs <= 0
+                      ? (posInMs >= wordEndMs ? 1.0 : 0.0)
+                      : ((posInMs - wordStartMs) / wordLenMs).clamp(0.0, 1.0);
                   return WidgetSpan(
-                    child: ShaderMask(
-                      blendMode: BlendMode.dstIn,
-                      shaderCallback: (bounds) {
-                        return LinearGradient(
-                          colors: [
-                            scheme.primary,
-                            scheme.primary,
-                            scheme.primary.withOpacity(0.10),
-                            scheme.primary.withOpacity(0.10),
-                          ],
-                          stops: [0, progress, progress, 1],
-                        ).createShader(bounds);
-                      },
-                      child: Text(
-                        syncLine.words[i].content,
-                        style: _lyricTextStyle(
-                          color: scheme.primary,
-                          fontSize: primarySize,
-                          weight: fontWeight,
-                          height: 1.15,
+                    child: Stack(
+                      children: [
+                        // 底层：未播放状态（暗色）
+                        Text(
+                          word.content,
+                          style: _lyricTextStyle(
+                            color: scheme.primary.withOpacity(0.12),
+                            fontSize: primarySize,
+                            weight: fontWeight,
+                            height: 1.15,
+                          ),
                         ),
-                      ),
+                        // 顶层：已播放状态（亮色），通过 ShaderMask 裁剪
+                        if (progress > 0.0)
+                          ShaderMask(
+                            blendMode: BlendMode.dstIn,
+                            shaderCallback: (bounds) {
+                              return LinearGradient(
+                                colors: const [
+                                  Colors.white,
+                                  Colors.white,
+                                  Colors.transparent,
+                                  Colors.transparent
+                                ],
+                                stops: [0, progress, progress + 0.05, 1],
+                              ).createShader(bounds);
+                            },
+                            child: Text(
+                              word.content,
+                              style: _lyricTextStyle(
+                                color: scheme.primary,
+                                fontSize: primarySize,
+                                weight: fontWeight,
+                                height: 1.15,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   );
                 },

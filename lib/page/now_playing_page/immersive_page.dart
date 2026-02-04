@@ -25,11 +25,16 @@ class _NowPlayingPage_Immersive extends StatelessWidget {
               ),
             ),
           ),
-          const Expanded(
-            child: VerticalLyricView(
-              showControls: false,
-              enableSeekOnTap: false,
-              centerVertically: true,
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 820.0),
+                child: const VerticalLyricView(
+                  showControls: false,
+                  enableSeekOnTap: false,
+                  centerVertically: true,
+                ),
+              ),
             ),
           ),
         ],

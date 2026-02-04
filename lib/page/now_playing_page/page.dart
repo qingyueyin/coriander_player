@@ -125,22 +125,30 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
             child: Scaffold(
               appBar: immersive
                   ? null
-                  : const PreferredSize(
-                      preferredSize: Size.fromHeight(56.0),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Row(
-                          children: [
-                            NavBackBtn(),
-                            Expanded(
-                              child: DragToMoveArea(child: SizedBox.expand()),
+                  : PreferredSize(
+                      preferredSize: const Size.fromHeight(56.0),
+                      child: ClipRect(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                          child: Container(
+                            color: scheme.surface.withOpacity(0.12),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: const Row(
+                              children: [
+                                NavBackBtn(),
+                                Expanded(
+                                  child:
+                                      DragToMoveArea(child: SizedBox.expand()),
+                                ),
+                                WindowControlls(),
+                              ],
                             ),
-                            WindowControlls(),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-              backgroundColor: scheme.secondaryContainer,
+              backgroundColor: Colors.transparent,
               body: Listener(
                 onPointerDown: (_) {
                   _bumpCursor();
@@ -155,21 +163,38 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                   fit: StackFit.expand,
                   alignment: AlignmentDirectional.center,
                   children: [
+                    ColoredBox(color: scheme.surface),
                     if (nowPlayingCover != null) ...[
                       Image(
                         image: nowPlayingCover!,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                       ),
-                      switch (brightness) {
-                        Brightness.dark =>
-                          const ColoredBox(color: Colors.black45),
-                        Brightness.light =>
-                          const ColoredBox(color: Colors.white54),
-                      },
                       BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 250, sigmaY: 250),
+                        filter: ImageFilter.blur(sigmaX: 72, sigmaY: 72),
                         child: const ColoredBox(color: Colors.transparent),
+                      ),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: switch (brightness) {
+                              Brightness.dark => [
+                                  Colors.black.withValues(alpha: 0.62),
+                                  Colors.black.withValues(alpha: 0.26),
+                                  Colors.black.withValues(alpha: 0.62),
+                                ],
+                              Brightness.light => [
+                                  Colors.white.withValues(alpha: 0.58),
+                                  Colors.white.withValues(alpha: 0.20),
+                                  Colors.white.withValues(alpha: 0.58),
+                                ],
+                            },
+                            stops: const [0.0, 0.5, 1.0],
+                          ),
+                        ),
+                        child: const SizedBox.expand(),
                       ),
                     ],
                     IconButtonTheme(
@@ -182,13 +207,13 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                               WidgetStateProperty.resolveWith((states) {
                             if (states.contains(WidgetState.pressed)) {
                               return scheme.onSecondaryContainer.withValues(
-                                alpha: 0.08,
+                                alpha: 0.04,
                               );
                             }
                             if (states.contains(WidgetState.hovered) ||
                                 states.contains(WidgetState.focused)) {
                               return scheme.onSecondaryContainer.withValues(
-                                alpha: 0.05,
+                                alpha: 0.02,
                               );
                             }
                             return Colors.transparent;
@@ -900,14 +925,15 @@ class _NowPlayingPlaybackModeSwitch extends StatelessWidget {
         };
 
         final icon = switch (true) {
-          _ when shuffle => Symbols.shuffle_on,
-          _ when playMode == PlayMode.singleLoop => Symbols.repeat_one_on,
+          _ when shuffle => Symbols.shuffle,
+          _ when playMode == PlayMode.singleLoop => Symbols.repeat_one,
           _ => Symbols.repeat,
         };
 
         return IconButton(
           style: const ButtonStyle(
             backgroundColor: WidgetStatePropertyAll(Colors.transparent),
+            overlayColor: WidgetStatePropertyAll(Colors.transparent),
           ),
           tooltip: modeText,
           onPressed: () {
@@ -925,7 +951,7 @@ class _NowPlayingPlaybackModeSwitch extends StatelessWidget {
             playbackService.useShuffle(false);
             playbackService.setPlayMode(PlayMode.forward);
           },
-          icon: Icon(icon),
+          icon: Icon(icon, fill: 0.0, weight: 400.0),
           color: scheme.onSecondaryContainer,
         );
       },
@@ -1045,28 +1071,31 @@ class _GlowingIconButtonState extends State<_GlowingIconButton> {
                 Positioned.fill(
                   child: ImageFiltered(
                     imageFilter: ImageFilter.blur(
-                      sigmaX: 12,
-                      sigmaY: 12,
+                      sigmaX: 10,
+                      sigmaY: 10,
                     ),
                     child: Center(
                       child: Icon(
                         widget.iconData,
                         size: widget.size,
                         color: widget.glowColor,
-                        fill: 1.0,
+                        fill: 0.0,
+                        weight: 400.0,
                       ),
                     ),
                   ),
                 ),
               // Icon Layer
               AnimatedScale(
-                duration: const Duration(milliseconds: 100),
+                duration: const Duration(milliseconds: 120),
+                curve: const Cubic(0.4, 0, 0.2, 1),
                 scale: _isPressed ? 0.9 : 1.0,
                 child: Icon(
                   widget.iconData,
                   size: widget.size,
                   color: widget.iconColor,
-                  fill: 1.0,
+                  fill: 0.0,
+                  weight: 400.0,
                 ),
               ),
             ],
