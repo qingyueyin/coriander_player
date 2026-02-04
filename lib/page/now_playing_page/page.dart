@@ -1547,39 +1547,16 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        nowPlaying == null ? "Enjoy Music" : nowPlaying.artist,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: scheme.onSecondaryContainer
-                              .withValues(alpha: 0.8),
-                          fontSize: 16,
-                          height: 1.2,
-                        ),
-                      ),
-                    ),
-                    if (nowPlaying != null && nowPlaying.album.isNotEmpty) ...[
-                      const SizedBox(width: 12),
-                      Flexible(
-                        child: Text(
-                          nowPlaying.album,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: scheme.onSecondaryContainer
-                                .withValues(alpha: 0.8),
-                            fontSize: 16,
-                            height: 1.2,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+                Text(
+                  nowPlaying == null ? "Enjoy Music" : nowPlaying.artist,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: scheme.onSecondaryContainer.withValues(alpha: 0.8),
+                    fontSize: 16,
+                    height: 1.2,
+                  ),
                 ),
               ],
             ),

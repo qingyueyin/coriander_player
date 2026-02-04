@@ -137,6 +137,9 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
   static const _scrollCurve = Cubic(0.4, 0, 0.2, 1);
   static const double _fadeExtent = 0.12;
   static const double _inactiveOpacity = 0.38;
+  static const double _scrollMsPerPixel = 0.55;
+  static const int _scrollMinMs = 220;
+  static const int _scrollMaxMs = 420;
 
   List<LyricViewTile> lyricTiles = [
     LyricViewTile(line: LrcLine.defaultLine, opacity: 1.0)
@@ -169,11 +172,17 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
     _ensureVisibleTimer?.cancel();
     _ensureVisibleTimer = Timer(const Duration(milliseconds: 60), () {
       if (!mounted) return;
-      _scrollToCurrent(const Duration(milliseconds: 200));
+      _scrollToCurrent();
     });
   }
 
-  void _scrollToCurrent(Duration duration) {
+  Duration _durationForScroll(double from, double to) {
+    final dist = (to - from).abs();
+    final ms = (dist * _scrollMsPerPixel).round().clamp(_scrollMinMs, _scrollMaxMs);
+    return Duration(milliseconds: ms);
+  }
+
+  void _scrollToCurrent([Duration? duration]) {
     if (!scrollController.hasClients) return;
     final targetContext = currentLyricTileKey.currentContext;
     if (targetContext == null || !targetContext.mounted) return;
@@ -190,14 +199,15 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
       scrollController.position.maxScrollExtent,
     );
 
-    if (duration == Duration.zero) {
+    final d = duration ?? _durationForScroll(scrollController.offset, targetOffset);
+    if (d == Duration.zero) {
       scrollController.jumpTo(targetOffset);
       return;
     }
 
     scrollController.animateTo(
       targetOffset,
-      duration: duration,
+      duration: d,
       curve: _scrollCurve,
     );
   }
@@ -212,7 +222,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
     lyricTiles = _generateLyricTiles(max(nextLyricLine - 1, 0));
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      _scrollToCurrent(const Duration(milliseconds: 300));
+      _scrollToCurrent(const Duration(milliseconds: 320));
     });
   }
 
@@ -249,7 +259,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
     setState(() {});
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      _scrollToCurrent(const Duration(milliseconds: 320));
+      _scrollToCurrent();
     });
   }
 

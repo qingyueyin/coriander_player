@@ -90,7 +90,8 @@ class LyricViewTile extends StatelessWidget {
     return Align(
       alignment: alignment,
       child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 280),
+        curve: const Cubic(0.4, 0, 0.2, 1),
         opacity: opacity,
         child: content,
       ),
