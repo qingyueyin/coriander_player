@@ -28,7 +28,7 @@ TextStyle _lyricTextStyle({
     fontSize: fontSize,
     fontFamily: 'MiSans',
     fontWeight: _discreteFontWeight(w),
-    height: height,
+    height: height ?? 1.5,
   );
 }
 
@@ -200,7 +200,7 @@ class _SyncLineContent extends StatelessWidget {
                             color: scheme.primary.withOpacity(0.12),
                             fontSize: primarySize,
                             weight: fontWeight,
-                            height: 1.15,
+                            height: 1.5,
                           ),
                         ),
                         // 顶层：已播放状态（亮色），通过 ShaderMask 裁剪
@@ -224,7 +224,7 @@ class _SyncLineContent extends StatelessWidget {
                                 color: scheme.primary,
                                 fontSize: primarySize,
                                 weight: fontWeight,
-                                height: 1.15,
+                                height: 1.5,
                               ),
                             ),
                           ),
@@ -239,7 +239,7 @@ class _SyncLineContent extends StatelessWidget {
       )
     ];
     if (showTranslation && syncLine.translation != null) {
-      contents.add(SizedBox(height: isMainLine ? 6.0 : 4.0));
+      contents.add(SizedBox(height: isMainLine ? 8.0 : 4.0));
       contents.add(buildSecondaryText(
         syncLine.translation!,
         scheme,
@@ -249,7 +249,7 @@ class _SyncLineContent extends StatelessWidget {
       ));
     }
     return Padding(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
       child: Column(
         crossAxisAlignment: switch (alignment) {
           LyricTextAlign.left => CrossAxisAlignment.start,
@@ -281,7 +281,7 @@ class _SyncLineContent extends StatelessWidget {
         color: scheme.onSecondaryContainer,
         fontSize: fontSize,
         weight: fontWeight,
-        height: 1.15,
+        height: 1.5,
       ),
     );
   }

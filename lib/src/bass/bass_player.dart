@@ -226,7 +226,7 @@ class BassPlayer {
       return;
     }
 
-    if (_eqHandles.isEmpty) {
+    if (_eqHandles.isEmpty && _bfxEqHandle == 0) {
       _initEQ();
     }
 
@@ -239,7 +239,7 @@ class BassPlayer {
       _removeEQ();
       return;
     }
-    if (_eqHandles.isEmpty) {
+    if (_eqHandles.isEmpty && _bfxEqHandle == 0) {
       _initEQ();
     } else {
       for (int i = 0; i < 10; i++) {
@@ -297,16 +297,28 @@ class BassPlayer {
       try {
         final params = calloc<bass.BASS_BFX_PEAKEQ>();
         final center = _eqCenters[band];
+        final bandwidth = (_calculateBandwidth(center) / 12.0).clamp(0.1, 10.0);
+        final gain = _eqGains[band];
+
         params.ref.lBand = band;
         params.ref.fCenter = center;
-        params.ref.fBandwidth = (_calculateBandwidth(center) / 12.0).clamp(
-          0.1,
-          10.0,
-        );
+        params.ref.fBandwidth = bandwidth;
         params.ref.fQ = 0.0;
-        params.ref.fGain = _eqGains[band];
+        params.ref.fGain = gain;
         params.ref.lChannel = bass.BASS_BFX_CHANALL;
-        _bass.BASS_FXSetParameters(_bfxEqHandle, params.cast());
+
+        final result = _bass.BASS_FXSetParameters(_bfxEqHandle, params.cast());
+
+        LOGGER.i(
+          "EQ Update (BFX) - Band: $band, Freq: $center Hz, Gain: $gain dB, Bandwidth: $bandwidth, Result: $result",
+        );
+
+        if (result == 0) {
+          final err = _bass.BASS_ErrorGetCode();
+          LOGGER
+              .w("Failed to set BFX EQ parameters for band $band: Error $err");
+        }
+
         calloc.free(params);
       } catch (e) {
         LOGGER.e("Error updating BFX EQ band $band: $e");
@@ -322,14 +334,22 @@ class BassPlayer {
     try {
       final params = calloc<bass.BASS_DX8_PARAMEQ>();
       final center = _eqCenters[band];
+      final bandwidth = _calculateBandwidth(center);
+      final gain = _eqGains[band];
+
       params.ref.fCenter = center;
-      params.ref.fBandwidth = _calculateBandwidth(center);
-      params.ref.fGain = _eqGains[band];
+      params.ref.fBandwidth = bandwidth;
+      params.ref.fGain = gain;
 
       final result = _bass.BASS_FXSetParameters(fx, params.cast());
+
+      LOGGER.i(
+        "EQ Update (DX8) - Band: $band, Freq: $center Hz, Gain: $gain dB, Bandwidth: $bandwidth, Result: $result",
+      );
+
       if (result == 0) {
-        // final err = _bass.BASS_ErrorGetCode();
-        // LOGGER.w("Failed to set EQ parameters for band $band: Error $err");
+        final err = _bass.BASS_ErrorGetCode();
+        LOGGER.w("Failed to set EQ parameters for band $band: Error $err");
       }
       calloc.free(params);
     } catch (e) {
