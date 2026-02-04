@@ -16,31 +16,11 @@ FontWeight _discreteFontWeight(int weight) {
   return FontWeight.values[((w / 100).floor() - 1).clamp(0, 8)];
 }
 
-double _lyricLetterSpacing({
-  required int weight,
-  required double fontSize,
-}) {
-  final sizeFactor = fontSize / 16;
-  var v = 0.0012 * (weight - 400) * sizeFactor;
-
-  if (weight > 800) {
-    final t = ((weight - 800) / 100).clamp(0.0, 1.0);
-    v += t * (0.9 * sizeFactor);
-  }
-
-  if (weight >= 900) {
-    v = max(v, 1.0 * sizeFactor);
-  }
-
-  if (v < -0.10) return -0.10;
-  if (v > 3.0) return 3.0;
-  return v;
-}
-
 TextStyle _lyricTextStyle({
   required Color color,
   required double fontSize,
   required int weight,
+  double? height,
 }) {
   final w = weight.clamp(100, 900);
   return TextStyle(
@@ -48,9 +28,22 @@ TextStyle _lyricTextStyle({
     fontSize: fontSize,
     fontFamily: 'MiSans',
     fontWeight: _discreteFontWeight(w),
-    fontVariations: [FontVariation('wght', w.toDouble())],
-    letterSpacing: _lyricLetterSpacing(weight: w, fontSize: fontSize),
+    height: height,
   );
+}
+
+const double _mainLinePrimaryScale = 1.00;
+const double _mainLineTranslationScale = 0.78;
+const double _subLinePrimaryScale = 0.88;
+const double _subLineTranslationScale = 0.70;
+
+double _effectiveLyricFontSize(double base, {required bool isMainLine}) {
+  return base * (isMainLine ? _mainLinePrimaryScale : _subLinePrimaryScale);
+}
+
+double _effectiveTranslationFontSize(double base, {required bool isMainLine}) {
+  return base *
+      (isMainLine ? _mainLineTranslationScale : _subLineTranslationScale);
 }
 
 class LyricViewTile extends StatelessWidget {
@@ -99,13 +92,7 @@ class LyricViewTile extends StatelessWidget {
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 300),
         opacity: opacity,
-        child: AnimatedScale(
-          scale: isMainLine ? 1.1 : 1.0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOutQuad,
-          alignment: alignment,
-          child: content,
-        ),
+        child: content,
       ),
     );
   }
@@ -131,26 +118,36 @@ class _SyncLineContent extends StatelessWidget {
     final lyricViewController = context.watch<LyricViewController>();
 
     final lyricFontSize = lyricViewController.lyricFontSize;
-    final translationFontSize = lyricViewController.translationFontSize;
     final alignment = lyricViewController.lyricTextAlign;
     final showTranslation = lyricViewController.showLyricTranslation;
     final fontWeight = lyricViewController.lyricFontWeight;
+
+    final primarySize =
+        _effectiveLyricFontSize(lyricFontSize, isMainLine: isMainLine);
+    final translationSize =
+        _effectiveTranslationFontSize(lyricFontSize, isMainLine: isMainLine);
 
     if (!isMainLine) {
       if (syncLine.words.isEmpty) {
         return const SizedBox.shrink();
       }
 
-      final List<Text> contents = [
+      final List<Widget> contents = [
         buildPrimaryText(
-            syncLine.content, scheme, alignment, lyricFontSize, fontWeight),
+          syncLine.content,
+          scheme,
+          alignment,
+          primarySize,
+          fontWeight,
+        ),
       ];
       if (showTranslation && syncLine.translation != null) {
+        contents.add(SizedBox(height: isMainLine ? 6.0 : 4.0));
         contents.add(buildSecondaryText(
           syncLine.translation!,
           scheme,
           alignment,
-          translationFontSize,
+          translationSize,
           fontWeight,
         ));
       }
@@ -174,6 +171,8 @@ class _SyncLineContent extends StatelessWidget {
         builder: (context, snapshot) {
           final posInMs = (snapshot.data ?? 0) * 1000;
           return RichText(
+            softWrap: true,
+            overflow: TextOverflow.visible,
             textAlign: switch (alignment) {
               LyricTextAlign.left => TextAlign.left,
               LyricTextAlign.center => TextAlign.center,
@@ -209,8 +208,9 @@ class _SyncLineContent extends StatelessWidget {
                         syncLine.words[i].content,
                         style: _lyricTextStyle(
                           color: scheme.primary,
-                          fontSize: lyricFontSize,
+                          fontSize: primarySize,
                           weight: fontWeight,
+                          height: 1.15,
                         ),
                       ),
                     ),
@@ -223,11 +223,12 @@ class _SyncLineContent extends StatelessWidget {
       )
     ];
     if (showTranslation && syncLine.translation != null) {
+      contents.add(SizedBox(height: isMainLine ? 6.0 : 4.0));
       contents.add(buildSecondaryText(
         syncLine.translation!,
         scheme,
         alignment,
-        translationFontSize,
+        translationSize,
         fontWeight,
       ));
     }
@@ -253,6 +254,8 @@ class _SyncLineContent extends StatelessWidget {
   ) {
     return Text(
       text,
+      softWrap: true,
+      overflow: TextOverflow.visible,
       textAlign: switch (align) {
         LyricTextAlign.left => TextAlign.left,
         LyricTextAlign.center => TextAlign.center,
@@ -262,6 +265,7 @@ class _SyncLineContent extends StatelessWidget {
         color: scheme.onSecondaryContainer,
         fontSize: fontSize,
         weight: fontWeight,
+        height: 1.15,
       ),
     );
   }
@@ -276,6 +280,8 @@ class _SyncLineContent extends StatelessWidget {
     final translationWeight = (fontWeight - 50).clamp(100, 900);
     return Text(
       text,
+      softWrap: true,
+      overflow: TextOverflow.visible,
       textAlign: switch (align) {
         LyricTextAlign.left => TextAlign.left,
         LyricTextAlign.center => TextAlign.center,
@@ -285,6 +291,7 @@ class _SyncLineContent extends StatelessWidget {
         color: scheme.onSecondaryContainer,
         fontSize: fontSize,
         weight: translationWeight,
+        height: 1.10,
       ),
     );
   }
@@ -310,23 +317,33 @@ class _LrcLineContent extends StatelessWidget {
     final lyricViewController = context.watch<LyricViewController>();
 
     final lyricFontSize = lyricViewController.lyricFontSize;
-    final translationFontSize = lyricViewController.translationFontSize;
     final alignment = lyricViewController.lyricTextAlign;
     final showTranslation = lyricViewController.showLyricTranslation;
     final fontWeight = lyricViewController.lyricFontWeight;
 
+    final primarySize =
+        _effectiveLyricFontSize(lyricFontSize, isMainLine: isMainLine);
+    final translationSize =
+        _effectiveTranslationFontSize(lyricFontSize, isMainLine: isMainLine);
+
     final splited = lrcLine.content.split("┃");
-    final List<Text> contents = [
+    final List<Widget> contents = [
       buildPrimaryText(
-          splited.first, scheme, alignment, lyricFontSize, fontWeight),
+        splited.first,
+        scheme,
+        alignment,
+        primarySize,
+        fontWeight,
+      )
     ];
     if (showTranslation) {
       for (var i = 1; i < splited.length; i++) {
+        contents.add(SizedBox(height: i == 1 ? (isMainLine ? 6.0 : 4.0) : 2.0));
         contents.add(buildSecondaryText(
           splited[i],
           scheme,
           alignment,
-          translationFontSize,
+          translationSize,
           fontWeight,
         ));
       }

@@ -89,16 +89,41 @@ class PlaybackPreference {
   PlayMode playMode;
   double volumeDsp;
   List<double> eqGains;
+  bool eqBypass;
   List<EqPreset> eqPresets;
+  String lastAudioPath;
+  List<String> lastPlaylistPaths;
+  int lastPlaylistIndex;
+  double wasapiBufferSec;
+  bool wasapiEventDriven;
+  bool reinitOnSetSource;
 
   PlaybackPreference(
-      this.playMode, this.volumeDsp, this.eqGains, this.eqPresets);
+    this.playMode,
+    this.volumeDsp,
+    this.eqGains,
+    this.eqPresets, {
+    this.eqBypass = false,
+    this.lastAudioPath = '',
+    this.lastPlaylistPaths = const [],
+    this.lastPlaylistIndex = 0,
+    this.wasapiBufferSec = 0.10,
+    this.wasapiEventDriven = false,
+    this.reinitOnSetSource = false,
+  });
 
   Map toMap() => {
         "playMode": playMode.name,
         "volumeDsp": volumeDsp,
         "eqGains": eqGains,
+        "eqBypass": eqBypass,
         "eqPresets": eqPresets.map((e) => e.toMap()).toList(),
+        "lastAudioPath": lastAudioPath,
+        "lastPlaylistPaths": lastPlaylistPaths,
+        "lastPlaylistIndex": lastPlaylistIndex,
+        "wasapiBufferSec": wasapiBufferSec,
+        "wasapiEventDriven": wasapiEventDriven,
+        "reinitOnSetSource": reinitOnSetSource,
       };
 
   factory PlaybackPreference.fromMap(Map map) => PlaybackPreference(
@@ -112,6 +137,15 @@ class PlaybackPreference {
                 .map((e) => EqPreset.fromMap(e))
                 .toList()
             : [],
+        eqBypass: map["eqBypass"] ?? false,
+        lastAudioPath: map["lastAudioPath"] ?? '',
+        lastPlaylistPaths: map["lastPlaylistPaths"] != null
+            ? List<String>.from(map["lastPlaylistPaths"])
+            : const [],
+        lastPlaylistIndex: map["lastPlaylistIndex"] ?? 0,
+        wasapiBufferSec: (map["wasapiBufferSec"] ?? 0.10).toDouble(),
+        wasapiEventDriven: map["wasapiEventDriven"] ?? false,
+        reinitOnSetSource: map["reinitOnSetSource"] ?? false,
       );
 }
 

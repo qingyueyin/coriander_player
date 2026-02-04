@@ -47,3 +47,10 @@
 ## 未完成（Bug）
 
 - [ ] **修复 SMTC (System Media Transport Controls)**：Windows 媒体通知/控制失效时的排查与修复
+
+### 最近修复（Bug）
+
+- [x] **音频叠加回声/重影**：
+  - 原因：DX8 EQ FX 在共享模式下存在不稳定行为，开启“均衡器旁路”后问题消失。
+  - 措施：共享模式下优先使用 BASS_FX 的 `BFX_PEAKEQ` 实现 10 段均衡，独占模式禁止挂载 EQ FX。
+  - 辅助：新增“均衡器旁路”开关用于快速 A/B；录制日志中写入 `eqBypass` 与 `eqGains` 便于回溯。

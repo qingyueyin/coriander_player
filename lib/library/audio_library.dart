@@ -22,7 +22,7 @@ class AudioLibrary {
 
   /// must call [initFromIndex]
   static AudioLibrary get instance {
-    _instance ?? AudioLibrary._([]);
+    _instance ??= AudioLibrary._([]);
     return _instance!;
   }
 

@@ -15,8 +15,8 @@ class EqualizerDialog extends StatefulWidget {
 class _EqualizerDialogState extends State<EqualizerDialog> {
   late List<double> _gains;
   static const _eqCenters = [
-    "31",
-    "62",
+    "80",
+    "100",
     "125",
     "250",
     "500",
@@ -27,8 +27,8 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
     "16k"
   ];
   static const _eqFreqs = [
-    31.0,
-    62.0,
+    80.0,
+    100.0,
     125.0,
     250.0,
     500.0,

@@ -7,6 +7,7 @@ import 'package:coriander_player/page/now_playing_page/component/lyric_view_cont
 import 'package:coriander_player/page/now_playing_page/component/lyric_view_tile.dart';
 import 'package:coriander_player/play_service/play_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 
 bool ALWAYS_SHOW_LYRIC_VIEW_CONTROLS = false;
@@ -133,6 +134,9 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
   final scrollController = ScrollController();
   LyricViewController? _lyricViewController;
   Timer? _ensureVisibleTimer;
+  static const _scrollCurve = Cubic(0.4, 0, 0.2, 1);
+  static const double _fadeExtent = 0.12;
+  static const double _inactiveOpacity = 0.38;
 
   List<LyricViewTile> lyricTiles = [
     LyricViewTile(line: LrcLine.defaultLine, opacity: 1.0)
@@ -165,15 +169,37 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
     _ensureVisibleTimer?.cancel();
     _ensureVisibleTimer = Timer(const Duration(milliseconds: 60), () {
       if (!mounted) return;
-      final targetContext = currentLyricTileKey.currentContext;
-      if (targetContext == null || !targetContext.mounted) return;
-      Scrollable.ensureVisible(
-        targetContext,
-        alignment: 0.25,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.fastOutSlowIn,
-      );
+      _scrollToCurrent(const Duration(milliseconds: 200));
     });
+  }
+
+  void _scrollToCurrent(Duration duration) {
+    if (!scrollController.hasClients) return;
+    final targetContext = currentLyricTileKey.currentContext;
+    if (targetContext == null || !targetContext.mounted) return;
+
+    final targetObject = targetContext.findRenderObject();
+    if (targetObject is! RenderBox) return;
+    final viewport = RenderAbstractViewport.of(targetObject);
+    if (viewport == null) return;
+
+    final alignment = widget.centerVertically ? 0.5 : 0.25;
+    final revealed = viewport.getOffsetToReveal(targetObject, alignment);
+    final targetOffset = revealed.offset.clamp(
+      scrollController.position.minScrollExtent,
+      scrollController.position.maxScrollExtent,
+    );
+
+    if (duration == Duration.zero) {
+      scrollController.jumpTo(targetOffset);
+      return;
+    }
+
+    scrollController.animateTo(
+      targetOffset,
+      duration: duration,
+      curve: _scrollCurve,
+    );
   }
 
   /// 加载当前歌词页面，获取并滚动到当前歌词行的位置
@@ -186,18 +212,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
     lyricTiles = _generateLyricTiles(max(nextLyricLine - 1, 0));
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      final targetContext = currentLyricTileKey.currentContext;
-      if (targetContext == null) return;
-
-      /// scroll to curr lyric line
-      if (targetContext.mounted) {
-        Scrollable.ensureVisible(
-          targetContext,
-          alignment: 0.25,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.fastOutSlowIn,
-        );
-      }
+      _scrollToCurrent(const Duration(milliseconds: 300));
     });
   }
 
@@ -217,7 +232,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
         double opacity = 1.0;
         if ((mainLine >= 1 && i <= mainLine - 1) ||
             (mainLine < widget.lyric.lines.length - 1 && i >= mainLine + 1)) {
-          opacity = 0.18;
+          opacity = _inactiveOpacity;
         }
         return LyricViewTile(
           key: i == mainLine ? currentLyricTileKey : null,
@@ -234,18 +249,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
     setState(() {});
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      final targetContext = currentLyricTileKey.currentContext;
-      if (targetContext == null) return;
-
-      /// scroll to curr lyric line
-      if (targetContext.mounted) {
-        Scrollable.ensureVisible(
-          targetContext,
-          alignment: 0.25,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.fastOutSlowIn,
-        );
-      }
+      _scrollToCurrent(const Duration(milliseconds: 320));
     });
   }
 
@@ -253,21 +257,37 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
       final spacerHeight = constraints.maxHeight / 2.0;
-      return CustomScrollView(
-        key: LYRIC_VIEW_KEY,
-        controller: scrollController,
-        slivers: [
-          if (widget.centerVertically)
-            SliverToBoxAdapter(child: SizedBox(height: spacerHeight)),
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: lyricTiles,
+      return ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (bounds) {
+          return const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.transparent,
+              Colors.white,
+              Colors.white,
+              Colors.transparent,
+            ],
+            stops: [0.0, _fadeExtent, 1.0 - _fadeExtent, 1.0],
+          ).createShader(bounds);
+        },
+        child: CustomScrollView(
+          key: LYRIC_VIEW_KEY,
+          controller: scrollController,
+          slivers: [
+            if (widget.centerVertically)
+              SliverToBoxAdapter(child: SizedBox(height: spacerHeight)),
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: lyricTiles,
+              ),
             ),
-          ),
-          if (widget.centerVertically)
-            SliverToBoxAdapter(child: SizedBox(height: spacerHeight)),
-        ],
+            if (widget.centerVertically)
+              SliverToBoxAdapter(child: SizedBox(height: spacerHeight)),
+          ],
+        ),
       );
     });
   }

@@ -159,6 +159,90 @@ class _UseSystemThemeModeSwitchState extends State<UseSystemThemeModeSwitch> {
   }
 }
 
+class AppearanceAdvancedSettingsTile extends StatelessWidget {
+  const AppearanceAdvancedSettingsTile({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SettingsTile(
+      description: "外观高级设置",
+      action: FilledButton.icon(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => const _AppearanceAdvancedSettingsDialog(),
+          );
+        },
+        icon: const Icon(Symbols.tune),
+        label: const Text("打开"),
+      ),
+    );
+  }
+}
+
+class _AppearanceAdvancedSettingsDialog extends StatelessWidget {
+  const _AppearanceAdvancedSettingsDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Dialog(
+      insetPadding: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: SizedBox(
+        width: 560.0,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: Text(
+                  "外观高级设置",
+                  style: TextStyle(
+                    color: scheme.onSurface,
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      UseSystemThemeSwitch(),
+                      SizedBox(height: 16.0),
+                      UseSystemThemeModeSwitch(),
+                      SizedBox(height: 16.0),
+                      ThemeSelector(),
+                      SizedBox(height: 16.0),
+                      SelectFontCombobox(),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16.0),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("关闭"),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class SelectFontCombobox extends StatelessWidget {
   const SelectFontCombobox({super.key});
 

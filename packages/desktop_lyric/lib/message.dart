@@ -1,149 +1,122 @@
 import 'dart:convert';
 
-String getMessageTypeName<T>() {
-  if (T == InitArgsMessage) return 'InitArgsMessage';
-  if (T == ControlEventMessage) return 'ControlEventMessage';
-  if (T == UnlockMessage) return 'UnlockMessage';
-  if (T == ThemeModeChangedMessage) return 'ThemeModeChangedMessage';
-  if (T == ThemeChangedMessage) return 'ThemeChangedMessage';
-  if (T == PlayerStateChangedMessage) return 'PlayerStateChangedMessage';
-  if (T == NowPlayingChangedMessage) return 'NowPlayingChangedMessage';
-  if (T == LyricLineChangedMessage) return 'LyricLineChangedMessage';
-  return T.toString();
-}
+String getMessageTypeName<T extends Message>() => T.toString();
 
 abstract class Message {
-  String get type;
-  Map<String, dynamic> get message;
+  const Message();
 
-  Map<String, dynamic> toJson() => {'type': type, 'message': message};
+  Map<String, dynamic> toMessageJson();
 
-  String buildMessageJson() => json.encode(toJson());
+  String buildMessageJson() => json.encode({
+        'type': runtimeType.toString(),
+        'message': toMessageJson(),
+      });
 }
 
-class InitArgsMessage extends Message {
+class InitArgsMessage {
   final bool isPlaying;
   final String title;
   final String artist;
   final String album;
-  final bool isDarkMode;
-  final int primaryArgb;
-  final int surfaceContainerArgb;
-  final int onSurfaceArgb;
+  final bool darkMode;
+  final int primary;
+  final int surfaceContainer;
+  final int onSurface;
 
-  InitArgsMessage(
+  const InitArgsMessage(
     this.isPlaying,
     this.title,
     this.artist,
     this.album,
-    this.isDarkMode,
-    this.primaryArgb,
-    this.surfaceContainerArgb,
-    this.onSurfaceArgb,
+    this.darkMode,
+    this.primary,
+    this.surfaceContainer,
+    this.onSurface,
   );
 
-  @override
-  String get type => getMessageTypeName<InitArgsMessage>();
-
-  @override
-  Map<String, dynamic> get message => {
+  Map<String, dynamic> toJson() => {
         'isPlaying': isPlaying,
         'title': title,
         'artist': artist,
         'album': album,
-        'isDarkMode': isDarkMode,
-        'primaryArgb': primaryArgb,
-        'surfaceContainerArgb': surfaceContainerArgb,
-        'onSurfaceArgb': onSurfaceArgb,
+        'darkMode': darkMode,
+        'primary': primary,
+        'surfaceContainer': surfaceContainer,
+        'onSurface': onSurface,
       };
 }
 
 enum ControlEvent {
-  pause,
-  start,
-  previousAudio,
-  nextAudio,
-  lock,
-  close,
+  pause(0),
+  start(1),
+  previousAudio(2),
+  nextAudio(3),
+  lock(4),
+  close(5);
+
+  const ControlEvent(this.code);
+  final int code;
+
+  static ControlEvent fromJson(Object? raw) {
+    if (raw is String) {
+      return ControlEvent.values.byName(raw);
+    }
+    if (raw is int) {
+      return ControlEvent.values.firstWhere((e) => e.code == raw);
+    }
+    throw FormatException('Invalid event: $raw');
+  }
 }
 
 class ControlEventMessage extends Message {
   final ControlEvent event;
 
-  ControlEventMessage(this.event);
+  const ControlEventMessage(this.event);
 
   factory ControlEventMessage.fromJson(Map<String, dynamic> json) {
-    final raw = json['event'];
-    if (raw is String) {
-      return ControlEventMessage(ControlEvent.values.byName(raw));
-    }
-    if (raw is int) {
-      return ControlEventMessage(ControlEvent.values[raw]);
-    }
-    throw FormatException('Invalid event: $raw');
+    return ControlEventMessage(ControlEvent.fromJson(json['event']));
   }
 
   @override
-  String get type => getMessageTypeName<ControlEventMessage>();
-
-  @override
-  Map<String, dynamic> get message => {'event': event.name};
+  Map<String, dynamic> toMessageJson() => {
+        'event': event.code,
+      };
 }
 
-class UnlockMessage extends Message {
-  UnlockMessage();
+class PreferenceChangedMessage extends Message {
+  final int primary;
+  final int surfaceContainer;
+  final int onSurface;
+
+  const PreferenceChangedMessage(this.primary, this.surfaceContainer, this.onSurface);
+
+  factory PreferenceChangedMessage.fromJson(Map<String, dynamic> json) {
+    return PreferenceChangedMessage(
+      json['primary'] as int,
+      json['surfaceContainer'] as int,
+      json['onSurface'] as int,
+    );
+  }
 
   @override
-  String get type => getMessageTypeName<UnlockMessage>();
-
-  @override
-  Map<String, dynamic> get message => const {};
-}
-
-class ThemeModeChangedMessage extends Message {
-  final bool darkMode;
-
-  ThemeModeChangedMessage(this.darkMode);
-
-  @override
-  String get type => getMessageTypeName<ThemeModeChangedMessage>();
-
-  @override
-  Map<String, dynamic> get message => {'darkMode': darkMode};
-}
-
-class ThemeChangedMessage extends Message {
-  final int primaryArgb;
-  final int surfaceContainerArgb;
-  final int onSurfaceArgb;
-
-  ThemeChangedMessage(
-    this.primaryArgb,
-    this.surfaceContainerArgb,
-    this.onSurfaceArgb,
-  );
-
-  @override
-  String get type => getMessageTypeName<ThemeChangedMessage>();
-
-  @override
-  Map<String, dynamic> get message => {
-        'primaryArgb': primaryArgb,
-        'surfaceContainerArgb': surfaceContainerArgb,
-        'onSurfaceArgb': onSurfaceArgb,
+  Map<String, dynamic> toMessageJson() => {
+        'primary': primary,
+        'surfaceContainer': surfaceContainer,
+        'onSurface': onSurface,
       };
 }
 
 class PlayerStateChangedMessage extends Message {
-  final bool isPlaying;
+  final bool playing;
 
-  PlayerStateChangedMessage(this.isPlaying);
+  const PlayerStateChangedMessage(this.playing);
+
+  factory PlayerStateChangedMessage.fromJson(Map<String, dynamic> json) {
+    return PlayerStateChangedMessage(json['playing'] as bool);
+  }
 
   @override
-  String get type => getMessageTypeName<PlayerStateChangedMessage>();
-
-  @override
-  Map<String, dynamic> get message => {'isPlaying': isPlaying};
+  Map<String, dynamic> toMessageJson() => {'playing': playing};
 }
 
 class NowPlayingChangedMessage extends Message {
@@ -151,13 +124,18 @@ class NowPlayingChangedMessage extends Message {
   final String artist;
   final String album;
 
-  NowPlayingChangedMessage(this.title, this.artist, this.album);
+  const NowPlayingChangedMessage(this.title, this.artist, this.album);
+
+  factory NowPlayingChangedMessage.fromJson(Map<String, dynamic> json) {
+    return NowPlayingChangedMessage(
+      json['title'] as String,
+      json['artist'] as String,
+      json['album'] as String,
+    );
+  }
 
   @override
-  String get type => getMessageTypeName<NowPlayingChangedMessage>();
-
-  @override
-  Map<String, dynamic> get message => {
+  Map<String, dynamic> toMessageJson() => {
         'title': title,
         'artist': artist,
         'album': album,
@@ -166,18 +144,70 @@ class NowPlayingChangedMessage extends Message {
 
 class LyricLineChangedMessage extends Message {
   final String content;
-  final Duration length;
   final String? translation;
+  final Duration length;
 
-  LyricLineChangedMessage(this.content, this.length, this.translation);
+  const LyricLineChangedMessage(this.content, this.length, [this.translation]);
+
+  factory LyricLineChangedMessage.fromJson(Map<String, dynamic> json) {
+    return LyricLineChangedMessage(
+      json['content'] as String,
+      Duration(microseconds: (json['length'] as num).toInt()),
+      json['translation'] as String?,
+    );
+  }
 
   @override
-  String get type => getMessageTypeName<LyricLineChangedMessage>();
-
-  @override
-  Map<String, dynamic> get message => {
+  Map<String, dynamic> toMessageJson() => {
         'content': content,
-        'lengthMs': length.inMilliseconds,
         'translation': translation,
+        'length': length.inMicroseconds,
       };
+}
+
+class ThemeModeChangedMessage extends Message {
+  final bool darkMode;
+
+  const ThemeModeChangedMessage(this.darkMode);
+
+  factory ThemeModeChangedMessage.fromJson(Map<String, dynamic> json) {
+    return ThemeModeChangedMessage(json['darkMode'] as bool);
+  }
+
+  @override
+  Map<String, dynamic> toMessageJson() => {'darkMode': darkMode};
+}
+
+class ThemeChangedMessage extends Message {
+  final int primary;
+  final int surfaceContainer;
+  final int onSurface;
+
+  const ThemeChangedMessage(this.primary, this.surfaceContainer, this.onSurface);
+
+  factory ThemeChangedMessage.fromJson(Map<String, dynamic> json) {
+    return ThemeChangedMessage(
+      json['primary'] as int,
+      json['surfaceContainer'] as int,
+      json['onSurface'] as int,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toMessageJson() => {
+        'primary': primary,
+        'surfaceContainer': surfaceContainer,
+        'onSurface': onSurface,
+      };
+}
+
+class UnlockMessage extends Message {
+  const UnlockMessage();
+
+  factory UnlockMessage.fromJson(Map<String, dynamic> json) {
+    return const UnlockMessage();
+  }
+
+  @override
+  Map<String, dynamic> toMessageJson() => const {};
 }

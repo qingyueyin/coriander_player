@@ -16,7 +16,6 @@ import 'package:coriander_player/library/playlist.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
 import 'package:coriander_player/page/now_playing_page/component/current_playlist_view.dart';
 import 'package:coriander_player/page/now_playing_page/component/equalizer_dialog.dart';
-import 'package:coriander_player/page/now_playing_page/component/filled_icon_button_style.dart';
 import 'package:coriander_player/page/now_playing_page/component/lyric_source_view.dart';
 import 'package:coriander_player/page/now_playing_page/component/pitch_control.dart';
 import 'package:coriander_player/page/now_playing_page/component/vertical_lyric_view.dart';

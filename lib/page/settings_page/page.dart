@@ -6,6 +6,28 @@ import 'package:coriander_player/page/settings_page/other_settings.dart';
 import 'package:coriander_player/page/settings_page/theme_settings.dart';
 import 'package:flutter/material.dart';
 
+class _SettingsSectionHeader extends StatelessWidget {
+  const _SettingsSectionHeader(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8.0),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: scheme.onSurface.withValues(alpha: 0.75),
+          fontSize: 14.0,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
@@ -16,27 +38,32 @@ class SettingsPage extends StatelessWidget {
       actions: const [],
       body: ListView(
         padding: const EdgeInsets.only(bottom: 96.0),
-        children: const [
+        children: [
+          const _SettingsSectionHeader("库与扫描"),
           AudioLibraryEditor(),
-          SizedBox(height: 16.0),
+          const SizedBox(height: 16.0),
           DefaultLyricSourceControl(),
-          SizedBox(height: 16.0),
+
+          const SizedBox(height: 24.0),
+          const _SettingsSectionHeader("播放"),
+          const EqBypassSwitch(),
+          const SizedBox(height: 16.0),
+          const AdvancedPlaybackSettingsTile(),
+
+          const SizedBox(height: 24.0),
+          const _SettingsSectionHeader("外观"),
           DynamicThemeSwitch(),
-          SizedBox(height: 16.0),
-          UseSystemThemeSwitch(),
-          SizedBox(height: 16.0),
-          ThemeSelector(),
-          SizedBox(height: 16.0),
-          UseSystemThemeModeSwitch(),
-          SizedBox(height: 16.0),
+          const SizedBox(height: 16.0),
           ThemeModeControl(),
-          SizedBox(height: 16.0),
-          SelectFontCombobox(),
-          SizedBox(height: 16.0),
+          const SizedBox(height: 16.0),
+          const AppearanceAdvancedSettingsTile(),
+
+          const SizedBox(height: 24.0),
+          const _SettingsSectionHeader("高级与关于"),
           ArtistSeparatorEditor(),
-          SizedBox(height: 16.0),
+          const SizedBox(height: 16.0),
           CreateIssueTile(),
-          SizedBox(height: 16.0),
+          const SizedBox(height: 16.0),
           CheckForUpdate(),
         ],
       ),

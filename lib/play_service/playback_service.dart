@@ -4,6 +4,7 @@ import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/enums.dart';
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/play_service/play_service.dart';
+import 'package:coriander_player/play_service/audio_echo_log_recorder.dart';
 import 'package:coriander_player/src/bass/bass_player.dart';
 import 'package:coriander_player/src/rust/api/smtc_flutter.dart';
 import 'package:coriander_player/theme_provider.dart';
@@ -53,6 +54,10 @@ class PlaybackService extends ChangeNotifier {
         _player.setEQ(i, savedGains[i]);
       }
     }
+
+    Future(() async {
+      await _restoreLastSession();
+    });
   }
 
   final _player = BassPlayer();
@@ -60,11 +65,19 @@ class PlaybackService extends ChangeNotifier {
   final _pref = AppPreference.instance.playbackPref;
 
   bool get isBassFxLoaded => _player.isBassFxLoaded;
+  String get bassDebugStateLine => _player.debugStateLine;
 
   List<double> get eqGains => _player.eqGains;
   List<EqPreset> get eqPresets => _pref.eqPresets;
 
+  void refreshEQ() {
+    _player.refreshEQ();
+  }
+
   void setEQ(int band, double gain) {
+    LOGGER.i("[action] setEQ band=$band gain=$gain");
+    AudioEchoLogRecorder.instance
+        .mark('setEQ', extra: {'band': band, 'gain': gain});
     _player.setEQ(band, gain);
     if (band < _pref.eqGains.length) {
       _pref.eqGains[band] = gain;
@@ -105,6 +118,9 @@ class PlaybackService extends ChangeNotifier {
 
   /// 独占模式
   void useExclusiveMode(bool exclusive) {
+    LOGGER.i("[action] useExclusiveMode=$exclusive");
+    AudioEchoLogRecorder.instance
+        .mark('useExclusiveMode', extra: {'exclusive': exclusive});
     if (_player.useExclusiveMode(exclusive)) {
       _wasapiExclusive.value = exclusive;
     }
@@ -130,6 +146,8 @@ class PlaybackService extends ChangeNotifier {
   ValueNotifier<double> get pitch => _pitch;
 
   void setPitch(double value) {
+    LOGGER.i("[action] setPitch=$value");
+    AudioEchoLogRecorder.instance.mark('setPitch', extra: {'value': value});
     _pitch.value = value;
     _player.setPitch(value);
   }
@@ -138,6 +156,8 @@ class PlaybackService extends ChangeNotifier {
   ValueNotifier<double> get rate => _rate;
 
   void setRate(double value) {
+    LOGGER.i("[action] setRate=$value");
+    AudioEchoLogRecorder.instance.mark('setRate', extra: {'value': value});
     _rate.value = value;
     _player.setRate(value);
   }
@@ -155,6 +175,9 @@ class PlaybackService extends ChangeNotifier {
 
   /// 修改解码时的音量（不影响 Windows 系统音量）
   void setVolumeDsp(double volume) {
+    LOGGER.i("[action] setVolumeDsp=$volume");
+    AudioEchoLogRecorder.instance
+        .mark('setVolumeDsp', extra: {'value': volume});
     _player.setVolumeDsp(volume);
     _pref.volumeDsp = volume;
     notifyListeners();
@@ -184,6 +207,12 @@ class PlaybackService extends ChangeNotifier {
       notifyListeners();
       ThemeProvider.instance.applyThemeFromAudio(nowPlaying!);
 
+      _persistLastSession(
+        playlist: playlist,
+        playlistIndex: audioIndex,
+        nowPlaying: nowPlaying!,
+      );
+
       _smtc.updateState(state: SMTCState.playing);
       _smtc.updateDisplay(
         title: nowPlaying!.title,
@@ -209,11 +238,17 @@ class PlaybackService extends ChangeNotifier {
 
   /// 播放当前播放列表的第几项，只能用在播放列表界面
   void playIndexOfPlaylist(int audioIndex) {
+    LOGGER.i("[action] playIndexOfPlaylist=$audioIndex");
+    AudioEchoLogRecorder.instance
+        .mark('playIndexOfPlaylist', extra: {'index': audioIndex});
     _loadAndPlay(audioIndex, playlist.value);
   }
 
   /// 播放playlist[audioIndex]并设置播放列表为playlist
   void play(int audioIndex, List<Audio> playlist) {
+    LOGGER.i("[action] play index=$audioIndex playlistLen=${playlist.length}");
+    AudioEchoLogRecorder.instance.mark('play',
+        extra: {'index': audioIndex, 'playlistLen': playlist.length});
     if (shuffle.value) {
       this.playlist.value = List.from(playlist);
       final willPlay = this.playlist.value.removeAt(audioIndex);
@@ -229,6 +264,9 @@ class PlaybackService extends ChangeNotifier {
   }
 
   void shuffleAndPlay(List<Audio> audios) {
+    LOGGER.i("[action] shuffleAndPlay len=${audios.length}");
+    AudioEchoLogRecorder.instance
+        .mark('shuffleAndPlay', extra: {'len': audios.length});
     playlist.value = List.from(audios);
     playlist.value.shuffle();
     _playlistBackup = List.from(audios);
@@ -240,15 +278,27 @@ class PlaybackService extends ChangeNotifier {
 
   /// 下一首播放
   void addToNext(Audio audio) {
+    LOGGER.i("[action] addToNext path=${audio.path}");
+    AudioEchoLogRecorder.instance
+        .mark('addToNext', extra: {'path': audio.path});
     if (_playlistIndex != null) {
       playlist.value.insert(_playlistIndex! + 1, audio);
       _playlistBackup = List.from(playlist.value);
+      if (nowPlaying != null) {
+        _persistLastSession(
+          playlist: playlist.value,
+          playlistIndex: _playlistIndex!,
+          nowPlaying: nowPlaying!,
+        );
+      }
     }
   }
 
   void useShuffle(bool flag) {
     if (nowPlaying == null) return;
     if (flag == shuffle.value) return;
+    LOGGER.i("[action] useShuffle=$flag");
+    AudioEchoLogRecorder.instance.mark('useShuffle', extra: {'flag': flag});
 
     if (flag) {
       playlist.value.shuffle();
@@ -260,6 +310,86 @@ class PlaybackService extends ChangeNotifier {
       playlist.value = List.from(_playlistBackup);
       _playlistIndex = playlist.value.indexOf(nowPlaying!);
       shuffle.value = false;
+    }
+
+    if (_playlistIndex != null) {
+      _persistLastSession(
+        playlist: playlist.value,
+        playlistIndex: _playlistIndex!,
+        nowPlaying: nowPlaying!,
+      );
+    }
+  }
+
+  void _persistLastSession({
+    required List<Audio> playlist,
+    required int playlistIndex,
+    required Audio nowPlaying,
+  }) {
+    _pref.lastAudioPath = nowPlaying.path;
+    _pref.lastPlaylistPaths = playlist.map((e) => e.path).toList();
+    _pref.lastPlaylistIndex = playlistIndex;
+    AppPreference.instance.save();
+  }
+
+  Future<void> _restoreLastSession() async {
+    final lastPath = _pref.lastAudioPath;
+    if (lastPath.isEmpty) return;
+
+    for (int i = 0; i < 10; i++) {
+      if (AudioLibrary.instance.audioCollection.isNotEmpty) break;
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+    if (AudioLibrary.instance.audioCollection.isEmpty) return;
+
+    final pathToAudio = <String, Audio>{};
+    for (final audio in AudioLibrary.instance.audioCollection) {
+      pathToAudio[audio.path] = audio;
+    }
+
+    final restoredPlaylist = <Audio>[];
+    for (final p in _pref.lastPlaylistPaths) {
+      final a = pathToAudio[p];
+      if (a != null) {
+        restoredPlaylist.add(a);
+      }
+    }
+
+    if (restoredPlaylist.isEmpty) {
+      final single = pathToAudio[lastPath];
+      if (single == null) return;
+      restoredPlaylist.add(single);
+    }
+
+    var restoredIndex = _pref.lastPlaylistIndex;
+    restoredIndex = restoredIndex.clamp(0, restoredPlaylist.length - 1);
+    final idxByPath = restoredPlaylist.indexWhere((e) => e.path == lastPath);
+    if (idxByPath >= 0) {
+      restoredIndex = idxByPath;
+    }
+
+    this.playlist.value = List.from(restoredPlaylist);
+    _playlistBackup = List.from(restoredPlaylist);
+    _playlistIndex = restoredIndex;
+    nowPlaying = restoredPlaylist[restoredIndex];
+
+    try {
+      _player.setSource(nowPlaying!.path);
+      setVolumeDsp(_pref.volumeDsp);
+      playService.lyricService.updateLyric();
+      ThemeProvider.instance.applyThemeFromAudio(nowPlaying!);
+
+      _smtc.updateState(state: SMTCState.paused);
+      _smtc.updateDisplay(
+        title: nowPlaying!.title,
+        artist: nowPlaying!.artist,
+        album: nowPlaying!.album,
+        duration: (length * 1000).floor(),
+        path: nowPlaying!.path,
+      );
+      notifyListeners();
+    } catch (err) {
+      LOGGER.e("[restore last session] $err");
     }
   }
 
@@ -303,10 +433,16 @@ class PlaybackService extends ChangeNotifier {
   }
 
   /// 手动下一曲时默认循环播放列表
-  void nextAudio() => _nextAudio_loop();
+  void nextAudio() {
+    LOGGER.i("[action] nextAudio");
+    AudioEchoLogRecorder.instance.mark('nextAudio');
+    _nextAudio_loop();
+  }
 
   /// 手动上一曲时默认循环播放列表
   void lastAudio() {
+    LOGGER.i("[action] lastAudio");
+    AudioEchoLogRecorder.instance.mark('lastAudio');
     if (_playlistIndex == null) return;
 
     int newIndex = _playlistIndex! - 1;
@@ -320,6 +456,8 @@ class PlaybackService extends ChangeNotifier {
   /// 暂停
   void pause() {
     try {
+      LOGGER.i("[action] pause");
+      AudioEchoLogRecorder.instance.mark('pause');
       _player.pause();
       _smtc.updateState(state: SMTCState.paused);
       playService.desktopLyricService.canSendMessage.then((canSend) {
@@ -336,6 +474,8 @@ class PlaybackService extends ChangeNotifier {
   /// 恢复播放
   void start() {
     try {
+      LOGGER.i("[action] start");
+      AudioEchoLogRecorder.instance.mark('start');
       _player.start();
       _smtc.updateState(state: SMTCState.playing);
       playService.desktopLyricService.canSendMessage.then((canSend) {
@@ -354,6 +494,8 @@ class PlaybackService extends ChangeNotifier {
   void playAgain() => _nextAudio_singleLoop();
 
   void seek(double position) {
+    LOGGER.i("[action] seek=$position");
+    AudioEchoLogRecorder.instance.mark('seek', extra: {'pos': position});
     _player.seek(position);
     playService.lyricService.findCurrLyricLine();
   }

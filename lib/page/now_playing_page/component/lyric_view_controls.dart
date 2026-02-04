@@ -27,20 +27,22 @@ class LyricViewController extends ChangeNotifier {
   }
 
   void increaseFontSize() {
+    if (lyricFontSize >= 48) return;
     lyricFontSize += 2;
+    translationFontSize = lyricFontSize - 4; // Sync translation size
     nowPlayingPagePref.lyricFontSize = lyricFontSize;
+    nowPlayingPagePref.translationFontSize = translationFontSize;
     AppPreference.instance.save();
     notifyListeners();
   }
 
   void decreaseFontSize() {
-    if (translationFontSize <= 14) return;
-
-    lyricFontSize -= 1;
-    translationFontSize -= 1;
-
+    if (lyricFontSize <= 16) return;
+    lyricFontSize -= 2;
+    translationFontSize = lyricFontSize - 4; // Sync translation size
     nowPlayingPagePref.lyricFontSize = lyricFontSize;
     nowPlayingPagePref.translationFontSize = translationFontSize;
+    AppPreference.instance.save();
     notifyListeners();
   }
 
@@ -260,20 +262,15 @@ class _IncreaseFontWeightBtn extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final lyricViewController = context.watch<LyricViewController>();
 
-    return GestureDetector(
-      onSecondaryTap: () =>
-          lyricViewController.increaseFontWeight(smallStep: true),
-      child: IconButton(
-        onPressed: () =>
-            lyricViewController.increaseFontWeight(smallStep: false),
-        tooltip: "增加字体粗细 (${lyricViewController.lyricFontWeight})",
-        icon: Text(
-          "B+",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: scheme.onSecondaryContainer,
-            fontSize: 16,
-          ),
+    return IconButton(
+      onPressed: () => lyricViewController.increaseFontWeight(),
+      tooltip: "增加字体粗细 (${lyricViewController.lyricFontWeight})",
+      icon: Text(
+        "B+",
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: scheme.onSecondaryContainer,
+          fontSize: 16,
         ),
       ),
     );
@@ -288,20 +285,15 @@ class _DecreaseFontWeightBtn extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final lyricViewController = context.watch<LyricViewController>();
 
-    return GestureDetector(
-      onSecondaryTap: () =>
-          lyricViewController.decreaseFontWeight(smallStep: true),
-      child: IconButton(
-        onPressed: () =>
-            lyricViewController.decreaseFontWeight(smallStep: false),
-        tooltip: "减小字体粗细 (${lyricViewController.lyricFontWeight})",
-        icon: Text(
-          "B-",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: scheme.onSecondaryContainer,
-            fontSize: 16,
-          ),
+    return IconButton(
+      onPressed: () => lyricViewController.decreaseFontWeight(),
+      tooltip: "减小字体粗细 (${lyricViewController.lyricFontWeight})",
+      icon: Text(
+        "B-",
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: scheme.onSecondaryContainer,
+          fontSize: 16,
         ),
       ),
     );

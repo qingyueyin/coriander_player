@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/library/union_search_result.dart';
 import 'package:coriander_player/component/app_shell.dart';
@@ -19,6 +21,7 @@ import 'package:coriander_player/page/settings_page/page.dart';
 import 'package:coriander_player/page/updating_page.dart';
 import 'package:coriander_player/page/welcoming_page.dart';
 import 'package:coriander_player/library/playlist.dart';
+import 'package:coriander_player/play_service/audio_echo_log_recorder.dart';
 import 'package:coriander_player/theme_provider.dart';
 import 'package:coriander_player/utils.dart';
 import 'package:flutter/material.dart';
@@ -92,6 +95,12 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
     _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _restoreAnimController, curve: Curves.easeOut),
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (Platform.environment['CP_ECHO_RECORD'] == '1') {
+        AudioEchoLogRecorder.instance.start();
+      }
+    });
   }
 
   @override

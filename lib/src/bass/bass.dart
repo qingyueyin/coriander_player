@@ -94,6 +94,11 @@ typedef HFX = DWORD;
 
 const int BASS_FX_DX8_PARAMEQ = 3;
 
+const int BASS_FX_BFX_ROTATE = 0x10000;
+const int BASS_FX_BFX_PEAKEQ = BASS_FX_BFX_ROTATE + 4;
+
+const int BASS_BFX_CHANALL = -1;
+
 final class BASS_DX8_PARAMEQ extends ffi.Struct {
   @ffi.Float()
   external double fCenter;
@@ -103,6 +108,26 @@ final class BASS_DX8_PARAMEQ extends ffi.Struct {
 
   @ffi.Float()
   external double fGain;
+}
+
+final class BASS_BFX_PEAKEQ extends ffi.Struct {
+  @ffi.Int32()
+  external int lBand;
+
+  @ffi.Float()
+  external double fBandwidth;
+
+  @ffi.Float()
+  external double fQ;
+
+  @ffi.Float()
+  external double fCenter;
+
+  @ffi.Float()
+  external double fGain;
+
+  @ffi.Int32()
+  external int lChannel;
 }
 
 final class HWND__ extends ffi.Struct {

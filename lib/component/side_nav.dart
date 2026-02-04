@@ -20,7 +20,6 @@ final destinations = <DestinationDesc>[
   DestinationDesc(Symbols.album, "专辑", app_paths.ALBUMS_PAGE),
   DestinationDesc(Symbols.folder, "文件夹", app_paths.FOLDERS_PAGE),
   DestinationDesc(Symbols.list, "歌单", app_paths.PLAYLISTS_PAGE),
-  DestinationDesc(Symbols.search, "搜索", app_paths.SEARCH_PAGE),
   DestinationDesc(Symbols.settings, "设置", app_paths.SETTINGS_PAGE),
 ];
 
@@ -38,12 +37,13 @@ class _SideNavState extends State<SideNav> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final location = GoRouterState.of(context).uri.toString();
-    int selected = destinations.indexWhere(
+    final matchedIndex = destinations.indexWhere(
       (desc) => location.startsWith(desc.desPath),
     );
+    final int? selectedIndex = matchedIndex == -1 ? null : matchedIndex;
 
     void onDestinationSelected(int value) {
-      if (value == selected) return;
+      if (selectedIndex == value) return;
 
       final index = app_paths.START_PAGES.indexOf(destinations[value].desPath);
       if (index != -1) AppPreference.instance.startPage = index;
@@ -67,7 +67,7 @@ class _SideNavState extends State<SideNav> {
           case ScreenType.small:
             return NavigationDrawer(
               backgroundColor: scheme.surfaceContainer,
-              selectedIndex: selected,
+              selectedIndex: selectedIndex,
               onDestinationSelected: onDestinationSelected,
               children: List.generate(
                 destinations.length,
@@ -80,7 +80,7 @@ class _SideNavState extends State<SideNav> {
           case ScreenType.medium:
             return NavigationRail(
               backgroundColor: scheme.surfaceContainer,
-              selectedIndex: selected,
+              selectedIndex: selectedIndex,
               onDestinationSelected: onDestinationSelected,
               destinations: List.generate(
                 destinations.length,
@@ -97,7 +97,7 @@ class _SideNavState extends State<SideNav> {
                 if (expanded) {
                   return NavigationDrawer(
                     backgroundColor: scheme.surfaceContainer,
-                    selectedIndex: selected,
+                    selectedIndex: selectedIndex,
                     onDestinationSelected: onDestinationSelected,
                     children: [
                       Padding(
@@ -125,7 +125,7 @@ class _SideNavState extends State<SideNav> {
                 } else {
                   return NavigationRail(
                     backgroundColor: scheme.surfaceContainer,
-                    selectedIndex: selected,
+                    selectedIndex: selectedIndex,
                     onDestinationSelected: onDestinationSelected,
                     extended: false,
                     leading: IconButton(

@@ -22,6 +22,8 @@ class DesktopLyricService extends ChangeNotifier {
 
   Future<Process?> desktopLyric = Future.value(null);
   StreamSubscription? _desktopLyricSubscription;
+  String _stdoutBuffer = '';
+  Future<void> _sendQueue = Future.value();
 
   bool isLocked = false;
 
@@ -31,6 +33,11 @@ class DesktopLyricService extends ChangeNotifier {
       "desktop_lyric",
       'desktop_lyric.exe',
     );
+    if (!File(desktopLyricPath).existsSync()) {
+      LOGGER.e("[desktop lyric] desktop_lyric.exe not found: $desktopLyricPath");
+      showTextOnSnackBar("桌面歌词组件未找到，请重新打包或检查安装目录");
+      return;
+    }
 
     final nowPlaying = _playbackService.nowPlaying;
     final currScheme = ThemeProvider.instance.currScheme;
@@ -49,6 +56,7 @@ class DesktopLyricService extends ChangeNotifier {
     ]);
 
     final process = await desktopLyric;
+    _sendQueue = Future.value();
 
     process?.stderr.transform(utf8.decoder).listen((event) {
       LOGGER.e("[desktop lyric] $event");
@@ -56,42 +64,30 @@ class DesktopLyricService extends ChangeNotifier {
 
     _desktopLyricSubscription = process?.stdout.transform(utf8.decoder).listen(
       (event) {
-        try {
-          final Map messageMap = json.decode(event);
-          final String messageType = messageMap["type"];
-          final messageContent = messageMap["message"] as Map<String, dynamic>;
-          if (messageType ==
-              msg.getMessageTypeName<msg.ControlEventMessage>()) {
-            final controlEvent =
-                msg.ControlEventMessage.fromJson(messageContent);
-            switch (controlEvent.event) {
-              case msg.ControlEvent.pause:
-                _playbackService.pause();
-                break;
-              case msg.ControlEvent.start:
-                _playbackService.start();
-                break;
-              case msg.ControlEvent.previousAudio:
-                _playbackService.lastAudio();
-                break;
-              case msg.ControlEvent.nextAudio:
-                _playbackService.nextAudio();
-                break;
-              case msg.ControlEvent.lock:
-                isLocked = true;
-                notifyListeners();
-                break;
-              case msg.ControlEvent.close:
-                killDesktopLyric();
-                break;
-            }
+        _stdoutBuffer += event;
+        while (true) {
+          final idx = _stdoutBuffer.indexOf('\n');
+          if (idx < 0) break;
+          final line = _stdoutBuffer.substring(0, idx).trimRight();
+          _stdoutBuffer = _stdoutBuffer.substring(idx + 1);
+          if (line.isEmpty) continue;
+          _handleDesktopLyricMessage(line);
+        }
+
+        if (!_stdoutBuffer.contains('\n')) {
+          final candidate = _stdoutBuffer.trim();
+          if (candidate.startsWith('{') && candidate.endsWith('}')) {
+            try {
+              _handleDesktopLyricMessage(candidate);
+              _stdoutBuffer = '';
+            } catch (_) {}
           }
-        } catch (err) {
-          LOGGER.e("[desktop lyric] $err");
         }
       },
     );
 
+    _stdoutBuffer = '';
+    _sendInitialState();
     notifyListeners();
   }
 
@@ -100,10 +96,16 @@ class DesktopLyricService extends ChangeNotifier {
       );
 
   void sendMessage(msg.Message message) {
-    desktopLyric.then((value) {
-      value?.stdin.write(message.buildMessageJson());
-    }).catchError((err, trace) {
-      LOGGER.e(err, stackTrace: trace);
+    _sendQueue = _sendQueue.then((_) async {
+      final value = await desktopLyric;
+      if (value == null) return;
+      try {
+        value.stdin.writeln(message.buildMessageJson());
+        await value.stdin.flush();
+        await Future.delayed(const Duration(milliseconds: 10));
+      } catch (err, trace) {
+        LOGGER.e(err, stackTrace: trace);
+      }
     });
   }
 
@@ -111,6 +113,8 @@ class DesktopLyricService extends ChangeNotifier {
     desktopLyric.then((value) {
       value?.kill();
       desktopLyric = Future.value(null);
+      _sendQueue = Future.value();
+      _stdoutBuffer = '';
 
       _desktopLyricSubscription?.cancel();
       _desktopLyricSubscription = null;
@@ -168,5 +172,62 @@ class DesktopLyricService extends ChangeNotifier {
         translation,
       ));
     }
+  }
+
+  void _handleDesktopLyricMessage(String raw) {
+    try {
+      final Map messageMap = json.decode(raw);
+      final String messageType = messageMap["type"];
+      final messageContent = messageMap["message"] as Map<String, dynamic>;
+      if (messageType == msg.getMessageTypeName<msg.ControlEventMessage>()) {
+        final controlEvent = msg.ControlEventMessage.fromJson(messageContent);
+        switch (controlEvent.event) {
+          case msg.ControlEvent.pause:
+            _playbackService.pause();
+            break;
+          case msg.ControlEvent.start:
+            _playbackService.start();
+            break;
+          case msg.ControlEvent.previousAudio:
+            _playbackService.lastAudio();
+            break;
+          case msg.ControlEvent.nextAudio:
+            _playbackService.nextAudio();
+            break;
+          case msg.ControlEvent.lock:
+            isLocked = true;
+            notifyListeners();
+            break;
+          case msg.ControlEvent.close:
+            killDesktopLyric();
+            break;
+        }
+      }
+    } catch (err) {
+      LOGGER.e("[desktop lyric] $err");
+    }
+  }
+
+  void _sendInitialState() {
+    final nowPlaying = _playbackService.nowPlaying;
+    if (nowPlaying != null) {
+      sendNowPlayingMessage(nowPlaying);
+    }
+    sendPlayerStateMessage(_playbackService.playerState == PlayerState.playing);
+
+    playService.lyricService.currLyricFuture.then((lyric) {
+      if (lyric == null) return;
+      final posMs = (_playbackService.position * 1000).floor();
+      int idx = 0;
+      for (int i = 0; i < lyric.lines.length; i++) {
+        if (lyric.lines[i].start.inMilliseconds <= posMs) {
+          idx = i;
+        } else {
+          break;
+        }
+      }
+      if (lyric.lines.isEmpty) return;
+      sendLyricLineMessage(lyric.lines[idx]);
+    });
   }
 }
