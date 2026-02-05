@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' show FontVariation;
 
 import 'package:coriander_player/enums.dart';
 import 'package:coriander_player/lyric/lrc.dart';
@@ -13,7 +14,7 @@ import 'package:provider/provider.dart';
 
 FontWeight _discreteFontWeight(int weight) {
   final w = weight.clamp(100, 900);
-  return FontWeight.values[((w / 100).floor() - 1).clamp(0, 8)];
+  return FontWeight.values[((w / 100).round() - 1).clamp(0, 8)];
 }
 
 TextStyle _lyricTextStyle({
@@ -26,7 +27,7 @@ TextStyle _lyricTextStyle({
   return TextStyle(
     color: color,
     fontSize: fontSize,
-    fontFamily: 'MiSans',
+    fontVariations: [FontVariation('wght', w.toDouble())],
     fontWeight: _discreteFontWeight(w),
     height: height ?? 1.5,
   );

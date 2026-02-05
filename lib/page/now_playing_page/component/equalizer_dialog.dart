@@ -14,6 +14,8 @@ class EqualizerDialog extends StatefulWidget {
 
 class _EqualizerDialogState extends State<EqualizerDialog> {
   late List<double> _gains;
+  late double _preampDb;
+  late bool _autoGainEnabled;
   static const _eqCenters = [
     "80",
     "100",
@@ -42,7 +44,10 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
   @override
   void initState() {
     super.initState();
-    _gains = List.from(PlayService.instance.playbackService.eqGains);
+    final playbackService = PlayService.instance.playbackService;
+    _gains = List.from(playbackService.eqGains);
+    _preampDb = playbackService.eqPreampDb;
+    _autoGainEnabled = playbackService.eqAutoGainEnabled;
   }
 
   Future<void> _importWaveletEq() async {
@@ -73,6 +78,20 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
     // Wavelet format: "GraphicEQ: 20 -6.9; 21 -6.9; ..."
     // Or sometimes just lines of "Freq Gain" or "Freq: Gain"
     // We will support "GraphicEQ:" prefix format as it is standard AutoEq export for Wavelet
+    final playbackService = PlayService.instance.playbackService;
+    final preampMatch = RegExp(
+      r'(?im)^\s*preamp\s*:\s*([+-]?\d+(?:\.\d+)?)',
+    ).firstMatch(content);
+    final preampDb = preampMatch == null
+        ? null
+        : double.tryParse(preampMatch.group(1) ?? '');
+    if (preampDb != null) {
+      setState(() {
+        _preampDb = preampDb;
+      });
+      playbackService.setEqPreampDb(preampDb);
+    }
+
     String data = content;
     if (content.startsWith("GraphicEQ:")) {
       data = content.substring(10).trim();
@@ -118,12 +137,12 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
 
     // Apply
     for (int i = 0; i < 10; i++) {
-      PlayService.instance.playbackService.setEQ(i, _gains[i]);
+      playbackService.setEQ(i, _gains[i]);
     }
-    PlayService.instance.playbackService.savePreference();
+    playbackService.savePreference();
 
     // Auto save as preset
-    PlayService.instance.playbackService.saveEqPreset(presetName);
+    playbackService.saveEqPreset(presetName);
 
     if (mounted) {
       showTextOnSnackBar("Imported & Saved '$presetName'");
@@ -259,55 +278,114 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
       ),
       content: SizedBox(
         width: 600,
-        height: 300,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: List.generate(10, (index) {
-            return Column(
+        height: 360,
+        child: Column(
+          children: [
+            Row(
               children: [
-                Text(
-                  "${_gains[index].toInt()}",
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
+                const Text("Preamp"),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: RotatedBox(
-                    quarterTurns: 3,
-                    child: SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        trackHeight: 4.0,
-                        thumbShape: const RoundSliderThumbShape(
-                            enabledThumbRadius: 6.0),
-                        overlayShape:
-                            const RoundSliderOverlayShape(overlayRadius: 14.0),
-                      ),
-                      child: Slider(
-                        min: -15.0,
-                        max: 15.0,
-                        value: _gains[index],
-                        onChanged: (value) {
-                          setState(() {
-                            _gains[index] = value;
-                          });
-                          playbackService.setEQ(index, value);
-                        },
-                        onChangeEnd: (value) {
-                          playbackService.savePreference();
-                        },
-                      ),
-                    ),
+                  child: Slider(
+                    min: -24.0,
+                    max: 24.0,
+                    value: _preampDb.clamp(-24.0, 24.0).toDouble(),
+                    onChanged: (value) {
+                      setState(() {
+                        _preampDb = value;
+                      });
+                      playbackService.setEqPreampDb(value);
+                    },
+                    onChangeEnd: (_) => playbackService.savePreference(),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  _eqCenters[index],
-                  style: const TextStyle(fontSize: 10),
+                SizedBox(
+                  width: 72,
+                  child: Text(
+                    "${_preampDb.toStringAsFixed(1)}dB",
+                    textAlign: TextAlign.end,
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
                 ),
               ],
-            );
-          }),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text("自动补偿"),
+                const SizedBox(width: 12),
+                Switch(
+                  value: _autoGainEnabled,
+                  onChanged: (value) {
+                    setState(() {
+                      _autoGainEnabled = value;
+                    });
+                    playbackService.setEqAutoGainEnabled(value);
+                    playbackService.savePreference();
+                  },
+                ),
+                const Spacer(),
+                Text(
+                  "${playbackService.eqAutoGainDb.toStringAsFixed(1)}dB",
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: List.generate(10, (index) {
+                  return Column(
+                    children: [
+                      Text(
+                        "${_gains[index].toInt()}",
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      Expanded(
+                        child: RotatedBox(
+                          quarterTurns: 3,
+                          child: SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              trackHeight: 4.0,
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 6.0,
+                              ),
+                              overlayShape: const RoundSliderOverlayShape(
+                                overlayRadius: 14.0,
+                              ),
+                            ),
+                            child: Slider(
+                              min: -15.0,
+                              max: 15.0,
+                              value: _gains[index],
+                              onChanged: (value) {
+                                setState(() {
+                                  _gains[index] = value;
+                                });
+                                playbackService.setEQ(index, value);
+                              },
+                              onChangeEnd: (_) {
+                                playbackService.savePreference();
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _eqCenters[index],
+                        style: const TextStyle(fontSize: 10),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+            ),
+          ],
         ),
       ),
       actions: [
@@ -315,10 +393,12 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
           onPressed: () {
             setState(() {
               _gains = List.filled(10, 0.0);
+              _preampDb = 0.0;
             });
             for (int i = 0; i < 10; i++) {
               playbackService.setEQ(i, 0.0);
             }
+            playbackService.setEqPreampDb(0.0);
             playbackService.savePreference();
           },
           child: const Text("重置"),

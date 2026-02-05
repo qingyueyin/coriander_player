@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/enums.dart';
@@ -54,6 +55,7 @@ class PlaybackService extends ChangeNotifier {
         _player.setEQ(i, savedGains[i]);
       }
     }
+    _applyOutputGain();
 
     Future(() async {
       await _restoreLastSession();
@@ -70,8 +72,44 @@ class PlaybackService extends ChangeNotifier {
   List<double> get eqGains => _player.eqGains;
   List<EqPreset> get eqPresets => _pref.eqPresets;
 
+  double get eqPreampDb => _pref.eqPreampDb;
+  bool get eqAutoGainEnabled => _pref.eqAutoGainEnabled;
+  double get eqAutoHeadroomDb => _pref.eqAutoHeadroomDb;
+
+  double get eqAutoGainDb => eqAutoGainEnabled ? _computeEqAutoGainDb() : 0.0;
+
+  double _dbToLinear(double db) {
+    return math.pow(10.0, db / 20.0).toDouble();
+  }
+
+  double _computeEqAutoGainDb() {
+    final gains = _player.eqGains;
+    if (gains.isEmpty) return 0.0;
+    if (gains.every((g) => g.abs() < 1e-6)) return 0.0;
+
+    double maxGain = gains.first;
+    double sum = 0.0;
+    for (final g in gains) {
+      if (g > maxGain) maxGain = g;
+      sum += g;
+    }
+    final meanGain = sum / gains.length;
+
+    final desired = -meanGain;
+    final safeUpper = math.max(0.0, (-maxGain - eqAutoHeadroomDb).toDouble());
+    final clampedDesired = desired.clamp(-24.0, safeUpper).toDouble();
+    return clampedDesired;
+  }
+
+  void _applyOutputGain() {
+    final totalDb = eqPreampDb + (eqAutoGainEnabled ? eqAutoGainDb : 0.0);
+    final volume = (_pref.volumeDsp * _dbToLinear(totalDb)).clamp(0.0, 8.0);
+    _player.setVolumeDsp(volume.toDouble());
+  }
+
   void refreshEQ() {
     _player.refreshEQ();
+    _applyOutputGain();
   }
 
   void setEQ(int band, double gain) {
@@ -82,6 +120,20 @@ class PlaybackService extends ChangeNotifier {
     if (band < _pref.eqGains.length) {
       _pref.eqGains[band] = gain;
     }
+    _applyOutputGain();
+  }
+
+  void setEqPreampDb(double value) {
+    final next = value.clamp(-24.0, 24.0).toDouble();
+    if (_pref.eqPreampDb == next) return;
+    _pref.eqPreampDb = next;
+    _applyOutputGain();
+  }
+
+  void setEqAutoGainEnabled(bool enabled) {
+    if (_pref.eqAutoGainEnabled == enabled) return;
+    _pref.eqAutoGainEnabled = enabled;
+    _applyOutputGain();
   }
 
   void saveEqPreset(String name) {
@@ -178,8 +230,8 @@ class PlaybackService extends ChangeNotifier {
     LOGGER.i("[action] setVolumeDsp=$volume");
     AudioEchoLogRecorder.instance
         .mark('setVolumeDsp', extra: {'value': volume});
-    _player.setVolumeDsp(volume);
     _pref.volumeDsp = volume;
+    _applyOutputGain();
     notifyListeners();
   }
 

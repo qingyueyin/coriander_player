@@ -261,10 +261,16 @@ class _IncreaseFontWeightBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final lyricViewController = context.watch<LyricViewController>();
+    final effective = ((lyricViewController.lyricFontWeight / 100).round()
+            .clamp(1, 9)) *
+        100;
 
     return IconButton(
       onPressed: () => lyricViewController.increaseFontWeight(),
-      tooltip: "增加字体粗细 (${lyricViewController.lyricFontWeight})",
+      onLongPress: () =>
+          lyricViewController.increaseFontWeight(smallStep: true),
+      tooltip:
+          "增加字体粗细 (${lyricViewController.lyricFontWeight}, 生效: $effective)",
       icon: Text(
         "B+",
         style: TextStyle(
@@ -284,10 +290,16 @@ class _DecreaseFontWeightBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final lyricViewController = context.watch<LyricViewController>();
+    final effective = ((lyricViewController.lyricFontWeight / 100).round()
+            .clamp(1, 9)) *
+        100;
 
     return IconButton(
       onPressed: () => lyricViewController.decreaseFontWeight(),
-      tooltip: "减小字体粗细 (${lyricViewController.lyricFontWeight})",
+      onLongPress: () =>
+          lyricViewController.decreaseFontWeight(smallStep: true),
+      tooltip:
+          "减小字体粗细 (${lyricViewController.lyricFontWeight}, 生效: $effective)",
       icon: Text(
         "B-",
         style: TextStyle(

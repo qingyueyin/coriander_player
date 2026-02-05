@@ -90,6 +90,9 @@ class PlaybackPreference {
   double volumeDsp;
   List<double> eqGains;
   bool eqBypass;
+  double eqPreampDb;
+  bool eqAutoGainEnabled;
+  double eqAutoHeadroomDb;
   List<EqPreset> eqPresets;
   String lastAudioPath;
   List<String> lastPlaylistPaths;
@@ -104,6 +107,9 @@ class PlaybackPreference {
     this.eqGains,
     this.eqPresets, {
     this.eqBypass = false,
+    this.eqPreampDb = 0.0,
+    this.eqAutoGainEnabled = true,
+    this.eqAutoHeadroomDb = 1.0,
     this.lastAudioPath = '',
     this.lastPlaylistPaths = const [],
     this.lastPlaylistIndex = 0,
@@ -117,6 +123,9 @@ class PlaybackPreference {
         "volumeDsp": volumeDsp,
         "eqGains": eqGains,
         "eqBypass": eqBypass,
+        "eqPreampDb": eqPreampDb,
+        "eqAutoGainEnabled": eqAutoGainEnabled,
+        "eqAutoHeadroomDb": eqAutoHeadroomDb,
         "eqPresets": eqPresets.map((e) => e.toMap()).toList(),
         "lastAudioPath": lastAudioPath,
         "lastPlaylistPaths": lastPlaylistPaths,
@@ -138,6 +147,9 @@ class PlaybackPreference {
                 .toList()
             : [],
         eqBypass: map["eqBypass"] ?? false,
+        eqPreampDb: (map["eqPreampDb"] ?? 0.0).toDouble(),
+        eqAutoGainEnabled: map["eqAutoGainEnabled"] ?? true,
+        eqAutoHeadroomDb: (map["eqAutoHeadroomDb"] ?? 1.0).toDouble(),
         lastAudioPath: map["lastAudioPath"] ?? '',
         lastPlaylistPaths: map["lastPlaylistPaths"] != null
             ? List<String>.from(map["lastPlaylistPaths"])
