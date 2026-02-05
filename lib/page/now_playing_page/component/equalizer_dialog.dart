@@ -16,7 +16,6 @@ class EqualizerDialog extends StatefulWidget {
 class _EqualizerDialogState extends State<EqualizerDialog> {
   late List<double> _gains;
   late double _preampDb;
-  late bool _autoGainEnabled;
   bool _isImportingFolder = false;
   static const _eqCenters = [
     "80",
@@ -49,7 +48,6 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
     final playbackService = PlayService.instance.playbackService;
     _gains = List.from(playbackService.eqGains);
     _preampDb = playbackService.eqPreampDb;
-    _autoGainEnabled = playbackService.eqAutoGainEnabled;
   }
 
   Future<void> _importWaveletEq() async {
@@ -171,7 +169,19 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
       _isImportingFolder = true;
     });
 
-    const folderPath = r'D:\All\Documents\EQ';
+    final dirPicker = DirectoryPicker();
+    dirPicker.title = "选择 EQ 文件夹（批量导入 .txt）";
+    final selected = dirPicker.getDirectory();
+    if (selected == null) {
+      if (mounted) {
+        setState(() {
+          _isImportingFolder = false;
+        });
+      }
+      return;
+    }
+
+    final folderPath = selected.path;
     final dir = Directory(folderPath);
     if (!dir.existsSync()) {
       if (mounted) showTextOnSnackBar("未找到文件夹：$folderPath");
@@ -187,6 +197,16 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
         .where((f) => f.path.toLowerCase().endsWith('.txt'))
         .toList()
       ..sort((a, b) => a.path.compareTo(b.path));
+
+    if (files.isEmpty) {
+      if (mounted) {
+        showTextOnSnackBar("该文件夹没有可导入的 .txt：$folderPath");
+        setState(() {
+          _isImportingFolder = false;
+        });
+      }
+      return;
+    }
 
     int ok = 0;
     int failed = 0;
@@ -207,7 +227,7 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
     }
 
     if (mounted) {
-      showTextOnSnackBar("已导入 $ok 个，失败 $failed 个");
+      showTextOnSnackBar("已从文件夹导入 $ok 个，失败 $failed 个");
     }
 
     if (lastImportedName != null && lastImportedContent != null) {
@@ -348,7 +368,7 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
           ),
           IconButton(
             onPressed: _isImportingFolder ? null : _importEqFolder,
-            tooltip: r"从 D:\All\Documents\EQ 批量导入",
+            tooltip: "从文件夹批量导入",
             icon: _isImportingFolder
                 ? const SizedBox(
                     width: 20,
@@ -398,27 +418,6 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
               ],
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text("自动补偿"),
-                const SizedBox(width: 12),
-                Switch(
-                  value: _autoGainEnabled,
-                  onChanged: (value) {
-                    setState(() {
-                      _autoGainEnabled = value;
-                    });
-                    playbackService.setEqAutoGainEnabled(value);
-                    playbackService.savePreference();
-                  },
-                ),
-                const Spacer(),
-                Text(
-                  "${playbackService.eqAutoGainDb.toStringAsFixed(1)}dB",
-                  style: TextStyle(color: scheme.onSurfaceVariant),
-                ),
-              ],
-            ),
             const SizedBox(height: 12),
             Expanded(
               child: Row(
