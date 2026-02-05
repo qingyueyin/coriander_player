@@ -377,8 +377,11 @@ class Audio {
 
   /// audio detail page 不需要频繁调用，所以不缓存图片
   /// 200 * 200
-  Future<ImageProvider?> get mediumCover =>
-      _getResizedPic(width: 200, height: 200);
+  Future<ImageProvider?> get mediumCover {
+    _mediumCoverFuture ??= _getResizedPic(width: 200, height: 200);
+    return _mediumCoverFuture!;
+  }
+  Future<ImageProvider?>? _mediumCoverFuture;
 
   /// now playing 不需要频繁调用，所以不缓存图片
   /// size: 400 * devicePixelRatio（屏幕缩放大小）

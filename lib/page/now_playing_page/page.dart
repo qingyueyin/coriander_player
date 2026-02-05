@@ -128,6 +128,9 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
           duration: const Duration(milliseconds: 520),
           switchInCurve: Curves.easeInOutCubic,
           switchOutCurve: Curves.easeInOutCubic,
+          layoutBuilder: (currentChild, previousChildren) {
+            return currentChild ?? const SizedBox.shrink();
+          },
           transitionBuilder: (child, animation) {
             final fade = CurvedAnimation(
               parent: animation,

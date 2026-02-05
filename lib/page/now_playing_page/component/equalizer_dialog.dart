@@ -1,6 +1,7 @@
 import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/play_service/play_service.dart';
 import 'package:coriander_player/utils.dart';
+import 'dart:io';
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -16,6 +17,7 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
   late List<double> _gains;
   late double _preampDb;
   late bool _autoGainEnabled;
+  bool _isImportingFolder = false;
   static const _eqCenters = [
     "80",
     "100",
@@ -65,7 +67,7 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
       try {
         final content = await result.readAsString();
         final fileName = result.path.split('\\').last.replaceAll('.txt', '');
-        _parseWaveletEq(content, fileName);
+        _applyWaveletEqFromContent(content, presetName: fileName);
       } catch (e) {
         if (mounted) {
           showTextOnSnackBar("Import failed: $e");
@@ -74,78 +76,153 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
     }
   }
 
-  void _parseWaveletEq(String content, String presetName) {
-    // Wavelet format: "GraphicEQ: 20 -6.9; 21 -6.9; ..."
-    // Or sometimes just lines of "Freq Gain" or "Freq: Gain"
-    // We will support "GraphicEQ:" prefix format as it is standard AutoEq export for Wavelet
-    final playbackService = PlayService.instance.playbackService;
-    final preampMatch = RegExp(
-      r'(?im)^\s*preamp\s*:\s*([+-]?\d+(?:\.\d+)?)',
+  double? _tryParseWaveletPreampDb(String content) {
+    final match = RegExp(
+      r'^\s*preamp\s*:\s*([+-]?\d+(?:\.\d+)?)',
+      multiLine: true,
+      caseSensitive: false,
     ).firstMatch(content);
-    final preampDb = preampMatch == null
-        ? null
-        : double.tryParse(preampMatch.group(1) ?? '');
-    if (preampDb != null) {
-      setState(() {
-        _preampDb = preampDb;
-      });
-      playbackService.setEqPreampDb(preampDb);
+    if (match == null) return null;
+    return double.tryParse(match.group(1) ?? '');
+  }
+
+  Iterable<MapEntry<double, double>> _extractWaveletPairs(String content) {
+    final normalized = content.replaceAll('\uFEFF', '');
+    final graphicEqMatch = RegExp(
+      r'^\s*graphiceq\s*:\s*(.*)$',
+      multiLine: true,
+      caseSensitive: false,
+    ).firstMatch(normalized);
+
+    final region =
+        graphicEqMatch == null ? normalized : graphicEqMatch.group(1)!;
+    final pairs = <MapEntry<double, double>>[];
+
+    final pairReg = RegExp(
+      r'(\d+(?:[.,]\d+)?)\s*(?:hz)?\s*[:\s]\s*([+-]?\d+(?:[.,]\d+)?)\s*(?:db)?',
+      caseSensitive: false,
+      multiLine: true,
+    );
+    for (final m in pairReg.allMatches(region)) {
+      final freqStr = (m.group(1) ?? '').replaceAll(',', '.');
+      final gainStr = (m.group(2) ?? '').replaceAll(',', '.');
+      final freq = double.tryParse(freqStr);
+      final gain = double.tryParse(gainStr);
+      if (freq == null || gain == null) continue;
+      if (freq <= 0) continue;
+      pairs.add(MapEntry(freq, gain));
     }
 
-    String data = content;
-    if (content.startsWith("GraphicEQ:")) {
-      data = content.substring(10).trim();
-    }
+    return pairs;
+  }
 
-    final points = <MapEntry<double, double>>[];
-    final pairs = data.split(';');
-    for (var pair in pairs) {
-      pair = pair.trim();
-      if (pair.isEmpty) continue;
-
-      // Handle "Freq Gain" (space separated)
-      final parts = pair.split(RegExp(r'\s+'));
-      if (parts.length >= 2) {
-        final freq = double.tryParse(parts[0]);
-        final gain = double.tryParse(parts[1]);
-        if (freq != null && gain != null) {
-          points.add(MapEntry(freq, gain));
-        }
-      }
-    }
+  ({List<double> gains, double? preampDb}) _parseWaveletEqContent(
+    String content,
+  ) {
+    final preampDb = _tryParseWaveletPreampDb(content);
+    final points = _extractWaveletPairs(content).toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
 
     if (points.isEmpty) {
-      if (mounted) showTextOnSnackBar("No valid EQ data found");
-      return;
+      throw const FormatException('No valid GraphicEQ pairs found');
     }
 
-    // Sort by frequency
-    points.sort((a, b) => a.key.compareTo(b.key));
-
-    // Map to our 10 bands using linear interpolation
     final newGains = List<double>.filled(10, 0.0);
     for (int i = 0; i < 10; i++) {
       final centerFreq = _eqFreqs[i];
-      newGains[i] = _interpolateGain(centerFreq, points);
-      // Clamp to -15 ~ 15
-      newGains[i] = newGains[i].clamp(-15.0, 15.0);
+      newGains[i] = _interpolateGain(centerFreq, points).clamp(-15.0, 15.0);
     }
 
-    setState(() {
-      _gains = newGains;
-    });
+    return (gains: newGains, preampDb: preampDb);
+  }
 
-    // Apply
+  void _applyWaveletEqFromContent(
+    String content, {
+    required String presetName,
+  }) {
+    final playbackService = PlayService.instance.playbackService;
+
+    final parsed = _parseWaveletEqContent(content);
+    final newGains = parsed.gains;
+    final preampDb = parsed.preampDb;
+
+    if (preampDb != null) {
+      _preampDb = preampDb;
+      playbackService.setEqPreampDb(preampDb);
+    }
+
     for (int i = 0; i < 10; i++) {
-      playbackService.setEQ(i, _gains[i]);
+      playbackService.setEQ(i, newGains[i]);
     }
     playbackService.savePreference();
-
-    // Auto save as preset
     playbackService.saveEqPreset(presetName);
 
+    setState(() {
+      _gains = List.from(newGains);
+      if (preampDb != null) {
+        _preampDb = preampDb;
+      }
+    });
+  }
+
+  Future<void> _importEqFolder() async {
+    if (_isImportingFolder) return;
+    setState(() {
+      _isImportingFolder = true;
+    });
+
+    const folderPath = r'D:\All\Documents\EQ';
+    final dir = Directory(folderPath);
+    if (!dir.existsSync()) {
+      if (mounted) showTextOnSnackBar("未找到文件夹：$folderPath");
+      setState(() {
+        _isImportingFolder = false;
+      });
+      return;
+    }
+
+    final files = dir
+        .listSync()
+        .whereType<File>()
+        .where((f) => f.path.toLowerCase().endsWith('.txt'))
+        .toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+
+    int ok = 0;
+    int failed = 0;
+    String? lastImportedName;
+    String? lastImportedContent;
+
+    for (final f in files) {
+      try {
+        final content = await f.readAsString();
+        final name = f.uri.pathSegments.last.replaceAll('.txt', '');
+        _applyWaveletEqFromContent(content, presetName: name);
+        ok += 1;
+        lastImportedName = name;
+        lastImportedContent = content;
+      } catch (_) {
+        failed += 1;
+      }
+    }
+
     if (mounted) {
-      showTextOnSnackBar("Imported & Saved '$presetName'");
+      showTextOnSnackBar("已导入 $ok 个，失败 $failed 个");
+    }
+
+    if (lastImportedName != null && lastImportedContent != null) {
+      try {
+        _applyWaveletEqFromContent(
+          lastImportedContent,
+          presetName: lastImportedName,
+        );
+      } catch (_) {}
+    }
+
+    if (mounted) {
+      setState(() {
+        _isImportingFolder = false;
+      });
     }
   }
 
@@ -268,6 +345,17 @@ class _EqualizerDialogState extends State<EqualizerDialog> {
             onPressed: _importWaveletEq,
             tooltip: "导入 Wavelet AutoEq",
             icon: const Icon(Symbols.file_upload),
+          ),
+          IconButton(
+            onPressed: _isImportingFolder ? null : _importEqFolder,
+            tooltip: r"从 D:\All\Documents\EQ 批量导入",
+            icon: _isImportingFolder
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Symbols.folder_open),
           ),
           if (!playbackService.isBassFxLoaded)
             Tooltip(

@@ -27,7 +27,19 @@ class _NowPlayingPage_Large extends StatelessWidget {
                               child: ConstrainedBox(
                                 constraints:
                                     const BoxConstraints(maxWidth: 820.0),
-                                child: const VerticalLyricView(),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16.0),
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      const Padding(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 8.0),
+                                        child: VerticalLyricView(),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                         },

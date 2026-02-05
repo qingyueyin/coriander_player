@@ -78,7 +78,22 @@ class _NowPlayingPage_SmallState extends State<_NowPlayingPage_Small> {
                     child: switch (views[1]) {
                       NowPlayingViewMode.onlyMain =>
                         const Center(child: _NowPlayingInfo()),
-                      NowPlayingViewMode.withLyric => const VerticalLyricView(),
+                      NowPlayingViewMode.withLyric => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16.0),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                const Padding(
+                                  padding:
+                                      EdgeInsets.symmetric(horizontal: 8.0),
+                                  child: VerticalLyricView(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       NowPlayingViewMode.withPlaylist =>
                         const CurrentPlaylistView(),
                     },

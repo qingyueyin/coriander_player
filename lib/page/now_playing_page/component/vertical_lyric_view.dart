@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:coriander_player/lyric/lrc.dart';
 import 'package:coriander_player/lyric/lyric.dart';
 import 'package:coriander_player/page/now_playing_page/component/lyric_view_controls.dart';
 import 'package:coriander_player/page/now_playing_page/component/lyric_view_tile.dart';
@@ -109,8 +108,6 @@ class _VerticalLyricViewState extends State<VerticalLyricView> {
   }
 }
 
-final LYRIC_VIEW_KEY = GlobalKey();
-
 class _VerticalLyricScrollView extends StatefulWidget {
   const _VerticalLyricScrollView({
     required this.lyric,
@@ -142,6 +139,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
   static const int _scrollMaxMs = 420;
   int _mainLine = 0;
   double _estimatedItemExtent = 56.0;
+  int _pendingScrollRetries = 0;
 
   /// 用来定位到当前歌词
   final currentLyricTileKey = GlobalKey();
@@ -176,22 +174,36 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
 
   Duration _durationForScroll(double from, double to) {
     final dist = (to - from).abs();
-    final ms = (dist * _scrollMsPerPixel).round().clamp(_scrollMinMs, _scrollMaxMs);
+    final ms =
+        (dist * _scrollMsPerPixel).round().clamp(_scrollMinMs, _scrollMaxMs);
     return Duration(milliseconds: ms);
   }
 
   void _scrollToCurrent([Duration? duration]) {
-    if (!scrollController.hasClients) return;
+    if (!scrollController.hasClients) {
+      if (_pendingScrollRetries < 4) {
+        _pendingScrollRetries++;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _scrollToCurrent(duration);
+        });
+      }
+      return;
+    }
+    _pendingScrollRetries = 0;
     final targetContext = currentLyricTileKey.currentContext;
     if (targetContext == null || !targetContext.mounted) {
+      // Fallback if not found (should be rare in Column)
       final alignment = widget.centerVertically ? 0.5 : 0.25;
       final viewport = scrollController.position.viewportDimension;
-      final estimated = (_estimatedItemExtent * _mainLine) - viewport * alignment;
+      final estimated =
+          (_estimatedItemExtent * _mainLine) - viewport * alignment;
       final targetOffset = estimated.clamp(
         scrollController.position.minScrollExtent,
         scrollController.position.maxScrollExtent,
       );
-      final d = duration ?? _durationForScroll(scrollController.offset, targetOffset);
+      final d =
+          duration ?? _durationForScroll(scrollController.offset, targetOffset);
       scrollController.animateTo(
         targetOffset,
         duration: d,
@@ -207,7 +219,6 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
     final targetObject = targetContext.findRenderObject();
     if (targetObject is! RenderBox) return;
     final viewport = RenderAbstractViewport.of(targetObject);
-    if (viewport == null) return;
 
     final alignment = widget.centerVertically ? 0.5 : 0.25;
     final revealed = viewport.getOffsetToReveal(targetObject, alignment);
@@ -221,7 +232,8 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
       _estimatedItemExtent = _estimatedItemExtent * 0.8 + h * 0.2;
     }
 
-    final d = duration ?? _durationForScroll(scrollController.offset, targetOffset);
+    final d =
+        duration ?? _durationForScroll(scrollController.offset, targetOffset);
     if (d == Duration.zero) {
       scrollController.jumpTo(targetOffset);
       return;
@@ -285,30 +297,27 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
               stops: [0.0, _fadeExtent, 1.0 - _fadeExtent, 1.0],
             ).createShader(bounds);
           },
-          child: CustomScrollView(
-            key: LYRIC_VIEW_KEY,
+          child: SingleChildScrollView(
+            key: ValueKey(widget.lyric.hashCode),
             controller: scrollController,
-            slivers: [
-              if (widget.centerVertically)
-                SliverToBoxAdapter(child: SizedBox(height: spacerHeight)),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, i) {
-                    final opacity = i == _mainLine ? 1.0 : _inactiveOpacity;
-                    return LyricViewTile(
-                      key: i == _mainLine ? currentLyricTileKey : null,
-                      line: widget.lyric.lines[i],
-                      opacity: opacity,
-                      onTap:
-                          widget.enableSeekOnTap ? () => _seekToLyricLine(i) : null,
-                    );
-                  },
-                  childCount: widget.lyric.lines.length,
-                ),
+            padding: EdgeInsets.symmetric(
+                vertical: widget.centerVertically ? spacerHeight : 0),
+            child: Column(
+              children: List.generate(
+                widget.lyric.lines.length,
+                (i) {
+                  final opacity = i == _mainLine ? 1.0 : _inactiveOpacity;
+                  return LyricViewTile(
+                    key: i == _mainLine ? currentLyricTileKey : null,
+                    line: widget.lyric.lines[i],
+                    opacity: opacity,
+                    onTap: widget.enableSeekOnTap
+                        ? () => _seekToLyricLine(i)
+                        : null,
+                  );
+                },
               ),
-              if (widget.centerVertically)
-                SliverToBoxAdapter(child: SizedBox(height: spacerHeight)),
-            ],
+            ),
           ),
         ),
       );

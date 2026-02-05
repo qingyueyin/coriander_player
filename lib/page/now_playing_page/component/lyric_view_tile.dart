@@ -24,12 +24,22 @@ TextStyle _lyricTextStyle({
   double? height,
 }) {
   final w = weight.clamp(100, 900);
+  final shadowColor = color.computeLuminance() > 0.6
+      ? Colors.black.withValues(alpha: 0.55)
+      : Colors.white.withValues(alpha: 0.40);
   return TextStyle(
     color: color,
     fontSize: fontSize,
     fontVariations: [FontVariation('wght', w.toDouble())],
     fontWeight: _discreteFontWeight(w),
     height: height ?? 1.5,
+    shadows: [
+      Shadow(
+        color: shadowColor,
+        blurRadius: 3.0,
+        offset: const Offset(0, 1),
+      ),
+    ],
   );
 }
 
@@ -90,19 +100,28 @@ class LyricViewTile extends StatelessWidget {
 
     return Align(
       alignment: alignment,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 280),
-        curve: const Cubic(0.2, 0.0, 0.0, 1.0),
-        opacity: opacity,
-        child: AnimatedSlide(
-          duration: const Duration(milliseconds: 220),
-          curve: const Cubic(0.2, 0.0, 0.0, 1.0),
-          offset: isMainLine ? Offset.zero : const Offset(0.0, 0.01),
-          child: AnimatedScale(
-            duration: const Duration(milliseconds: 220),
-            curve: const Cubic(0.2, 0.0, 0.0, 1.0),
-            scale: isMainLine ? 1.0 : 0.98,
-            child: content,
+      child: SizedBox(
+        width: double.infinity,
+        child: ClipRect(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 280),
+              curve: const Cubic(0.2, 0.0, 0.0, 1.0),
+              opacity: opacity,
+              child: AnimatedSlide(
+                duration: const Duration(milliseconds: 220),
+                curve: const Cubic(0.2, 0.0, 0.0, 1.0),
+                offset: isMainLine ? Offset.zero : const Offset(0.0, 0.01),
+                child: AnimatedScale(
+                  duration: const Duration(milliseconds: 220),
+                  curve: const Cubic(0.2, 0.0, 0.0, 1.0),
+                  alignment: alignment,
+                  scale: isMainLine ? 1.1 : 0.9,
+                  child: content,
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -282,7 +301,7 @@ class _SyncLineContent extends StatelessWidget {
     return Text(
       text,
       softWrap: true,
-      overflow: TextOverflow.visible,
+      overflow: TextOverflow.clip,
       textAlign: switch (align) {
         LyricTextAlign.left => TextAlign.left,
         LyricTextAlign.center => TextAlign.center,
@@ -308,7 +327,7 @@ class _SyncLineContent extends StatelessWidget {
     return Text(
       text,
       softWrap: true,
-      overflow: TextOverflow.visible,
+      overflow: TextOverflow.clip,
       textAlign: switch (align) {
         LyricTextAlign.left => TextAlign.left,
         LyricTextAlign.center => TextAlign.center,
@@ -398,6 +417,8 @@ class _LrcLineContent extends StatelessWidget {
   ) {
     return Text(
       text,
+      softWrap: true,
+      overflow: TextOverflow.clip,
       textAlign: switch (align) {
         LyricTextAlign.left => TextAlign.left,
         LyricTextAlign.center => TextAlign.center,
@@ -421,6 +442,8 @@ class _LrcLineContent extends StatelessWidget {
     final translationWeight = (fontWeight - 50).clamp(100, 900);
     return Text(
       text,
+      softWrap: true,
+      overflow: TextOverflow.clip,
       textAlign: switch (align) {
         LyricTextAlign.left => TextAlign.left,
         LyricTextAlign.center => TextAlign.center,

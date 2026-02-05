@@ -27,36 +27,19 @@ class ArtistTile extends StatefulWidget {
 class _ArtistTileState extends State<ArtistTile> {
   bool _hovered = false;
   late Future<ImageProvider?> _coverFuture;
-  late Future<ColorScheme?> _colorSchemeFuture;
-  static final Map<int, ColorScheme> _colorCache = {};
 
   @override
   void initState() {
     super.initState();
-    _coverFuture = widget.artist.works.first.mediumCover;
-    _colorSchemeFuture = _getColorScheme();
+    _coverFuture = widget.artist.works.first.cover;
   }
 
   @override
   void didUpdateWidget(covariant ArtistTile oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.artist != widget.artist) {
-      _coverFuture = widget.artist.works.first.mediumCover;
-      _colorSchemeFuture = _getColorScheme();
+      _coverFuture = widget.artist.works.first.cover;
     }
-  }
-
-  Future<ColorScheme?> _getColorScheme() async {
-    if (_colorCache.containsKey(widget.artist.hashCode)) {
-      return _colorCache[widget.artist.hashCode];
-    }
-
-    final image = await widget.artist.works.first.mediumCover;
-    if (image == null) return null;
-
-    final scheme = await ColorScheme.fromImageProvider(provider: image);
-    _colorCache[widget.artist.hashCode] = scheme;
-    return scheme;
   }
 
   @override
@@ -155,118 +138,42 @@ class _ArtistTileState extends State<ArtistTile> {
               );
             },
             borderRadius: BorderRadius.circular(ThemeProvider.radiusMedium),
-            child: widget.view == ContentView.list
-                ? Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: [
-                        FutureBuilder(
-                          future: _coverFuture,
-                          builder: (context, snapshot) {
-                            if (snapshot.data == null) {
-                              return placeholder;
-                            }
-                            return ClipOval(
-                              child: Image(
-                                image: snapshot.data!,
-                                width: 48.0,
-                                height: 48.0,
-                                errorBuilder: (_, __, ___) => placeholder,
-                                fit: BoxFit.cover,
-                              ),
-                            );
-                          },
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  FutureBuilder(
+                    future: _coverFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.data == null) {
+                        return placeholder;
+                      }
+                      return ClipOval(
+                        child: Image(
+                          image: snapshot.data!,
+                          width: 48.0,
+                          height: 48.0,
+                          errorBuilder: (_, __, ___) => placeholder,
+                          fit: BoxFit.cover,
                         ),
-                        Flexible(
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 12.0),
-                            child: Text(
-                              widget.artist.name,
-                              softWrap: false,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: scheme.onSurface),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: AspectRatio(
-                            aspectRatio: 1.0,
-                            child: FutureBuilder(
-                              future: _coverFuture,
-                              builder: (context, snapshot) {
-                                if (snapshot.data == null) {
-                                  return placeholder;
-                                }
-                                return ClipOval(
-                                  child: Image(
-                                    image: snapshot.data!,
-                                    errorBuilder: (_, __, ___) => placeholder,
-                                    fit: BoxFit.cover,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                      FutureBuilder(
-                        future: _colorSchemeFuture,
-                        builder: (context, snapshot) {
-                          if (snapshot.data == null) {
-                            return Padding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(4.0, 0.0, 4.0, 8.0),
-                              child: Text(
-                                widget.artist.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: scheme.onSurface,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            );
-                          }
-                          final primaryColor = snapshot.data!.primary;
-                          final onPrimaryColor = snapshot.data!.onPrimary;
-                          return Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12.0,
-                              vertical: 8.0,
-                            ),
-                            decoration: BoxDecoration(
-                              color: primaryColor,
-                              borderRadius: const BorderRadius.vertical(
-                                bottom:
-                                    Radius.circular(ThemeProvider.radiusMedium),
-                              ),
-                            ),
-                            child: Text(
-                              widget.artist.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: onPrimaryColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                      );
+                    },
                   ),
+                  Flexible(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 12.0),
+                      child: Text(
+                        widget.artist.name,
+                        softWrap: false,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: scheme.onSurface),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
