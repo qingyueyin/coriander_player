@@ -133,7 +133,28 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
                 _scheduleHideControls();
               }
             },
-            onTap: () => context.push(app_paths.NOW_PLAYING_PAGE),
+            onTap: () {
+              final nowPlaying =
+                  PlayService.instance.playbackService.nowPlaying;
+              if (nowPlaying != null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  nowPlaying.cover.then((image) {
+                    if (!mounted) return;
+                    if (image != null) precacheImage(image, context);
+                  });
+                  nowPlaying.mediumCover.then((image) {
+                    if (!mounted) return;
+                    if (image != null) precacheImage(image, context);
+                  });
+                  nowPlaying.largeCover.then((image) {
+                    if (!mounted) return;
+                    if (image != null) precacheImage(image, context);
+                  });
+                });
+              }
+              context.push(app_paths.NOW_PLAYING_PAGE);
+            },
             borderRadius: BorderRadius.circular(8.0),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),

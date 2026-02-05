@@ -79,3 +79,5 @@ todo/
 
 # Local docs
 docs/
+output/
+output/data/

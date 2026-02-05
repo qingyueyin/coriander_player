@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:ui' show FontVariation;
+import 'dart:ui' show FontVariation, ImageFilter;
 
 import 'package:coriander_player/enums.dart';
 import 'package:coriander_player/lyric/lrc.dart';
@@ -9,7 +9,6 @@ import 'package:coriander_player/page/now_playing_page/component/lyric_view_cont
 import 'package:coriander_player/play_service/play_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
 FontWeight _discreteFontWeight(int weight) {
@@ -58,17 +57,33 @@ double _effectiveTranslationFontSize(double base, {required bool isMainLine}) {
 }
 
 class LyricViewTile extends StatelessWidget {
-  const LyricViewTile(
-      {super.key, required this.line, required this.opacity, this.onTap});
+  const LyricViewTile({
+    super.key,
+    required this.line,
+    required this.opacity,
+    this.distance,
+    this.onTap,
+  });
 
   final LyricLine line;
   final double opacity;
+  final int? distance;
   final void Function()? onTap;
 
   @override
   Widget build(BuildContext context) {
     final lyricViewController = context.watch<LyricViewController>();
-    final isMainLine = opacity == 1.0;
+    final d = distance ?? (opacity == 1.0 ? 0 : 999);
+    final isMainLine = d == 0;
+    final blurSigma =
+        lyricViewController.enableLyricBlur ? min(d * 1.6, 6.0) : 0.0;
+    final scale = isMainLine
+        ? 1.1
+        : switch (d) {
+            1 => 0.98,
+            2 => 0.94,
+            _ => 0.90,
+          };
 
     Widget content = InkWell(
       onTap: onTap,
@@ -84,14 +99,6 @@ class LyricViewTile extends StatelessWidget {
             ),
     );
 
-    if (lyricViewController.enableLyricBlur) {
-      content = content.animate(target: isMainLine ? 0 : 1).blurXY(
-            end: 2.0,
-            duration: 300.ms,
-            curve: Curves.easeInOut,
-          );
-    }
-
     final alignment = switch (lyricViewController.lyricTextAlign) {
       LyricTextAlign.left => Alignment.centerLeft,
       LyricTextAlign.center => Alignment.center,
@@ -105,22 +112,37 @@ class LyricViewTile extends StatelessWidget {
         child: ClipRect(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 280),
+            child: TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 220),
               curve: const Cubic(0.2, 0.0, 0.0, 1.0),
-              opacity: opacity,
-              child: AnimatedSlide(
-                duration: const Duration(milliseconds: 220),
-                curve: const Cubic(0.2, 0.0, 0.0, 1.0),
-                offset: isMainLine ? Offset.zero : const Offset(0.0, 0.01),
-                child: AnimatedScale(
-                  duration: const Duration(milliseconds: 220),
+              tween: Tween(begin: 0.0, end: blurSigma),
+              builder: (context, sigma, child) {
+                final filtered = sigma <= 0.01
+                    ? child!
+                    : ImageFiltered(
+                        imageFilter:
+                            ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                        child: child,
+                      );
+                return AnimatedOpacity(
+                  duration: const Duration(milliseconds: 280),
                   curve: const Cubic(0.2, 0.0, 0.0, 1.0),
-                  alignment: alignment,
-                  scale: isMainLine ? 1.1 : 0.9,
-                  child: content,
-                ),
-              ),
+                  opacity: opacity,
+                  child: AnimatedSlide(
+                    duration: const Duration(milliseconds: 220),
+                    curve: const Cubic(0.2, 0.0, 0.0, 1.0),
+                    offset: isMainLine ? Offset.zero : const Offset(0.0, 0.01),
+                    child: AnimatedScale(
+                      duration: const Duration(milliseconds: 220),
+                      curve: const Cubic(0.2, 0.0, 0.0, 1.0),
+                      alignment: alignment,
+                      scale: scale,
+                      child: filtered,
+                    ),
+                  ),
+                );
+              },
+              child: content,
             ),
           ),
         ),
@@ -227,7 +249,7 @@ class _SyncLineContent extends StatelessWidget {
                         Text(
                           word.content,
                           style: _lyricTextStyle(
-                            color: scheme.primary.withOpacity(0.12),
+                            color: Colors.white.withValues(alpha: 0.22),
                             fontSize: primarySize,
                             weight: fontWeight,
                             height: 1.5,
@@ -251,7 +273,7 @@ class _SyncLineContent extends StatelessWidget {
                             child: Text(
                               word.content,
                               style: _lyricTextStyle(
-                                color: scheme.primary,
+                                color: Colors.white,
                                 fontSize: primarySize,
                                 weight: fontWeight,
                                 height: 1.5,
@@ -308,7 +330,7 @@ class _SyncLineContent extends StatelessWidget {
         LyricTextAlign.right => TextAlign.right,
       },
       style: _lyricTextStyle(
-        color: scheme.onSecondaryContainer,
+        color: Colors.white,
         fontSize: fontSize,
         weight: fontWeight,
         height: 1.5,
@@ -334,7 +356,7 @@ class _SyncLineContent extends StatelessWidget {
         LyricTextAlign.right => TextAlign.right,
       },
       style: _lyricTextStyle(
-        color: scheme.onSecondaryContainer,
+        color: Colors.white.withValues(alpha: 0.70),
         fontSize: fontSize,
         weight: translationWeight,
         height: 1.10,
@@ -425,7 +447,7 @@ class _LrcLineContent extends StatelessWidget {
         LyricTextAlign.right => TextAlign.right,
       },
       style: _lyricTextStyle(
-        color: scheme.onSecondaryContainer,
+        color: Colors.white,
         fontSize: fontSize,
         weight: fontWeight,
       ),
@@ -450,7 +472,7 @@ class _LrcLineContent extends StatelessWidget {
         LyricTextAlign.right => TextAlign.right,
       },
       style: _lyricTextStyle(
-        color: scheme.onSecondaryContainer,
+        color: Colors.white.withValues(alpha: 0.70),
         fontSize: fontSize,
         weight: translationWeight,
       ),

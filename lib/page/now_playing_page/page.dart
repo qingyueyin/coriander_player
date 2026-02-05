@@ -186,13 +186,13 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                                   colors: switch (brightness) {
                                     Brightness.dark => [
                                         Colors.black.withValues(alpha: 0.44),
-                                        Colors.black.withValues(alpha: 0.14),
+                                        Colors.black.withValues(alpha: 0.20),
                                         Colors.black.withValues(alpha: 0.44),
                                       ],
                                     Brightness.light => [
-                                        Colors.white.withValues(alpha: 0.40),
-                                        Colors.white.withValues(alpha: 0.12),
-                                        Colors.white.withValues(alpha: 0.40),
+                                        Colors.black.withValues(alpha: 0.34),
+                                        Colors.black.withValues(alpha: 0.18),
+                                        Colors.black.withValues(alpha: 0.34),
                                       ],
                                   },
                                   stops: const [0.0, 0.6, 1.0],
@@ -1567,25 +1567,31 @@ class _NowPlayingInfo extends StatefulWidget {
 
 class __NowPlayingInfoState extends State<_NowPlayingInfo> {
   final playbackService = PlayService.instance.playbackService;
-  ImageProvider<Object>? _currentCover;
-  String? _currentCoverPath;
+  ImageProvider<Object>? _loResCover;
+  String? _loResCoverPath;
+  ImageProvider<Object>? _hiResCover;
+  String? _hiResCoverPath;
 
   void _onPlaybackChange() {
     final nextAudio = playbackService.nowPlaying;
     if (nextAudio == null) {
-      if (_currentCoverPath != null) {
+      if (_loResCoverPath != null || _hiResCoverPath != null) {
         setState(() {
-          _currentCover = null;
-          _currentCoverPath = null;
+          _loResCover = null;
+          _loResCoverPath = null;
+          _hiResCover = null;
+          _hiResCoverPath = null;
         });
       }
       return;
     }
 
-    if (nextAudio.path == _currentCoverPath) return;
+    if (nextAudio.path == _loResCoverPath &&
+        nextAudio.path == _hiResCoverPath) {
+      return;
+    }
 
-    // Start loading the next cover
-    nextAudio.largeCover.then((image) async {
+    nextAudio.cover.then((image) async {
       if (!mounted) return;
       // Double check if the audio is still the same
       if (playbackService.nowPlaying?.path != nextAudio.path) return;
@@ -1595,8 +1601,22 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
       }
 
       setState(() {
-        _currentCover = image;
-        _currentCoverPath = nextAudio.path;
+        _loResCover = image;
+        _loResCoverPath = nextAudio.path;
+      });
+    });
+
+    nextAudio.largeCover.then((image) async {
+      if (!mounted) return;
+      if (playbackService.nowPlaying?.path != nextAudio.path) return;
+
+      if (image != null) {
+        await precacheImage(image, context);
+      }
+
+      setState(() {
+        _hiResCover = image;
+        _hiResCoverPath = nextAudio.path;
       });
     });
   }
@@ -1647,8 +1667,12 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
         final coverSize =
             coverWidthLimit < coverMax ? coverWidthLimit : coverMax;
 
-        final coverWidget = _currentCover == null
-            ? FittedBox(fit: BoxFit.contain, child: placeholder)
+        final currentCover =
+            (_hiResCoverPath == nowPlayingPath && _hiResCover != null)
+                ? _hiResCover
+                : (_loResCoverPath == nowPlayingPath ? _loResCover : null);
+        final coverWidget = currentCover == null
+            ? Center(child: placeholder)
             : Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12.0),
@@ -1679,11 +1703,10 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12.0),
                   child: Image(
-                    image: _currentCover!,
-                    width: coverSize,
-                    height: coverSize,
+                    image: currentCover!,
                     fit: BoxFit.cover,
                     gaplessPlayback: true,
+                    filterQuality: FilterQuality.high,
                     errorBuilder: (_, __, ___) => FittedBox(
                       fit: BoxFit.contain,
                       child: placeholder,
@@ -1735,6 +1758,11 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
                       begin: begin,
                       end: end,
                     ),
+                    flightShuttleBuilder: (flightContext, animation, direction,
+                        fromHeroContext, toHeroContext) {
+                      final fromHero = fromHeroContext.widget as Hero;
+                      return fromHero.child;
+                    },
                     child: RepaintBoundary(child: coverWidget),
                   ),
                 ),
@@ -1744,7 +1772,7 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: scheme.onSecondaryContainer,
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 24,
                     height: 1.2,
@@ -1757,7 +1785,7 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: scheme.onSecondaryContainer.withValues(alpha: 0.8),
+                    color: Colors.white.withValues(alpha: 0.7),
                     fontSize: 16,
                     height: 1.2,
                   ),
