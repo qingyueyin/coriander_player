@@ -101,11 +101,6 @@ class LyricService extends ChangeNotifier {
           qqSongId: lyricSource.qqSongId,
           kugouSongHash: lyricSource.kugouSongHash,
           neteaseSongId: lyricSource.neteaseSongId,
-          lrclibTrackName: lyricSource.lrclibTrackName,
-          lrclibArtistName: lyricSource.lrclibArtistName,
-          lrclibAlbumName: lyricSource.lrclibAlbumName,
-          lrclibDurationMs: lyricSource.lrclibDurationMs,
-          lrclibAudioFallback: nowPlaying,
         );
       }
     }

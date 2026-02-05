@@ -8,7 +8,6 @@ enum LyricSourceType {
   qq("qq"),
   kugou("kugou"),
   netease("netease"),
-  lrclib("lrclib"),
   local("local");
 
   final String name;
@@ -21,19 +20,9 @@ class LyricSource {
   int? qqSongId;
   String? kugouSongHash;
   String? neteaseSongId;
-  String? lrclibTrackName;
-  String? lrclibArtistName;
-  String? lrclibAlbumName;
-  int? lrclibDurationMs;
 
   LyricSource(this.source,
-      {this.qqSongId,
-      this.kugouSongHash,
-      this.neteaseSongId,
-      this.lrclibTrackName,
-      this.lrclibArtistName,
-      this.lrclibAlbumName,
-      this.lrclibDurationMs});
+      {this.qqSongId, this.kugouSongHash, this.neteaseSongId});
 
   static LyricSource fromMap(Map map) {
     if (map["source"] == "qq") {
@@ -42,14 +31,6 @@ class LyricSource {
       return LyricSource(LyricSourceType.kugou, kugouSongHash: map["id"]);
     } else if (map["source"] == "netease") {
       return LyricSource(LyricSourceType.netease, neteaseSongId: map["id"]);
-    } else if (map["source"] == "lrclib") {
-      return LyricSource(
-        LyricSourceType.lrclib,
-        lrclibTrackName: map["track_name"],
-        lrclibArtistName: map["artist_name"],
-        lrclibAlbumName: map["album_name"],
-        lrclibDurationMs: map["duration_ms"],
-      );
     } else {
       return LyricSource(LyricSourceType.local);
     }
@@ -63,14 +44,6 @@ class LyricSource {
         return {"source": source.name, "id": kugouSongHash};
       case LyricSourceType.netease:
         return {"source": source.name, "id": neteaseSongId};
-      case LyricSourceType.lrclib:
-        return {
-          "source": source.name,
-          "track_name": lrclibTrackName,
-          "artist_name": lrclibArtistName,
-          "album_name": lrclibAlbumName,
-          "duration_ms": lrclibDurationMs,
-        };
       case LyricSourceType.local:
         return {"source": source.name, "id": null};
     }
