@@ -210,6 +210,17 @@ class _LyricSourceTileState extends State<_LyricSourceTile> {
     qqSongId: widget.searchResult.qqSongId,
     kugouSongHash: widget.searchResult.kugouSongHash,
     neteaseSongId: widget.searchResult.neteaseSongId,
+    lrclibTrackName: widget.searchResult.source == ResultSource.lrclib
+        ? widget.searchResult.title
+        : null,
+    lrclibArtistName: widget.searchResult.source == ResultSource.lrclib
+        ? widget.searchResult.artists
+        : null,
+    lrclibAlbumName: widget.searchResult.source == ResultSource.lrclib
+        ? widget.searchResult.album
+        : null,
+    lrclibDurationMs: widget.searchResult.durationMs,
+    lrclibAudioFallback: widget.audio,
   );
   @override
   Widget build(BuildContext context) {
@@ -249,18 +260,49 @@ class _LyricSourceTileState extends State<_LyricSourceTile> {
     SongSearchResult searchResult,
     Lyric lyric,
   ) {
+    final kindText = switch (lyric) {
+      Lrc _ => "LRC",
+      _ => switch (lyric.runtimeType.toString()) {
+          "Qrc" => "QRC",
+          "Krc" => "KRC",
+          _ => "逐字",
+        },
+    };
+
+    final sourceText = switch (searchResult.source) {
+      ResultSource.qq => "QQ",
+      ResultSource.kugou => "酷狗",
+      ResultSource.netease => "网易",
+      ResultSource.lrclib => "LRC Lib",
+    };
+
+    final hasTranslation = lyric.lines.any((line) {
+      if (line is SyncLyricLine) return line.translation != null;
+      if (line is LrcLine) return line.content.contains("┃");
+      return false;
+    });
+
     return ListTile(
       onTap: () {
         LyricSourceType source = switch (searchResult.source) {
           ResultSource.qq => LyricSourceType.qq,
           ResultSource.kugou => LyricSourceType.kugou,
           ResultSource.netease => LyricSourceType.netease,
+          ResultSource.lrclib => LyricSourceType.lrclib,
         };
         LYRIC_SOURCES[audio.path] = LyricSource(
           source,
           qqSongId: searchResult.qqSongId,
           kugouSongHash: searchResult.kugouSongHash,
           neteaseSongId: searchResult.neteaseSongId,
+          lrclibTrackName:
+              searchResult.source == ResultSource.lrclib ? searchResult.title : null,
+          lrclibArtistName: searchResult.source == ResultSource.lrclib
+              ? searchResult.artists
+              : null,
+          lrclibAlbumName:
+              searchResult.source == ResultSource.lrclib ? searchResult.album : null,
+          lrclibDurationMs: searchResult.durationMs,
         );
         PlayService.instance.lyricService.useSpecificLyric(lyric);
 
@@ -269,7 +311,17 @@ class _LyricSourceTileState extends State<_LyricSourceTile> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8.0),
       ),
-      leading: Text(lyric is Lrc ? "LRC" : "逐字"),
+      leading: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(sourceText),
+          Text(
+            hasTranslation ? "$kindText·翻译" : kindText,
+            style: const TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
       title: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,7 +351,7 @@ class _LyricSourceTileState extends State<_LyricSourceTile> {
           final LyricLine currLine = lyric.lines[currLineIndex];
           if (currLine is LrcLine) {
             return Text(
-              "当前：${currLine.content}",
+              "当前（$kindText）：${currLine.content}",
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             );
@@ -307,7 +359,7 @@ class _LyricSourceTileState extends State<_LyricSourceTile> {
             final syncLine = currLine as SyncLyricLine;
 
             return Text(
-              "当前：${syncLine.content}${syncLine.translation != null ? "┃${syncLine.translation}" : ""}",
+              "当前（$kindText）：${syncLine.content}${syncLine.translation != null ? "┃${syncLine.translation}" : ""}",
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             );
