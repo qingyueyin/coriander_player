@@ -64,6 +64,19 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
   bool _hovered = false;
   bool _controlsVisible = false;
   Timer? _controlsHideTimer;
+  String? _lastPrecachedCoverPath;
+
+  void _maybePrecacheCover({
+    required String path,
+    required ImageProvider image,
+  }) {
+    if (_lastPrecachedCoverPath == path) return;
+    _lastPrecachedCoverPath = path;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      precacheImage(image, context);
+    });
+  }
 
   void _setControlsVisible(bool visible) {
     if (_controlsVisible == visible) return;
@@ -191,17 +204,23 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
                                         ConnectionState.done =>
                                           snapshot.data == null
                                               ? Center(child: placeholder)
-                                              : Image(
-                                                  image: snapshot.data!,
-                                                  fit: BoxFit.cover,
-                                                  gaplessPlayback: true,
-                                                  filterQuality:
-                                                      FilterQuality.medium,
-                                                  errorBuilder: (_, __, ___) =>
-                                                      Center(
-                                                    child: placeholder,
-                                                  ),
-                                                ),
+                                              : Builder(builder: (context) {
+                                                  _maybePrecacheCover(
+                                                    path: nowPlaying.path,
+                                                    image: snapshot.data!,
+                                                  );
+                                                  return Image(
+                                                    image: snapshot.data!,
+                                                    fit: BoxFit.cover,
+                                                    gaplessPlayback: true,
+                                                    filterQuality:
+                                                        FilterQuality.medium,
+                                                    errorBuilder:
+                                                        (_, __, ___) => Center(
+                                                      child: placeholder,
+                                                    ),
+                                                  );
+                                                }),
                                         _ => const Center(
                                             child: SizedBox(
                                               width: 20,

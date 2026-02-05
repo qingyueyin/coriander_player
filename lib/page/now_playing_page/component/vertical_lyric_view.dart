@@ -140,10 +140,8 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
   static const double _scrollMsPerPixel = 0.55;
   static const int _scrollMinMs = 220;
   static const int _scrollMaxMs = 420;
-
-  List<LyricViewTile> lyricTiles = [
-    LyricViewTile(line: LrcLine.defaultLine, opacity: 1.0)
-  ];
+  int _mainLine = 0;
+  double _estimatedItemExtent = 56.0;
 
   /// 用来定位到当前歌词
   final currentLyricTileKey = GlobalKey();
@@ -185,7 +183,26 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
   void _scrollToCurrent([Duration? duration]) {
     if (!scrollController.hasClients) return;
     final targetContext = currentLyricTileKey.currentContext;
-    if (targetContext == null || !targetContext.mounted) return;
+    if (targetContext == null || !targetContext.mounted) {
+      final alignment = widget.centerVertically ? 0.5 : 0.25;
+      final viewport = scrollController.position.viewportDimension;
+      final estimated = (_estimatedItemExtent * _mainLine) - viewport * alignment;
+      final targetOffset = estimated.clamp(
+        scrollController.position.minScrollExtent,
+        scrollController.position.maxScrollExtent,
+      );
+      final d = duration ?? _durationForScroll(scrollController.offset, targetOffset);
+      scrollController.animateTo(
+        targetOffset,
+        duration: d,
+        curve: _scrollCurve,
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _scrollToCurrent(const Duration(milliseconds: 220));
+      });
+      return;
+    }
 
     final targetObject = targetContext.findRenderObject();
     if (targetObject is! RenderBox) return;
@@ -198,6 +215,11 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
       scrollController.position.minScrollExtent,
       scrollController.position.maxScrollExtent,
     );
+
+    final h = targetObject.size.height;
+    if (h.isFinite && h > 0) {
+      _estimatedItemExtent = _estimatedItemExtent * 0.8 + h * 0.2;
+    }
 
     final d = duration ?? _durationForScroll(scrollController.offset, targetOffset);
     if (d == Duration.zero) {
@@ -219,7 +241,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
           element.start.inMilliseconds / 1000 > playbackService.position,
     );
     int nextLyricLine = next == -1 ? widget.lyric.lines.length : next;
-    lyricTiles = _generateLyricTiles(max(nextLyricLine - 1, 0));
+    _mainLine = max(nextLyricLine - 1, 0);
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       _scrollToCurrent(const Duration(milliseconds: 320));
@@ -229,34 +251,14 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
   void _seekToLyricLine(int i) {
     playbackService.seek(widget.lyric.lines[i].start.inMilliseconds / 1000);
     setState(() {
-      lyricTiles = _generateLyricTiles(i);
+      _mainLine = i;
     });
   }
 
-  /// 当前歌词行100%不透明度，其他歌词行18%透明度
-  /// 把[currentLyricTileKey]绑在当前歌词行上
-  List<LyricViewTile> _generateLyricTiles(int mainLine) {
-    return List.generate(
-      widget.lyric.lines.length,
-      (i) {
-        double opacity = 1.0;
-        if ((mainLine >= 1 && i <= mainLine - 1) ||
-            (mainLine < widget.lyric.lines.length - 1 && i >= mainLine + 1)) {
-          opacity = _inactiveOpacity;
-        }
-        return LyricViewTile(
-          key: i == mainLine ? currentLyricTileKey : null,
-          line: widget.lyric.lines[i],
-          opacity: opacity,
-          onTap: widget.enableSeekOnTap ? () => _seekToLyricLine(i) : null,
-        );
-      },
-    );
-  }
-
   void _updateNextLyricLine(int lyricLine) {
-    lyricTiles = _generateLyricTiles(lyricLine);
-    setState(() {});
+    setState(() {
+      _mainLine = lyricLine;
+    });
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       _scrollToCurrent();
@@ -267,36 +269,47 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView> {
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
       final spacerHeight = constraints.maxHeight / 2.0;
-      return ShaderMask(
-        blendMode: BlendMode.dstIn,
-        shaderCallback: (bounds) {
-          return const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              Colors.white,
-              Colors.white,
-              Colors.transparent,
-            ],
-            stops: [0.0, _fadeExtent, 1.0 - _fadeExtent, 1.0],
-          ).createShader(bounds);
-        },
-        child: CustomScrollView(
-          key: LYRIC_VIEW_KEY,
-          controller: scrollController,
-          slivers: [
-            if (widget.centerVertically)
-              SliverToBoxAdapter(child: SizedBox(height: spacerHeight)),
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: lyricTiles,
+      return RepaintBoundary(
+        child: ShaderMask(
+          blendMode: BlendMode.dstIn,
+          shaderCallback: (bounds) {
+            return const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.transparent,
+                Colors.white,
+                Colors.white,
+                Colors.transparent,
+              ],
+              stops: [0.0, _fadeExtent, 1.0 - _fadeExtent, 1.0],
+            ).createShader(bounds);
+          },
+          child: CustomScrollView(
+            key: LYRIC_VIEW_KEY,
+            controller: scrollController,
+            slivers: [
+              if (widget.centerVertically)
+                SliverToBoxAdapter(child: SizedBox(height: spacerHeight)),
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) {
+                    final opacity = i == _mainLine ? 1.0 : _inactiveOpacity;
+                    return LyricViewTile(
+                      key: i == _mainLine ? currentLyricTileKey : null,
+                      line: widget.lyric.lines[i],
+                      opacity: opacity,
+                      onTap:
+                          widget.enableSeekOnTap ? () => _seekToLyricLine(i) : null,
+                    );
+                  },
+                  childCount: widget.lyric.lines.length,
+                ),
               ),
-            ),
-            if (widget.centerVertically)
-              SliverToBoxAdapter(child: SizedBox(height: spacerHeight)),
-          ],
+              if (widget.centerVertically)
+                SliverToBoxAdapter(child: SizedBox(height: spacerHeight)),
+            ],
+          ),
         ),
       );
     });

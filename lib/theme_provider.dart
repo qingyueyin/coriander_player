@@ -25,6 +25,9 @@ class ThemeProvider extends ChangeNotifier {
       themeMode == ThemeMode.dark ? darkScheme : lightScheme;
 
   ThemeMode themeMode = AppSettings.instance.themeMode;
+  final Map<String, ColorScheme> _schemeCache = {};
+  final Map<String, Future<ColorScheme>> _schemeFutureCache = {};
+  int _themeRequestToken = 0;
 
   static ThemeProvider? _instance;
 
@@ -60,44 +63,86 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   /// 应用从 image 生成的主题。只在 themeMode == this.themeMode 时通知改变。
-  void applyThemeFromImage(ImageProvider image, ThemeMode themeMode) {
+  void applyThemeFromImage(
+    ImageProvider image,
+    ThemeMode themeMode, {
+    String? cacheKey,
+    int? requestToken,
+  }) {
     final brightness = switch (themeMode) {
       ThemeMode.system => Brightness.light,
       ThemeMode.light => Brightness.light,
       ThemeMode.dark => Brightness.dark,
     };
 
-    ColorScheme.fromImageProvider(
-      provider: image,
-      brightness: brightness,
-    ).then(
-      (value) {
-        switch (brightness) {
-          case Brightness.light:
-            lightScheme = value;
-            break;
-          case Brightness.dark:
-            darkScheme = value.copyWith(
-              surface: const Color(0xFF121314),
-              surfaceContainer: const Color(0xFF171819),
-              surfaceContainerHigh: const Color(0xFF1A1B1C),
-              surfaceContainerHighest: const Color(0xFF1C1D1E),
-            );
-            break;
-        }
+    final key = cacheKey == null ? null : "$cacheKey|${brightness.name}";
+    final cached = key == null ? null : _schemeCache[key];
+    if (cached != null) {
+      switch (brightness) {
+        case Brightness.light:
+          lightScheme = cached;
+          break;
+        case Brightness.dark:
+          darkScheme = cached.copyWith(
+            surface: const Color(0xFF121314),
+            surfaceContainer: const Color(0xFF171819),
+            surfaceContainerHigh: const Color(0xFF1A1B1C),
+            surfaceContainerHighest: const Color(0xFF1C1D1E),
+          );
+          break;
+      }
 
-        if (themeMode == this.themeMode) {
-          notifyListeners();
-          PlayService.instance.desktopLyricService.canSendMessage
-              .then((canSend) {
-            if (!canSend) return;
+      if (themeMode == this.themeMode &&
+          (requestToken == null || requestToken == _themeRequestToken)) {
+        notifyListeners();
+        PlayService.instance.desktopLyricService.canSendMessage.then((canSend) {
+          if (!canSend) return;
+          PlayService.instance.desktopLyricService.sendThemeMessage(currScheme);
+        });
+      }
+      return;
+    }
 
-            PlayService.instance.desktopLyricService
-                .sendThemeMessage(currScheme);
-          });
-        }
-      },
-    );
+    final future = key == null
+        ? ColorScheme.fromImageProvider(provider: image, brightness: brightness)
+        : _schemeFutureCache.putIfAbsent(
+            key,
+            () => ColorScheme.fromImageProvider(
+              provider: image,
+              brightness: brightness,
+            ),
+          );
+
+    future.then((value) {
+      if (key != null) {
+        _schemeFutureCache.remove(key);
+        _schemeCache[key] = value;
+      }
+
+      if (requestToken != null && requestToken != _themeRequestToken) return;
+
+      switch (brightness) {
+        case Brightness.light:
+          lightScheme = value;
+          break;
+        case Brightness.dark:
+          darkScheme = value.copyWith(
+            surface: const Color(0xFF121314),
+            surfaceContainer: const Color(0xFF171819),
+            surfaceContainerHigh: const Color(0xFF1A1B1C),
+            surfaceContainerHighest: const Color(0xFF1C1D1E),
+          );
+          break;
+      }
+
+      if (themeMode == this.themeMode) {
+        notifyListeners();
+        PlayService.instance.desktopLyricService.canSendMessage.then((canSend) {
+          if (!canSend) return;
+          PlayService.instance.desktopLyricService.sendThemeMessage(currScheme);
+        });
+      }
+    });
   }
 
   void applyThemeMode(ThemeMode themeMode) {
@@ -115,18 +160,30 @@ class ThemeProvider extends ChangeNotifier {
 
   void applyThemeFromAudio(Audio audio) {
     if (!AppSettings.instance.dynamicTheme) return;
+    _themeRequestToken += 1;
+    final token = _themeRequestToken;
 
     audio.cover.then((image) {
       if (image == null) return;
 
-      applyThemeFromImage(image, themeMode);
+      applyThemeFromImage(
+        image,
+        themeMode,
+        cacheKey: audio.path,
+        requestToken: token,
+      );
 
       final second = switch (themeMode) {
         ThemeMode.system => ThemeMode.dark,
         ThemeMode.light => ThemeMode.dark,
         ThemeMode.dark => ThemeMode.light,
       };
-      applyThemeFromImage(image, second);
+      applyThemeFromImage(
+        image,
+        second,
+        cacheKey: audio.path,
+        requestToken: token,
+      );
     });
   }
 

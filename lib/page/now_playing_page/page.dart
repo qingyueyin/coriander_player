@@ -86,6 +86,9 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     playbackService.nowPlaying?.cover.then((cover) {
       if (!mounted) return;
       if (playbackService.nowPlaying?.path != path) return;
+      if (cover != null) {
+        precacheImage(cover, context);
+      }
       if (nowPlayingCover == cover) return;
       setState(() {
         nowPlayingCover = cover;
@@ -155,40 +158,49 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                   fit: StackFit.expand,
                   alignment: AlignmentDirectional.center,
                   children: [
-                    ColoredBox(color: scheme.surface),
-                    if (nowPlayingCover != null) ...[
-                      Image(
-                        image: nowPlayingCover!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    RepaintBoundary(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ColoredBox(color: scheme.surface),
+                          if (nowPlayingCover != null) ...[
+                            Image(
+                              image: nowPlayingCover!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  const SizedBox.shrink(),
+                            ),
+                            BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 72, sigmaY: 72),
+                              child:
+                                  const ColoredBox(color: Colors.transparent),
+                            ),
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: switch (brightness) {
+                                    Brightness.dark => [
+                                        Colors.black.withValues(alpha: 0.44),
+                                        Colors.black.withValues(alpha: 0.14),
+                                        Colors.black.withValues(alpha: 0.44),
+                                      ],
+                                    Brightness.light => [
+                                        Colors.white.withValues(alpha: 0.40),
+                                        Colors.white.withValues(alpha: 0.12),
+                                        Colors.white.withValues(alpha: 0.40),
+                                      ],
+                                  },
+                                  stops: const [0.0, 0.6, 1.0],
+                                ),
+                              ),
+                              child: const SizedBox.expand(),
+                            ),
+                          ],
+                        ],
                       ),
-                      BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 72, sigmaY: 72),
-                        child: const ColoredBox(color: Colors.transparent),
-                      ),
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: switch (brightness) {
-                              Brightness.dark => [
-                                  Colors.black.withValues(alpha: 0.44),
-                                  Colors.black.withValues(alpha: 0.14),
-                                  Colors.black.withValues(alpha: 0.44),
-                                ],
-                              Brightness.light => [
-                                  Colors.white.withValues(alpha: 0.40),
-                                  Colors.white.withValues(alpha: 0.12),
-                                  Colors.white.withValues(alpha: 0.40),
-                                ],
-                            },
-                            stops: const [0.0, 0.6, 1.0],
-                          ),
-                        ),
-                        child: const SizedBox.expand(),
-                      ),
-                    ],
+                    ),
                     IconButtonTheme(
                       data: IconButtonThemeData(
                         style: ButtonStyle(
@@ -1570,10 +1582,14 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
     if (nextAudio.path == _currentCoverPath) return;
 
     // Start loading the next cover
-    nextAudio.largeCover.then((image) {
+    nextAudio.largeCover.then((image) async {
       if (!mounted) return;
       // Double check if the audio is still the same
       if (playbackService.nowPlaying?.path != nextAudio.path) return;
+
+      if (image != null) {
+        await precacheImage(image, context);
+      }
 
       setState(() {
         _currentCover = image;

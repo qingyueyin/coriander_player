@@ -62,6 +62,7 @@ class _LyricHorizontalScrollAreaState
   final scrollController = ScrollController();
   final lyricService = PlayService.instance.lyricService;
   late StreamSubscription lyricLineStreamSubscription;
+  int _scrollToken = 0;
 
   var currContent = "Enjoy Music";
 
@@ -81,6 +82,8 @@ class _LyricHorizontalScrollAreaState
 
     lyricLineStreamSubscription = lyricService.lyricLineStream.listen((line) {
       if (widget.lyric.lines.isEmpty) return;
+      _scrollToken += 1;
+      final token = _scrollToken;
       final currLine = widget.lyric.lines[line];
 
       setState(() {
@@ -104,17 +107,22 @@ class _LyricHorizontalScrollAreaState
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!scrollController.hasClients) return;
 
-        scrollController.jumpTo(0);
+        scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeOutCubic,
+        );
         if (scrollController.position.maxScrollExtent > 0) {
           if (lastTime.isNegative) return;
 
           Future.delayed(waitFor, () {
             if (!scrollController.hasClients) return;
+            if (token != _scrollToken) return;
 
             scrollController.animateTo(
               scrollController.position.maxScrollExtent,
               duration: lastTime,
-              curve: Curves.linear,
+              curve: Curves.easeOutQuart,
             );
           });
         }
