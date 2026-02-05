@@ -194,6 +194,7 @@ class _UniDetailPageState<P, S, T> extends State<UniDetailPage<P, S, T>> {
                             widget.secondaryContent[i],
                             i,
                             multiSelectController,
+                            ContentView.list,
                           ),
                         ),
                       ContentView.table => SliverGrid.builder(
@@ -205,6 +206,7 @@ class _UniDetailPageState<P, S, T> extends State<UniDetailPage<P, S, T>> {
                             widget.secondaryContent[i],
                             i,
                             multiSelectController,
+                            ContentView.table,
                           ),
                         ),
                     },
@@ -231,6 +233,7 @@ class _UniDetailPageState<P, S, T> extends State<UniDetailPage<P, S, T>> {
                         widget.tertiaryContent[i],
                         i,
                         null,
+                        ContentView.list,
                       ),
                     ),
                     const SliverPadding(padding: EdgeInsets.only(bottom: 96.0)),

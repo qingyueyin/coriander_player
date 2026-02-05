@@ -20,9 +20,16 @@ class AlbumsPage extends StatelessWidget {
       title: "专辑",
       subtitle: "${contentList.length} 张专辑",
       contentList: contentList,
-      contentBuilder: (context, item, i, multiSelectController) => AlbumTile(
+      contentBuilder: (context, item, i, multiSelectController, view) => AlbumTile(
         album: item,
         multiSelectController: multiSelectController,
+        view: view,
+      ),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 160,
+        childAspectRatio: 0.75,
+        mainAxisSpacing: 16.0,
+        crossAxisSpacing: 16.0,
       ),
       enableShufflePlay: false,
       enableSortMethod: true,

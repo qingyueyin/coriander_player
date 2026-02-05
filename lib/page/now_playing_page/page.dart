@@ -214,6 +214,58 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                       ),
                     ),
                     if (immersive) const _ImmersiveHelpOverlay(),
+                    if (!immersive)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 56.0,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: IgnorePointer(
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Color(0x14000000),
+                                        Colors.transparent,
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            ClipRect(
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(
+                                    sigmaX: 12.0, sigmaY: 12.0),
+                                child: Container(
+                                  color: scheme.surface.withValues(alpha: 0.05),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12.0),
+                                  child: const SafeArea(
+                                    bottom: false,
+                                    child: Row(
+                                      children: [
+                                        NavBackBtn(),
+                                        Expanded(
+                                          child: DragToMoveArea(
+                                            child: SizedBox.expand(),
+                                          ),
+                                        ),
+                                        WindowControlls(),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     if (_cursorHidden)
                       const Positioned.fill(
                         child: MouseRegion(
@@ -961,25 +1013,15 @@ class _NowPlayingMainControls extends StatelessWidget {
           initialData: playbackService.playerState,
           builder: (context, snapshot) {
             final playerState = snapshot.data!;
-            late void Function() onTap;
-            if (playerState == PlayerState.playing) {
-              onTap = playbackService.pause;
-            } else if (playerState == PlayerState.completed) {
-              onTap = playbackService.playAgain;
-            } else {
-              onTap = playbackService.start;
-            }
-
-            return _GlowingIconButton(
-              tooltip: playerState == PlayerState.playing ? "暂停" : "播放",
-              onPressed: onTap,
-              iconData: playerState == PlayerState.playing
-                  ? Symbols.pause
-                  : Symbols.play_arrow,
-              size: 56, // Larger size for main control
+            return _MorphPlayPauseButton(
+              playerState: playerState,
+              onPlay: playbackService.start,
+              onPause: playbackService.pause,
+              onReplay: playbackService.playAgain,
+              size: 56,
               glowColor: scheme.primary.withValues(alpha: 0.6),
-              iconColor: scheme.primary, // Use primary color for active state
-              enableGlow: true,
+              color: scheme.primary,
+              playerStateStream: playbackService.playerStateStream,
             );
           },
         ),
@@ -1076,6 +1118,131 @@ class _GlowingIconButtonState extends State<_GlowingIconButton> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MorphPlayPauseButton extends StatefulWidget {
+  const _MorphPlayPauseButton({
+    required this.playerState,
+    required this.onPlay,
+    required this.onPause,
+    required this.onReplay,
+    required this.size,
+    required this.glowColor,
+    required this.color,
+    required this.playerStateStream,
+  });
+  final PlayerState playerState;
+  final VoidCallback onPlay;
+  final VoidCallback onPause;
+  final VoidCallback onReplay;
+  final double size;
+  final Color glowColor;
+  final Color color;
+  final Stream<PlayerState> playerStateStream;
+
+  @override
+  State<_MorphPlayPauseButton> createState() => _MorphPlayPauseButtonState();
+}
+
+class _MorphPlayPauseButtonState extends State<_MorphPlayPauseButton>
+    with SingleTickerProviderStateMixin {
+  bool _isHovering = false;
+  bool _isPressed = false;
+  late final AnimationController _controller = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 220));
+  late PlayerState _state = widget.playerState;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.value = _state == PlayerState.playing ? 1.0 : 0.0;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        child: StreamBuilder<PlayerState>(
+          stream: widget.playerStateStream,
+          initialData: _state,
+          builder: (context, snapshot) {
+            _state = snapshot.data ?? _state;
+            final isPlaying = _state == PlayerState.playing;
+            _controller.animateTo(
+              isPlaying ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 240),
+              curve: const Cubic(0.2, 0.0, 0.0, 1.0),
+            );
+
+            late final VoidCallback onPressed;
+            if (_state == PlayerState.playing) {
+              onPressed = widget.onPause;
+            } else if (_state == PlayerState.completed) {
+              onPressed = widget.onReplay;
+            } else {
+              onPressed = widget.onPlay;
+            }
+
+            final showGlow = _isHovering;
+
+            return SizedBox(
+              width: widget.size + 16,
+              height: widget.size + 16,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (showGlow)
+                    Positioned.fill(
+                      child: ImageFiltered(
+                        imageFilter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Center(
+                          child: AnimatedIcon(
+                            icon: AnimatedIcons.play_pause,
+                            progress: _controller,
+                            color: widget.glowColor,
+                            size: widget.size,
+                          ),
+                        ),
+                      ),
+                    ),
+                  AnimatedScale(
+                    duration: const Duration(milliseconds: 120),
+                    curve: const Cubic(0.4, 0, 0.2, 1),
+                    scale: _isPressed ? 0.9 : 1.0,
+                    child: IconButton(
+                      tooltip: isPlaying ? "暂停" : "播放",
+                      onPressed: onPressed,
+                      icon: AnimatedIcon(
+                        icon: AnimatedIcons.play_pause,
+                        progress: _controller,
+                        color: widget.color,
+                        size: widget.size,
+                      ),
+                      style: ButtonStyle(
+                        backgroundColor:
+                            const WidgetStatePropertyAll(Colors.transparent),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );

@@ -21,7 +21,7 @@ class AudiosPage extends StatelessWidget {
       title: "音乐",
       subtitle: "${contentList.length} 首乐曲",
       contentList: contentList,
-      contentBuilder: (context, item, i, multiSelectController) => AudioTile(
+      contentBuilder: (context, item, i, multiSelectController, _) => AudioTile(
         audioIndex: i,
         playlist: contentList,
         focus: item == locateTo,

@@ -1,6 +1,8 @@
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/component/motion.dart';
 import 'package:coriander_player/page/uni_page.dart';
+import 'package:coriander_player/theme_provider.dart';
+import 'package:coriander_player/enums.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -11,10 +13,12 @@ class AlbumTile extends StatefulWidget {
     super.key,
     required this.album,
     this.multiSelectController,
+    this.view = ContentView.list,
   });
 
   final Album album;
   final MultiSelectController<Album>? multiSelectController;
+  final ContentView view;
 
   @override
   State<AlbumTile> createState() => _AlbumTileState();
@@ -28,12 +32,14 @@ class _AlbumTileState extends State<AlbumTile> {
     final scheme = Theme.of(context).colorScheme;
     final menuStyle = MenuStyle(
       shape: WidgetStatePropertyAll(
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(ThemeProvider.radiusLarge)),
       ),
     );
     final menuItemStyle = ButtonStyle(
       shape: WidgetStatePropertyAll(
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(ThemeProvider.radiusMedium)),
       ),
     );
     final placeholder = Icon(
@@ -82,7 +88,7 @@ class _AlbumTileState extends State<AlbumTile> {
                   : _hovered
                       ? scheme.primary.withValues(alpha: 0.06)
                       : Colors.transparent,
-              borderRadius: BorderRadius.circular(8.0),
+              borderRadius: BorderRadius.circular(ThemeProvider.radiusMedium),
             ),
             child: Material(
               type: MaterialType.transparency,
@@ -120,42 +126,142 @@ class _AlbumTileState extends State<AlbumTile> {
                     position: details.localPosition.translate(0, -140),
                   );
                 },
-                borderRadius: BorderRadius.circular(8.0),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    children: [
-                      FutureBuilder(
-                        future: widget.album.works.first.cover,
-                        builder: (context, snapshot) {
-                          if (snapshot.data == null) {
-                            return placeholder;
-                          }
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(8.0),
-                            child: Image(
-                              image: snapshot.data!,
-                              width: 48.0,
-                              height: 48.0,
-                              errorBuilder: (_, __, ___) => placeholder,
+                borderRadius: BorderRadius.circular(ThemeProvider.radiusMedium),
+                child: widget.view == ContentView.list
+                    ? Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          children: [
+                            FutureBuilder(
+                              future: widget.album.works.first.cover,
+                              builder: (context, snapshot) {
+                                if (snapshot.data == null) {
+                                  return placeholder;
+                                }
+                                return ClipRRect(
+                                  borderRadius: BorderRadius.circular(
+                                      ThemeProvider.radiusMedium),
+                                  child: Image(
+                                    image: snapshot.data!,
+                                    width: 48.0,
+                                    height: 48.0,
+                                    errorBuilder: (_, __, ___) => placeholder,
+                                    fit: BoxFit.cover,
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
-                      Flexible(
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 8.0),
-                          child: Text(
-                            widget.album.name,
-                            softWrap: false,
-                            maxLines: 2,
-                            style: TextStyle(color: scheme.onSurface),
-                          ),
+                            Flexible(
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 12.0),
+                                child: Text(
+                                  widget.album.name,
+                                  softWrap: false,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(color: scheme.onSurface),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: FutureBuilder(
+                                future: widget.album.works.first.mediumCover,
+                                builder: (context, snapshot) {
+                                  if (snapshot.data == null) {
+                                    return placeholder;
+                                  }
+                                  return FutureBuilder(
+                                    future: ColorScheme.fromImageProvider(
+                                      provider: snapshot.data!,
+                                    ),
+                                    builder: (context, schemeSnapshot) {
+                                      final cardColor = schemeSnapshot
+                                              .data?.surfaceContainer ??
+                                          Colors.transparent;
+                                      return DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                              ThemeProvider.radiusMedium),
+                                          color: cardColor,
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                              ThemeProvider.radiusMedium),
+                                          child: Image(
+                                            image: snapshot.data!,
+                                            errorBuilder: (_, __, ___) =>
+                                                placeholder,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding:
+                                const EdgeInsets.fromLTRB(4.0, 8.0, 4.0, 4.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                FutureBuilder(
+                                  future: widget.album.works.first.mediumCover,
+                                  builder: (context, snapshot) {
+                                    if (snapshot.data == null) {
+                                      return Text(
+                                        widget.album.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: scheme.onSurface,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      );
+                                    }
+                                    return FutureBuilder(
+                                      future: ColorScheme.fromImageProvider(
+                                        provider: snapshot.data!,
+                                      ),
+                                      builder: (context, schemeSnapshot) {
+                                        final textColor =
+                                            schemeSnapshot.data?.primary ??
+                                                scheme.onSurface;
+                                        return Text(
+                                          widget.album.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: textColor,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                                Text(
+                                  "${widget.album.works.length} 首作品",
+                                  style: TextStyle(
+                                    color: scheme.onSurfaceVariant,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
               ),
             ),
           ),

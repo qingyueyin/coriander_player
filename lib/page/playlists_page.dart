@@ -64,7 +64,7 @@ class _PlaylistsPageState extends State<PlaylistsPage> {
       title: "歌单",
       subtitle: "${PLAYLISTS.length} 个歌单",
       contentList: PLAYLISTS,
-      contentBuilder: (context, item, i, multiSelectController) {
+      contentBuilder: (context, item, i, multiSelectController, _) {
         final playlist = PLAYLISTS[i];
         final isSelected =
             multiSelectController?.selected.contains(playlist) == true;

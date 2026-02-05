@@ -21,7 +21,7 @@ class FolderDetailPage extends StatelessWidget {
       title: folder.path,
       subtitle: "${contentList.length} 首乐曲",
       contentList: contentList,
-      contentBuilder: (context, item, i, multiSelectController) => AudioTile(
+      contentBuilder: (context, item, i, multiSelectController, _) => AudioTile(
         audioIndex: i,
         playlist: contentList,
         multiSelectController: multiSelectController,

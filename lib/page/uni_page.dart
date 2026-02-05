@@ -11,8 +11,13 @@ import 'package:coriander_player/page/page_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-typedef ContentBuilder<T> = Widget Function(BuildContext context, T item,
-    int index, MultiSelectController<T>? multiSelectController);
+typedef ContentBuilder<T> = Widget Function(
+    BuildContext context,
+    T item,
+    int index,
+    MultiSelectController<T>? multiSelectController,
+    ContentView view,
+    );
 
 typedef SortMethod<T> = void Function(List<T> list, SortOrder order);
 
@@ -93,6 +98,7 @@ class UniPage<T> extends StatefulWidget {
     this.locateTo,
     this.multiSelectController,
     this.multiSelectViewActions,
+    this.gridDelegate,
   });
 
   final PagePreference pref;
@@ -116,6 +122,8 @@ class UniPage<T> extends StatefulWidget {
 
   final MultiSelectController<T>? multiSelectController;
   final List<Widget>? multiSelectViewActions;
+  
+  final SliverGridDelegate? gridDelegate;
 
   @override
   State<UniPage<T>> createState() => _UniPageState<T>();
@@ -324,18 +332,20 @@ class _UniPageState<T> extends State<UniPage<T>> {
                     widget.contentList[i],
                     i,
                     multiSelectController,
+                    ContentView.list,
                   ),
                 ),
               ContentView.table => GridView.builder(
                   controller: scrollController,
                   padding: const EdgeInsets.only(bottom: 96.0),
-                  gridDelegate: gridDelegate,
+                  gridDelegate: widget.gridDelegate ?? gridDelegate,
                   itemCount: widget.contentList.length,
                   itemBuilder: (context, i) => widget.contentBuilder(
                     context,
                     widget.contentList[i],
                     i,
                     multiSelectController,
+                    ContentView.table,
                   ),
                 ),
             },

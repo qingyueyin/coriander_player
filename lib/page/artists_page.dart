@@ -20,9 +20,16 @@ class ArtistsPage extends StatelessWidget {
       title: "艺术家",
       subtitle: "${contentList.length} 位艺术家",
       contentList: contentList,
-      contentBuilder: (_, item, __, multiSelectController) => ArtistTile(
+      contentBuilder: (_, item, __, multiSelectController, view) => ArtistTile(
         artist: item,
         multiSelectController: multiSelectController,
+        view: view,
+      ),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 160,
+        childAspectRatio: 0.75,
+        mainAxisSpacing: 16.0,
+        crossAxisSpacing: 16.0,
       ),
       enableShufflePlay: false,
       enableSortMethod: true,

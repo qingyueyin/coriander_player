@@ -12,6 +12,11 @@ class ThemeProvider extends ChangeNotifier {
   ColorScheme darkScheme = ColorScheme.fromSeed(
     seedColor: Color(AppSettings.instance.defaultTheme),
     brightness: Brightness.dark,
+  ).copyWith(
+    surface: const Color(0xFF121314),
+    surfaceContainer: const Color(0xFF171819),
+    surfaceContainerHigh: const Color(0xFF1A1B1C),
+    surfaceContainerHighest: const Color(0xFF1C1D1E),
   );
 
   String? fontFamily = AppSettings.instance.fontFamily;
@@ -39,6 +44,11 @@ class ThemeProvider extends ChangeNotifier {
     darkScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: Brightness.dark,
+    ).copyWith(
+      surface: const Color(0xFF121314),
+      surfaceContainer: const Color(0xFF171819),
+      surfaceContainerHigh: const Color(0xFF1A1B1C),
+      surfaceContainerHighest: const Color(0xFF1C1D1E),
     );
     notifyListeners();
 
@@ -67,7 +77,12 @@ class ThemeProvider extends ChangeNotifier {
             lightScheme = value;
             break;
           case Brightness.dark:
-            darkScheme = value;
+            darkScheme = value.copyWith(
+              surface: const Color(0xFF121314),
+              surfaceContainer: const Color(0xFF171819),
+              surfaceContainerHigh: const Color(0xFF1A1B1C),
+              surfaceContainerHighest: const Color(0xFF1C1D1E),
+            );
             break;
         }
 
@@ -119,6 +134,13 @@ class ThemeProvider extends ChangeNotifier {
     this.fontFamily = fontFamily;
     notifyListeners();
   }
+
+  static const double radiusSmall = 6.0;
+  static const double radiusMedium = 8.0;
+  static const double radiusLarge = 12.0;
+  static const double elevationLow = 1.0;
+  static const double elevationMedium = 3.0;
+  static const double elevationHigh = 6.0;
 
   // ButtonStyle get primaryButtonStyle => ButtonStyle(
   //       backgroundColor: WidgetStatePropertyAll(scheme.primary),

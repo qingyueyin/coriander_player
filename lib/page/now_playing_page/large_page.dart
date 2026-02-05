@@ -94,32 +94,22 @@ class _NowPlayingPage_Large extends StatelessWidget {
                       initialData:
                           PlayService.instance.playbackService.playerState,
                       builder: (context, snapshot) {
-                        final playerState = snapshot.data!;
-                        late void Function() onTap;
-                        if (playerState == PlayerState.playing) {
-                          onTap = PlayService.instance.playbackService.pause;
-                        } else if (playerState == PlayerState.completed) {
-                          onTap =
-                              PlayService.instance.playbackService.playAgain;
-                        } else {
-                          onTap = PlayService.instance.playbackService.start;
-                        }
-
-                        return _GlowingIconButton(
-                          tooltip:
-                              playerState == PlayerState.playing ? "暂停" : "播放",
-                          onPressed: onTap,
-                          iconData: playerState == PlayerState.playing
-                              ? Symbols.pause
-                              : Symbols.play_arrow,
+                        final state = snapshot.data!;
+                        final service = PlayService.instance.playbackService;
+                        return _MorphPlayPauseButton(
+                          playerState: state,
+                          onPlay: service.start,
+                          onPause: service.pause,
+                          onReplay: service.playAgain,
                           size: 32,
                           glowColor: Theme.of(context)
                               .colorScheme
                               .primary
                               .withValues(alpha: 0.5),
-                          iconColor: Theme.of(context)
+                          color: Theme.of(context)
                               .colorScheme
                               .onSecondaryContainer,
+                          playerStateStream: service.playerStateStream,
                         );
                       },
                     ),
