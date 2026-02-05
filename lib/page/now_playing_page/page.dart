@@ -48,6 +48,7 @@ class NowPlayingPage extends StatefulWidget {
 class _NowPlayingPageState extends State<NowPlayingPage> {
   final playbackService = PlayService.instance.playbackService;
   ImageProvider<Object>? nowPlayingCover;
+  String? _nowPlayingCoverPath;
   Timer? _cursorHideTimer;
   bool _cursorHidden = false;
   bool _lastImmersive = false;
@@ -68,12 +69,27 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   }
 
   void updateCover() {
-    playbackService.nowPlaying?.cover.then((cover) {
-      if (mounted) {
+    final path = playbackService.nowPlaying?.path;
+    if (path == null) {
+      if (_nowPlayingCoverPath != null || nowPlayingCover != null) {
         setState(() {
-          nowPlayingCover = cover;
+          _nowPlayingCoverPath = null;
+          nowPlayingCover = null;
         });
       }
+      return;
+    }
+
+    if (path == _nowPlayingCoverPath) return;
+    _nowPlayingCoverPath = path;
+
+    playbackService.nowPlaying?.cover.then((cover) {
+      if (!mounted) return;
+      if (playbackService.nowPlaying?.path != path) return;
+      if (nowPlayingCover == cover) return;
+      setState(() {
+        nowPlayingCover = cover;
+      });
     });
   }
 
@@ -220,50 +236,23 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                         left: 0,
                         right: 0,
                         height: 56.0,
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: IgnorePointer(
-                                child: Container(
-                                  decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Color(0x14000000),
-                                        Colors.transparent,
-                                      ],
-                                    ),
+                        child: SafeArea(
+                          bottom: false,
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 12.0),
+                            child: Row(
+                              children: [
+                                const NavBackBtn(),
+                                const Expanded(
+                                  child: DragToMoveArea(
+                                    child: SizedBox.expand(),
                                   ),
                                 ),
-                              ),
+                                const WindowControlls(),
+                              ],
                             ),
-                            ClipRect(
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(
-                                    sigmaX: 12.0, sigmaY: 12.0),
-                                child: Container(
-                                  color: scheme.surface.withValues(alpha: 0.05),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12.0),
-                                  child: const SafeArea(
-                                    bottom: false,
-                                    child: Row(
-                                      children: [
-                                        NavBackBtn(),
-                                        Expanded(
-                                          child: DragToMoveArea(
-                                            child: SizedBox.expand(),
-                                          ),
-                                        ),
-                                        WindowControlls(),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     if (_cursorHidden)
@@ -1563,30 +1552,49 @@ class _NowPlayingInfo extends StatefulWidget {
 
 class __NowPlayingInfoState extends State<_NowPlayingInfo> {
   final playbackService = PlayService.instance.playbackService;
-  Future<ImageProvider<Object>?>? nowPlayingCover;
-  String? _coverPath;
+  ImageProvider<Object>? _currentCover;
+  String? _currentCoverPath;
 
-  void updateCover() {
-    final nextPath = playbackService.nowPlaying?.path;
-    if (nextPath == _coverPath) return;
-    _coverPath = nextPath;
-    setState(() {
-      nowPlayingCover = playbackService.nowPlaying?.largeCover;
+  void _onPlaybackChange() {
+    final nextAudio = playbackService.nowPlaying;
+    if (nextAudio == null) {
+      if (_currentCoverPath != null) {
+        setState(() {
+          _currentCover = null;
+          _currentCoverPath = null;
+        });
+      }
+      return;
+    }
+
+    if (nextAudio.path == _currentCoverPath) return;
+
+    // Start loading the next cover
+    nextAudio.largeCover.then((image) {
+      if (!mounted) return;
+      // Double check if the audio is still the same
+      if (playbackService.nowPlaying?.path != nextAudio.path) return;
+
+      setState(() {
+        _currentCover = image;
+        _currentCoverPath = nextAudio.path;
+      });
     });
   }
 
   @override
   void initState() {
     super.initState();
-    playbackService.addListener(updateCover);
-    nowPlayingCover = playbackService.nowPlaying?.largeCover;
-    _coverPath = playbackService.nowPlaying?.path;
+    playbackService.addListener(_onPlaybackChange);
+    // Initial load
+    _onPlaybackChange();
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final nowPlaying = playbackService.nowPlaying;
+    final nowPlayingPath = nowPlaying?.path;
 
     final placeholder = Image.asset(
       'app_icon.ico',
@@ -1597,14 +1605,6 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
         Symbols.broken_image,
         size: 400.0,
         color: scheme.onSecondaryContainer,
-      ),
-    );
-
-    const loadingWidget = Center(
-      child: SizedBox(
-        width: 24,
-        height: 24,
-        child: CircularProgressIndicator(),
       ),
     );
 
@@ -1628,58 +1628,49 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
         final coverSize =
             coverWidthLimit < coverMax ? coverWidthLimit : coverMax;
 
-        final coverWidget = nowPlayingCover == null
+        final coverWidget = _currentCover == null
             ? FittedBox(fit: BoxFit.contain, child: placeholder)
-            : FutureBuilder(
-                future: nowPlayingCover,
-                builder: (context, snapshot) =>
-                    switch (snapshot.connectionState) {
-                  ConnectionState.done => snapshot.data == null
-                      ? FittedBox(fit: BoxFit.contain, child: placeholder)
-                      : Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12.0),
-                            boxShadow: [
-                              // 1. 环境光晕 (Ambient Glow)
-                              BoxShadow(
-                                color: scheme.primary.withOpacity(0.25),
-                                spreadRadius: -4,
-                                blurRadius: 24,
-                                offset: const Offset(0, 8),
-                              ),
-                              // 2. 轮廓描边 (Outline)
-                              BoxShadow(
-                                color: scheme.primary.withOpacity(0.15),
-                                spreadRadius: 1,
-                                blurRadius: 0,
-                                offset: Offset.zero,
-                              ),
-                              // 3. 深邃阴影 (Depth Shadow)
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.20),
-                                spreadRadius: 0,
-                                blurRadius: 16,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12.0),
-                            child: Image(
-                              image: snapshot.data!,
-                              width: coverSize,
-                              height: coverSize,
-                              fit: BoxFit.cover,
-                              gaplessPlayback: true,
-                              errorBuilder: (_, __, ___) => FittedBox(
-                                fit: BoxFit.contain,
-                                child: placeholder,
-                              ),
-                            ),
-                          ),
-                        ),
-                  _ => loadingWidget,
-                },
+            : Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12.0),
+                  boxShadow: [
+                    // 1. 环境光晕 (Ambient Glow)
+                    BoxShadow(
+                      color: scheme.primary.withOpacity(0.25),
+                      spreadRadius: -4,
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                    // 2. 轮廓描边 (Outline)
+                    BoxShadow(
+                      color: scheme.primary.withOpacity(0.15),
+                      spreadRadius: 1,
+                      blurRadius: 0,
+                      offset: Offset.zero,
+                    ),
+                    // 3. 深邃阴影 (Depth Shadow)
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.20),
+                      spreadRadius: 0,
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12.0),
+                  child: Image(
+                    image: _currentCover!,
+                    width: coverSize,
+                    height: coverSize,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    errorBuilder: (_, __, ___) => FittedBox(
+                      fit: BoxFit.contain,
+                      child: placeholder,
+                    ),
+                  ),
+                ),
               );
 
         return AnimatedSwitcher(
@@ -1709,7 +1700,7 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
             );
           },
           child: Container(
-            key: ValueKey(nowPlaying?.path),
+            key: ValueKey(nowPlayingPath ?? 'now_playing_none'),
             alignment: Alignment.center,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1720,7 +1711,11 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
                   width: coverSize,
                   height: coverSize,
                   child: Hero(
-                    tag: nowPlaying?.path ?? 'now_playing_cover',
+                    tag: nowPlayingPath ?? 'now_playing_cover',
+                    createRectTween: (begin, end) => MaterialRectArcTween(
+                      begin: begin,
+                      end: end,
+                    ),
                     child: RepaintBoundary(child: coverWidget),
                   ),
                 ),
@@ -1758,7 +1753,7 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
 
   @override
   void dispose() {
-    playbackService.removeListener(updateCover);
+    playbackService.removeListener(_onPlaybackChange);
     super.dispose();
   }
 }

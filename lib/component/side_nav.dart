@@ -80,6 +80,7 @@ class _SideNavState extends State<SideNav> {
           case ScreenType.medium:
             return NavigationRail(
               backgroundColor: scheme.surfaceContainer,
+              minWidth: 72.0,
               selectedIndex: selectedIndex,
               onDestinationSelected: onDestinationSelected,
               destinations: List.generate(
@@ -95,36 +96,40 @@ class _SideNavState extends State<SideNav> {
               valueListenable: sidebarExpanded,
               builder: (context, expanded, _) {
                 if (expanded) {
-                  return NavigationDrawer(
-                    backgroundColor: scheme.surfaceContainer,
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: onDestinationSelected,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              onPressed: toggleSidebar,
-                              icon: const Icon(Symbols.menu_open),
-                              tooltip: "收起侧边栏",
-                            ),
-                            const Spacer(),
-                          ],
+                  return SizedBox(
+                    width: 220.0,
+                    child: NavigationDrawer(
+                      backgroundColor: scheme.surfaceContainer,
+                      selectedIndex: selectedIndex,
+                      onDestinationSelected: onDestinationSelected,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                onPressed: toggleSidebar,
+                                icon: const Icon(Symbols.menu_open),
+                                tooltip: "收起侧边栏",
+                              ),
+                              const Spacer(),
+                            ],
+                          ),
                         ),
-                      ),
-                      ...List.generate(
-                        destinations.length,
-                        (i) => NavigationDrawerDestination(
-                          icon: Icon(destinations[i].icon),
-                          label: Text(destinations[i].label),
+                        ...List.generate(
+                          destinations.length,
+                          (i) => NavigationDrawerDestination(
+                            icon: Icon(destinations[i].icon),
+                            label: Text(destinations[i].label),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   );
                 } else {
                   return NavigationRail(
                     backgroundColor: scheme.surfaceContainer,
+                    minWidth: 72.0,
                     selectedIndex: selectedIndex,
                     onDestinationSelected: onDestinationSelected,
                     extended: false,

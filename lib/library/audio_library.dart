@@ -264,6 +264,7 @@ class Audio {
   String? by;
 
   ImageProvider? _cover;
+  Future<ImageProvider?>? _coverFuture;
 
   /// 以“、”和“/”分割艺术家，会把名称中带有这些符号的艺术家分割。
   /// 暂时想不到别的方法。
@@ -365,15 +366,13 @@ class Audio {
   /// 缓存ImageProvider不用重新解码。快速滚动时最多250mb
   /// 48*48
   Future<ImageProvider?> get cover {
-    if (_cover == null) {
-      return _getResizedPic(width: 48, height: 48).then((value) {
-        if (value == null) return null;
-
-        _cover = value;
-        return _cover;
-      });
-    }
-    return Future.value(_cover);
+    _coverFuture ??= (() async {
+      if (_cover != null) return _cover;
+      final value = await _getResizedPic(width: 48, height: 48);
+      if (value != null) _cover = value;
+      return _cover;
+    })();
+    return _coverFuture!;
   }
 
   /// audio detail page 不需要频繁调用，所以不缓存图片

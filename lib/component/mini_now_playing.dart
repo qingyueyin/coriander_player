@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' show FontFeature;
 
 import 'package:coriander_player/component/rectangle_progress_indicator.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
@@ -178,36 +177,49 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
                     return Row(
                       children: [
                         nowPlaying != null
-                            ? FutureBuilder(
-                                future: nowPlaying.cover,
-                                builder: (context, snapshot) =>
-                                    switch (snapshot.connectionState) {
-                                  ConnectionState.done => snapshot.data == null
-                                      ? placeholder
-                                      : Hero(
-                                          tag: nowPlaying.path,
-                                          child: ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(8.0),
-                                            child: Image(
-                                              image: snapshot.data!,
-                                              width: 48.0,
-                                              height: 48.0,
-                                              errorBuilder: (_, __, ___) =>
-                                                  placeholder,
+                            ? Hero(
+                                tag: nowPlaying.path,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                  child: SizedBox(
+                                    width: 48.0,
+                                    height: 48.0,
+                                    child: FutureBuilder(
+                                      future: nowPlaying.cover,
+                                      builder: (context, snapshot) =>
+                                          switch (snapshot.connectionState) {
+                                        ConnectionState.done =>
+                                          snapshot.data == null
+                                              ? Center(child: placeholder)
+                                              : Image(
+                                                  image: snapshot.data!,
+                                                  fit: BoxFit.cover,
+                                                  gaplessPlayback: true,
+                                                  filterQuality:
+                                                      FilterQuality.medium,
+                                                  errorBuilder: (_, __, ___) =>
+                                                      Center(
+                                                    child: placeholder,
+                                                  ),
+                                                ),
+                                        _ => const Center(
+                                            child: SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child:
+                                                  CircularProgressIndicator(),
                                             ),
                                           ),
-                                        ),
-                                  _ => const SizedBox(
-                                      width: 48,
-                                      height: 48,
-                                      child: Center(
-                                        child: CircularProgressIndicator(),
-                                      ),
+                                      },
                                     ),
-                                },
+                                  ),
+                                ),
                               )
-                            : placeholder,
+                            : SizedBox(
+                                width: 48.0,
+                                height: 48.0,
+                                child: Center(child: placeholder),
+                              ),
                         const SizedBox(width: 8.0),
                         Expanded(
                           child: Column(
