@@ -49,6 +49,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/fonts/MiSans/MiSansVF.ttf
+  shaders:
+    - assets/shaders/now_playing_bg.frag
   fonts:
     - family: MiSans
       fonts:

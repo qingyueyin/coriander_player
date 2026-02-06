@@ -18,6 +18,7 @@ import 'package:coriander_player/component/responsive_builder.dart';
 import 'package:coriander_player/page/now_playing_page/component/current_playlist_view.dart';
 import 'package:coriander_player/page/now_playing_page/component/equalizer_dialog.dart';
 import 'package:coriander_player/page/now_playing_page/component/lyric_source_view.dart';
+import 'package:coriander_player/page/now_playing_page/component/now_playing_shader_background.dart';
 import 'package:coriander_player/page/now_playing_page/component/pitch_control.dart';
 import 'package:coriander_player/page/now_playing_page/component/vertical_lyric_view.dart';
 import 'package:coriander_player/app_paths.dart' as app_paths;
@@ -281,14 +282,21 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                         fit: StackFit.expand,
                         children: [
                           ColoredBox(color: scheme.surface),
-                          RepaintBoundary(
-                            child: CustomPaint(
-                              painter: _MeshBackgroundPainter(
-                                scheme: scheme,
-                                brightness: brightness,
-                                repaint: _bgController,
+                          NowPlayingShaderBackground(
+                            repaint: _bgController,
+                            scheme: scheme,
+                            brightness: brightness,
+                            spectrumStream: playbackService.spectrumStream,
+                            intensity: brightness == Brightness.dark ? 1.0 : 0.9,
+                            fallback: RepaintBoundary(
+                              child: CustomPaint(
+                                painter: _MeshBackgroundPainter(
+                                  scheme: scheme,
+                                  brightness: brightness,
+                                  repaint: _bgController,
+                                ),
+                                child: const SizedBox.expand(),
                               ),
-                              child: const SizedBox.expand(),
                             ),
                           ),
                           AnimatedSwitcher(

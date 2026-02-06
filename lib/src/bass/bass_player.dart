@@ -3,6 +3,9 @@
 import 'dart:async';
 import 'dart:ffi' as ffi;
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/src/bass/bass.dart' as bass;
@@ -45,6 +48,8 @@ const BASS_PLUGINS = [
   "BASS\\basswebm.dll",
   "BASS\\basswv.dll",
 ];
+
+enum SpectrumUpdateMode { auto, hz60, hz90, hz120 }
 
 class BassPlayer {
   late final ffi.DynamicLibrary _bassLib;
@@ -104,6 +109,7 @@ class BassPlayer {
 
   Timer? _positionUpdater;
   final _positionStreamController = StreamController<double>.broadcast();
+  final _spectrumStreamController = StreamController<Float32List>.broadcast();
   final _playerStateStreamController =
       StreamController<PlayerState>.broadcast();
 
@@ -186,18 +192,152 @@ class BassPlayer {
   /// update every 33ms
   Stream<double> get positionStream => _positionStreamController.stream;
 
+  Stream<Float32List> get spectrumStream => _spectrumStreamController.stream;
+
   Stream<PlayerState> get playerStateStream =>
       _playerStateStreamController.stream;
+
+  static const int _bassDataFft2048 = 0x80000003;
+  int Function(int, ffi.Pointer<ffi.Void>, int)? _bassChannelGetData;
+  ffi.Pointer<ffi.Float>? _fftBuffer;
+  double _streamSampleRate = 44100.0;
+  int _lastSpectrumUpdateUs = 0;
+  Duration _spectrumTickPeriod = const Duration(milliseconds: 16);
+  SpectrumUpdateMode spectrumUpdateMode = SpectrumUpdateMode.auto;
+  final Float32List _spectrumSmoothed = Float32List(8);
+
+  void setSpectrumUpdateMode(SpectrumUpdateMode mode) {
+    spectrumUpdateMode = mode;
+    _spectrumTickPeriod = _computeSpectrumTickPeriod();
+    _lastSpectrumUpdateUs = 0;
+  }
+
+  double _getDisplayRefreshRate() {
+    double refreshRate = 60.0;
+    try {
+      final views = ui.PlatformDispatcher.instance.views;
+      if (views.isNotEmpty) {
+        final r = views.first.display.refreshRate;
+        if (r.isFinite && r > 0) refreshRate = r;
+      }
+    } catch (_) {}
+    return refreshRate;
+  }
 
   Timer _getPositionUpdater(Duration period) {
     return Timer.periodic(period, (timer) {
       _positionStreamController.add(position);
+      _maybeUpdateSpectrum();
 
       /// check if the channel has completed
       if (playerState == PlayerState.stopped) {
         _playerStateStreamController.add(PlayerState.completed);
       }
     });
+  }
+
+  Duration _computePlayingTickPeriod() {
+    final refreshRate = _getDisplayRefreshRate();
+    final ms = (1000.0 / refreshRate).round().clamp(8, 33);
+    return Duration(milliseconds: ms);
+  }
+
+  Duration _computeSpectrumTickPeriod() {
+    final displayHz = _getDisplayRefreshRate();
+    final targetHz = switch (spectrumUpdateMode) {
+      SpectrumUpdateMode.hz60 => 60.0,
+      SpectrumUpdateMode.hz90 => 90.0,
+      SpectrumUpdateMode.hz120 => 120.0,
+      SpectrumUpdateMode.auto =>
+        displayHz >= 110.0 ? 120.0 : (displayHz >= 80.0 ? 90.0 : 60.0),
+    };
+    final ms = (1000.0 / targetHz).round().clamp(8, 33);
+    return Duration(milliseconds: ms);
+  }
+
+  void _refreshStreamSampleRate() {
+    if (_fstream == null) return;
+    final freqPtr = malloc.allocate<ffi.Float>(ffi.sizeOf<ffi.Float>());
+    try {
+      final ok =
+          _bass.BASS_ChannelGetAttribute(_fstream!, bass.BASS_ATTRIB_FREQ, freqPtr);
+      if (ok != 0 && freqPtr.value.isFinite && freqPtr.value > 1.0) {
+        _streamSampleRate = freqPtr.value.toDouble();
+      }
+    } finally {
+      malloc.free(freqPtr);
+    }
+  }
+
+  void _maybeUpdateSpectrum() {
+    if (_fstream == null) return;
+    if (_bassChannelGetData == null) return;
+    if (playerState != PlayerState.playing) return;
+
+    final nowUs = DateTime.now().microsecondsSinceEpoch;
+    final intervalUs = _spectrumTickPeriod.inMicroseconds;
+    if (nowUs - _lastSpectrumUpdateUs < intervalUs) return;
+    _lastSpectrumUpdateUs = nowUs;
+    _emitSpectrumFrame();
+  }
+
+  void _emitSpectrumFrame() {
+    final handle = _fstream;
+    if (handle == null) return;
+    final getData = _bassChannelGetData;
+    if (getData == null) return;
+
+    _fftBuffer ??= malloc.allocate<ffi.Float>(1024 * ffi.sizeOf<ffi.Float>());
+    final bytesRead = getData(handle, _fftBuffer!.cast<ffi.Void>(), _bassDataFft2048);
+    if (bytesRead <= 0) return;
+
+    final fft = _fftBuffer!.asTypedList(1024);
+    final bands = _computeSpectrum8(fft, _streamSampleRate);
+    final out = Float32List(8);
+    for (int i = 0; i < 8; i++) {
+      final target = bands[i];
+      final prev = _spectrumSmoothed[i];
+      final a = target > prev ? 0.35 : 0.18;
+      final next = (prev + (target - prev) * a).clamp(0.0, 1.0).toDouble();
+      _spectrumSmoothed[i] = next;
+      out[i] = next;
+    }
+    _spectrumStreamController.add(out);
+  }
+
+  Float32List _computeSpectrum8(Float32List fft, double sampleRate) {
+    const fftSize = 2048.0;
+    const minF = 45.0;
+    const maxF = 16000.0;
+    const bands = 8;
+
+    final out = Float32List(bands);
+    final nyquist = sampleRate * 0.5;
+    final clampedMaxF = math.min(maxF, nyquist - 1.0);
+    if (clampedMaxF <= minF || nyquist <= 1.0) return out;
+
+    for (int i = 0; i < bands; i++) {
+      final a = i / bands;
+      final b = (i + 1) / bands;
+      final fa = minF * math.pow(clampedMaxF / minF, a).toDouble();
+      final fb = minF * math.pow(clampedMaxF / minF, b).toDouble();
+      final ia = ((fa / sampleRate) * fftSize).floor().clamp(1, 1023).toInt();
+      final ib = ((fb / sampleRate) * fftSize)
+          .ceil()
+          .clamp(ia + 1, 1023)
+          .toInt();
+
+      double m = 0.0;
+      for (int k = ia; k < ib; k++) {
+        final v = fft[k];
+        if (v.isFinite && v > m) m = v.toDouble();
+      }
+      final scaled = (math.log(1.0 + m * 18.0) / math.log(19.0))
+          .clamp(0.0, 1.0)
+          .toDouble();
+      out[i] = scaled;
+    }
+    return out;
   }
 
   void setEQ(int band, double gain) {
@@ -468,6 +608,17 @@ class BassPlayer {
     final bassLibPath = path.join(_bassDir, "bass.dll");
     _bassLib = ffi.DynamicLibrary.open(bassLibPath);
     _bass = bass.Bass(_bassLib);
+    try {
+      _bassChannelGetData = _bassLib.lookupFunction<
+          ffi.UnsignedLong Function(
+            ffi.UnsignedLong,
+            ffi.Pointer<ffi.Void>,
+            ffi.UnsignedLong,
+          ),
+          int Function(int, ffi.Pointer<ffi.Void>, int)>('BASS_ChannelGetData');
+    } catch (_) {
+      _bassChannelGetData = null;
+    }
 
     final bassWasapiLibPath = path.join(_bassDir, "basswasapi.dll");
     _bassWasapiLib = ffi.DynamicLibrary.open(bassWasapiLibPath);
@@ -945,7 +1096,10 @@ class BassPlayer {
     }
     _playerStateStreamController.add(playerState);
     _positionUpdater?.cancel();
-    _positionUpdater = _getPositionUpdater(const Duration(milliseconds: 33));
+    _refreshStreamSampleRate();
+    _spectrumTickPeriod = _computeSpectrumTickPeriod();
+    _lastSpectrumUpdateUs = 0;
+    _positionUpdater = _getPositionUpdater(_computePlayingTickPeriod());
   }
 
   /// start/resume channel
@@ -976,7 +1130,10 @@ class BassPlayer {
 
     _playerStateStreamController.add(playerState);
     _positionUpdater?.cancel();
-    _positionUpdater = _getPositionUpdater(const Duration(milliseconds: 33));
+    _refreshStreamSampleRate();
+    _spectrumTickPeriod = _computeSpectrumTickPeriod();
+    _lastSpectrumUpdateUs = 0;
+    _positionUpdater = _getPositionUpdater(_computePlayingTickPeriod());
     _logAudioState("start(done)");
   }
 
@@ -1108,5 +1265,10 @@ class BassPlayer {
     _positionUpdater?.cancel();
     _playerStateStreamController.close();
     _positionStreamController.close();
+    _spectrumStreamController.close();
+    if (_fftBuffer != null) {
+      malloc.free(_fftBuffer!);
+      _fftBuffer = null;
+    }
   }
 }

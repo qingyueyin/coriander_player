@@ -237,7 +237,15 @@ class PlaybackService extends ChangeNotifier {
 
   Stream<double> get positionStream => _player.positionStream;
 
+  Stream<Float32List> get spectrumStream => _player.spectrumStream;
+
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
+
+  SpectrumUpdateMode get spectrumUpdateMode => _player.spectrumUpdateMode;
+
+  void setSpectrumUpdateMode(SpectrumUpdateMode mode) {
+    _player.setSpectrumUpdateMode(mode);
+  }
 
   /// 1. 更新 [_playlistIndex] 为 [audioIndex]
   /// 2. 更新 [nowPlaying] 为 playlist[_nowPlayingIndex]
