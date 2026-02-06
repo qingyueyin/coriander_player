@@ -5,6 +5,7 @@ import 'package:coriander_player/component/settings_tile.dart';
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/library/playlist.dart';
 import 'package:coriander_player/lyric/lyric_source.dart';
+import 'package:coriander_player/album_color_cache.dart';
 import 'package:coriander_player/play_service/audio_echo_log_recorder.dart';
 import 'package:coriander_player/play_service/play_service.dart';
 import 'package:filepicker_windows/filepicker_windows.dart';
@@ -161,6 +162,10 @@ class _AudioLibraryEditorDialogState extends State<AudioLibraryEditorDialog> {
                                     readPlaylists(),
                                     readLyricSources(),
                                   ]);
+                                  AlbumColorCache.instance
+                                      .prewarmAlbums(
+                                          AudioLibrary.instance.albumCollection.values)
+                                      .ignore();
                                   if (context.mounted) {
                                     Navigator.pop(context);
                                   }

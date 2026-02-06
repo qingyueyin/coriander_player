@@ -1,8 +1,9 @@
 use std::{
-    collections::HashSet,
+    collections::{HashSet, VecDeque},
     fs::{self},
     io::{self, Cursor, Write},
     path::{Path, PathBuf},
+    sync::{Mutex, OnceLock},
     time::{Duration, UNIX_EPOCH},
 };
 
@@ -505,9 +506,35 @@ fn _get_picture_by_lofty(path: &String) -> Option<Vec<u8>> {
     None
 }
 
+const PICTURE_CACHE_CAPACITY: usize = 96;
+static PICTURE_CACHE: OnceLock<Mutex<VecDeque<(String, Vec<u8>)>>> = OnceLock::new();
+
+fn _picture_cache_key(path: &str, width: u32, height: u32) -> String {
+    let modified_secs = fs::metadata(path)
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    format!("{path}|{modified_secs}|{width}x{height}")
+}
+
 /// for Flutter  
 /// 如果无法通过 Lofty 获取则通过 Windows 获取
 pub fn get_picture_from_path(path: String, width: u32, height: u32) -> Option<Vec<u8>> {
+    let cache_key = _picture_cache_key(&path, width, height);
+    if let Some(cache_lock) = PICTURE_CACHE.get_or_init(|| Mutex::new(VecDeque::new())).lock().ok()
+    {
+        if let Some(pos) = cache_lock.iter().position(|(k, _)| k == &cache_key) {
+            let mut cache = cache_lock;
+            if let Some((k, v)) = cache.remove(pos) {
+                let val = v.clone();
+                cache.push_front((k, v));
+                return Some(val);
+            }
+        }
+    }
+
     let pic_option =
         _get_picture_by_lofty(&path).or_else(|| match _get_picture_by_windows(&path) {
             Ok(val) => Some(val),
@@ -537,7 +564,19 @@ pub fn get_picture_from_path(path: String, width: u32, height: u32) -> Option<Ve
 
             let mut output = Cursor::new(Vec::new());
             if let Ok(_) = resized_img.write_to(&mut output, image::ImageFormat::Png) {
-                return Some(output.into_inner());
+                let out = output.into_inner();
+                if let Some(mut cache) =
+                    PICTURE_CACHE.get_or_init(|| Mutex::new(VecDeque::new())).lock().ok()
+                {
+                    if let Some(pos) = cache.iter().position(|(k, _)| k == &cache_key) {
+                        cache.remove(pos);
+                    }
+                    cache.push_front((cache_key, out.clone()));
+                    while cache.len() > PICTURE_CACHE_CAPACITY {
+                        cache.pop_back();
+                    }
+                }
+                return Some(out);
             }
         }
     }

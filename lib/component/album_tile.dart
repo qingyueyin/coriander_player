@@ -3,6 +3,7 @@ import 'package:coriander_player/component/motion.dart';
 import 'package:coriander_player/page/uni_page.dart';
 import 'package:coriander_player/theme_provider.dart';
 import 'package:coriander_player/enums.dart';
+import 'package:coriander_player/album_color_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -27,14 +28,13 @@ class AlbumTile extends StatefulWidget {
 class _AlbumTileState extends State<AlbumTile> {
   bool _hovered = false;
   late Future<ImageProvider?> _coverFuture;
-  late Future<ColorScheme?> _colorSchemeFuture;
-  static final Map<int, ColorScheme> _colorCache = {};
+  late Future<AlbumColor?> _albumColorFuture;
 
   @override
   void initState() {
     super.initState();
     _coverFuture = widget.album.works.first.mediumCover;
-    _colorSchemeFuture = _getColorScheme();
+    _albumColorFuture = AlbumColorCache.instance.getAlbumColor(widget.album);
   }
 
   @override
@@ -42,21 +42,8 @@ class _AlbumTileState extends State<AlbumTile> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.album != widget.album) {
       _coverFuture = widget.album.works.first.mediumCover;
-      _colorSchemeFuture = _getColorScheme();
+      _albumColorFuture = AlbumColorCache.instance.getAlbumColor(widget.album);
     }
-  }
-
-  Future<ColorScheme?> _getColorScheme() async {
-    if (_colorCache.containsKey(widget.album.hashCode)) {
-      return _colorCache[widget.album.hashCode];
-    }
-
-    final image = await widget.album.works.first.mediumCover;
-    if (image == null) return null;
-
-    final scheme = await ColorScheme.fromImageProvider(provider: image);
-    _colorCache[widget.album.hashCode] = scheme;
-    return scheme;
   }
 
   @override
@@ -224,7 +211,7 @@ class _AlbumTileState extends State<AlbumTile> {
                           ),
                         ),
                         FutureBuilder(
-                          future: _colorSchemeFuture,
+                          future: _albumColorFuture,
                           builder: (context, snapshot) {
                             if (snapshot.data == null) {
                               return Padding(

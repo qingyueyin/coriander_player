@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/app_settings.dart';
+import 'package:coriander_player/album_color_cache.dart';
 import 'package:coriander_player/entry.dart';
 import 'package:coriander_player/hotkeys_helper.dart';
 import 'package:coriander_player/immersive_mode.dart';
@@ -85,6 +86,7 @@ Future<void> main() async {
   if (File("$supportPath\\app_preference.json").existsSync()) {
     await AppPreference.read();
   }
+  await AlbumColorCache.instance.init();
   final welcome = !File("$supportPath\\index.json").existsSync();
 
   await initWindow();

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/app_settings.dart';
+import 'package:coriander_player/album_color_cache.dart';
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/library/playlist.dart';
 import 'package:coriander_player/lyric/lyric_source.dart';
@@ -58,6 +59,9 @@ class _UpdatingStateViewState extends State<UpdatingStateView> {
       readPlaylists(),
       readLyricSources(),
     ]);
+    AlbumColorCache.instance
+        .prewarmAlbums(AudioLibrary.instance.albumCollection.values)
+        .ignore();
     _subscription?.cancel();
     final ctx = context;
     if (ctx.mounted) {

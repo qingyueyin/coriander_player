@@ -1,6 +1,7 @@
 import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/enums.dart';
 import 'package:coriander_player/component/album_tile.dart';
+import 'package:coriander_player/album_color_cache.dart';
 import 'package:coriander_player/utils.dart';
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/page/uni_page.dart';
@@ -19,6 +20,67 @@ class AlbumsPage extends StatelessWidget {
       pref: AppPreference.instance.albumsPagePref,
       title: "专辑",
       subtitle: "${contentList.length} 张专辑",
+      primaryAction: FilledButton.icon(
+        onPressed: () async {
+          int done = 0;
+          int total = contentList.isEmpty ? 1 : contentList.length;
+          bool running = true;
+          bool started = false;
+          await showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => StatefulBuilder(
+              builder: (context, setState) {
+                if (!started) {
+                  started = true;
+                  AlbumColorCache.instance
+                      .recomputeAllAlbums(
+                        contentList,
+                        onProgress: (d, t) {
+                          setState(() {
+                            done = d;
+                            total = t <= 0 ? 1 : t;
+                          });
+                        },
+                      )
+                      .then((_) => AlbumColorCache.instance.flush())
+                      .whenComplete(() {
+                    if (context.mounted) {
+                      setState(() {
+                        running = false;
+                      });
+                    }
+                  }).ignore();
+                }
+
+                return AlertDialog(
+                  title: const Text("优化专辑页"),
+                  content: SizedBox(
+                    width: 360,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        LinearProgressIndicator(value: done / total),
+                        const SizedBox(height: 12),
+                        Text("$done / $total"),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: running ? null : () => Navigator.pop(context),
+                      child: const Text("关闭"),
+                    ),
+                  ],
+                );
+              },
+            ),
+          );
+        },
+        icon: const Icon(Symbols.palette),
+        label: const Text("优化专辑页"),
+      ),
       contentList: contentList,
       contentBuilder: (context, item, i, multiSelectController, view) => AlbumTile(
         album: item,
