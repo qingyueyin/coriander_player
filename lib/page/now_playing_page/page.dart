@@ -48,7 +48,9 @@ class NowPlayingPage extends StatefulWidget {
 class _NowPlayingPageState extends State<NowPlayingPage> {
   final playbackService = PlayService.instance.playbackService;
   ImageProvider<Object>? nowPlayingCover;
+  ImageProvider<Object>? nowPlayingBgCover;
   String? _nowPlayingCoverPath;
+  Timer? _coverDebounceTimer;
   Timer? _cursorHideTimer;
   bool _cursorHidden = false;
   bool _lastImmersive = false;
@@ -72,9 +74,11 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     final path = playbackService.nowPlaying?.path;
     if (path == null) {
       if (_nowPlayingCoverPath != null || nowPlayingCover != null) {
+        _coverDebounceTimer?.cancel();
         setState(() {
           _nowPlayingCoverPath = null;
           nowPlayingCover = null;
+          nowPlayingBgCover = null;
         });
       }
       return;
@@ -83,15 +87,26 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     if (path == _nowPlayingCoverPath) return;
     _nowPlayingCoverPath = path;
 
-    playbackService.nowPlaying?.cover.then((cover) {
-      if (!mounted) return;
-      if (playbackService.nowPlaying?.path != path) return;
-      if (cover != null) {
-        precacheImage(cover, context);
-      }
-      if (nowPlayingCover == cover) return;
-      setState(() {
-        nowPlayingCover = cover;
+    _coverDebounceTimer?.cancel();
+    _coverDebounceTimer = Timer(MotionDuration.base, () {
+      playbackService.nowPlaying?.cover.then((cover) {
+        if (!mounted) return;
+        if (playbackService.nowPlaying?.path != path) return;
+        if (cover != null) {
+          precacheImage(cover, context);
+        }
+        if (nowPlayingCover == cover) return;
+        setState(() {
+          nowPlayingCover = cover;
+          nowPlayingBgCover = cover == null
+              ? null
+              : ResizeImage(
+                  cover,
+                  width: 64,
+                  height: 64,
+                  allowUpscaling: true,
+                );
+        });
       });
     });
   }
@@ -107,6 +122,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   @override
   void dispose() {
     playbackService.removeListener(updateCover);
+    _coverDebounceTimer?.cancel();
     _cursorHideTimer?.cancel();
     super.dispose();
   }
@@ -129,7 +145,13 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
           switchInCurve: Curves.easeInOutCubic,
           switchOutCurve: Curves.easeInOutCubic,
           layoutBuilder: (currentChild, previousChildren) {
-            return currentChild ?? const SizedBox.shrink();
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                ...previousChildren,
+                if (currentChild != null) currentChild,
+              ],
+            );
           },
           transitionBuilder: (child, animation) {
             final fade = CurvedAnimation(
@@ -195,17 +217,18 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                                     child: Stack(
                                       fit: StackFit.expand,
                                       children: [
-                                        Image(
-                                          image: nowPlayingCover!,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) =>
-                                              const SizedBox.shrink(),
-                                        ),
-                                        BackdropFilter(
-                                          filter: ImageFilter.blur(
-                                              sigmaX: 72, sigmaY: 72),
-                                          child: const ColoredBox(
-                                              color: Colors.transparent),
+                                        ImageFiltered(
+                                          imageFilter: ImageFilter.blur(
+                                            sigmaX: 24,
+                                            sigmaY: 24,
+                                          ),
+                                          child: Image(
+                                            image: nowPlayingBgCover ?? nowPlayingCover!,
+                                            fit: BoxFit.cover,
+                                            filterQuality: FilterQuality.low,
+                                            errorBuilder: (_, __, ___) =>
+                                                const SizedBox.shrink(),
+                                          ),
                                         ),
                                         DecoratedBox(
                                           decoration: BoxDecoration(
@@ -428,51 +451,6 @@ class _NowPlayingMoreAction extends StatelessWidget {
             },
             leadingIcon: const Icon(Symbols.lyrics),
             child: const Text("歌词来源"),
-          ),
-          MenuItemButton(
-            style: menuItemStyle,
-            onPressed: PlayService.instance.lyricService.useOnlineLyric,
-            leadingIcon: const Icon(Symbols.language),
-            child: const Text("使用在线歌词"),
-          ),
-          MenuItemButton(
-            style: menuItemStyle,
-            onPressed: PlayService.instance.lyricService.useLocalLyric,
-            leadingIcon: const Icon(Symbols.folder),
-            child: const Text("使用本地歌词"),
-          ),
-          MenuItemButton(
-            style: menuItemStyle,
-            onPressed: () {
-              showDialog<void>(
-                context: context,
-                builder: (context) => const NowPlayingPitchDialog(),
-              );
-            },
-            leadingIcon: const Icon(Symbols.music_note),
-            child: const Text("音调"),
-          ),
-          MenuItemButton(
-            style: menuItemStyle,
-            onPressed: () {
-              showDialog<void>(
-                context: context,
-                builder: (context) => const EqualizerDialog(),
-              );
-            },
-            leadingIcon: const Icon(Symbols.graphic_eq),
-            child: const Text("均衡器"),
-          ),
-          ValueListenableBuilder(
-            valueListenable: PlayService.instance.playbackService.wasapiExclusive,
-            builder: (context, exclusive, _) => MenuItemButton(
-              style: menuItemStyle,
-              onPressed: () {
-                PlayService.instance.playbackService.useExclusiveMode(!exclusive);
-              },
-              leadingIcon: exclusive ? const Icon(Symbols.check) : null,
-              child: const Text("独占模式"),
-            ),
           ),
           SubmenuButton(
             style: menuItemStyle,

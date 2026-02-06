@@ -116,13 +116,26 @@ class _NowPlayingPage_SmallState extends State<_NowPlayingPage_Small> {
           const SizedBox(height: 6.0),
           const _NowPlayingMainControls(),
           const SizedBox(height: 6.0),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _DesktopLyricSwitch(),
-              _NowPlayingPlaybackModeSwitch(),
-              _NowPlayingVolDspSlider(),
-              _NowPlayingMoreAction(),
+              const _DesktopLyricSwitch(),
+              const _NowPlayingPlaybackModeSwitch(),
+              const NowPlayingPitchControl(),
+              const _NowPlayingVolDspSlider(),
+              const _ExclusiveModeSwitch(),
+              IconButton(
+                tooltip: "均衡器",
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const EqualizerDialog(),
+                  );
+                },
+                icon: const Icon(Symbols.graphic_eq),
+                color: Theme.of(context).colorScheme.onSecondaryContainer,
+              ),
+              const _NowPlayingMoreAction(),
             ],
           )
         ],

@@ -64,6 +64,37 @@ class SlideTransitionPage<T> extends CustomTransitionPage<T> {
   }
 }
 
+class DetailTransitionPage<T> extends CustomTransitionPage<T> {
+  const DetailTransitionPage({
+    required super.child,
+    super.name,
+    super.arguments,
+    super.restorationId,
+    super.key,
+  }) : super(
+          transitionsBuilder: _transitionsBuilder,
+          transitionDuration: const Duration(milliseconds: 420),
+          reverseTransitionDuration: const Duration(milliseconds: 420),
+        );
+
+  static Widget _transitionsBuilder(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final fade = CurvedAnimation(parent: animation, curve: Curves.easeInOutCubic);
+    final slide = Tween(
+      begin: const Offset(0, 0.06),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: animation, curve: Curves.fastOutSlowIn));
+    return FadeTransition(
+      opacity: fade,
+      child: SlideTransition(position: slide, child: child),
+    );
+  }
+}
+
 class Entry extends StatefulWidget {
   const Entry({super.key, required this.welcome});
   final bool welcome;
@@ -206,7 +237,7 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
             routes: [
               GoRoute(
                 path: "detail",
-                pageBuilder: (context, state) => SlideTransitionPage(
+                pageBuilder: (context, state) => DetailTransitionPage(
                   child: AudioDetailPage(audio: state.extra as Audio),
                 ),
               ),

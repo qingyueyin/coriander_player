@@ -135,12 +135,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
   Timer? _ensureVisibleTimer;
   Timer? _userScrollHoldTimer;
   bool _userScrolling = false;
-  late final AnimationController _scrollAnimation;
-  static const _scrollCurve = Cubic(0.2, 0.0, 0.0, 1.0);
   static const double _fadeExtent = 0.12;
-  static const double _scrollMsPerPixel = 0.55;
-  static const int _scrollMinMs = 220;
-  static const int _scrollMaxMs = 420;
   int _mainLine = 0;
   double _estimatedItemExtent = 56.0;
   int _pendingScrollRetries = 0;
@@ -151,16 +146,6 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
   @override
   void initState() {
     super.initState();
-
-    _scrollAnimation = AnimationController.unbounded(vsync: this)
-      ..addListener(() {
-        if (!scrollController.hasClients) return;
-        final minExtent = scrollController.position.minScrollExtent;
-        final maxExtent = scrollController.position.maxScrollExtent;
-        final target = _scrollAnimation.value.clamp(minExtent, maxExtent);
-        if ((scrollController.offset - target).abs() < 0.5) return;
-        scrollController.jumpTo(target);
-      });
 
     _initLyricView();
     lyricLineStreamSubscription =
@@ -186,7 +171,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
     });
   }
 
-  void _springTo(double targetOffset) {
+  void _animateTo(double targetOffset) {
     if (!scrollController.hasClients) return;
     final minExtent = scrollController.position.minScrollExtent;
     final maxExtent = scrollController.position.maxScrollExtent;
@@ -194,24 +179,11 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
     final to = targetOffset.clamp(minExtent, maxExtent);
     final dist = (to - from).abs();
     if (dist < 0.5) return;
-
-    _scrollAnimation.stop();
-    _scrollAnimation.value = from;
-
-    final ms = (dist * _scrollMsPerPixel).round().clamp(_scrollMinMs, _scrollMaxMs);
-    final t = (ms / 1000.0).clamp(0.18, 0.42);
-    final stiffness = 520.0;
-    final damping = 2 *
-        sqrt(stiffness) *
-        (0.92 + 0.08 * (1 - ((t - 0.18) / 0.24).clamp(0.0, 1.0)));
-
-    final sim = SpringSimulation(
-      SpringDescription(mass: 1.0, stiffness: stiffness, damping: damping),
-      from,
+    scrollController.animateTo(
       to,
-      0.0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
     );
-    _scrollAnimation.animateWith(sim);
   }
 
   void _scrollToCurrent([Duration? duration]) {
@@ -230,10 +202,10 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
 
     final targetContext = currentLyricTileKey.currentContext;
     if (targetContext == null || !targetContext.mounted) {
-      final alignment = widget.centerVertically ? 0.5 : 0.25;
+      final alignment = widget.centerVertically ? 0.4 : 0.25;
       final viewport = scrollController.position.viewportDimension;
       final estimated = (_estimatedItemExtent * _mainLine) - viewport * alignment;
-      _springTo(estimated);
+      _animateTo(estimated);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _scrollToCurrent(const Duration(milliseconds: 220));
@@ -246,7 +218,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
     final viewport = RenderAbstractViewport.of(targetObject);
     if (viewport == null) return;
 
-    final alignment = widget.centerVertically ? 0.5 : 0.25;
+    final alignment = widget.centerVertically ? 0.4 : 0.25;
     final revealed = viewport.getOffsetToReveal(targetObject, alignment);
     final targetOffset = revealed.offset.clamp(
       scrollController.position.minScrollExtent,
@@ -258,7 +230,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
       _estimatedItemExtent = _estimatedItemExtent * 0.8 + h * 0.2;
     }
 
-    _springTo(targetOffset);
+    _animateTo(targetOffset);
   }
 
   void _initLyricView() {
@@ -322,7 +294,6 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
                 if (notification is UserScrollNotification) {
                   _userScrollHoldTimer?.cancel();
                   _userScrolling = true;
-                  _scrollAnimation.stop();
                   _userScrollHoldTimer = Timer(const Duration(seconds: 2), () {
                     if (!mounted) return;
                     _userScrolling = false;
@@ -363,7 +334,6 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
     _userScrollHoldTimer?.cancel();
     _lyricViewController?.removeListener(_scheduleEnsureCurrentVisible);
     lyricLineStreamSubscription.cancel();
-    _scrollAnimation.dispose();
     scrollController.dispose();
   }
 }

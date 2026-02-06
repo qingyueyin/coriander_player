@@ -66,6 +66,20 @@ class _NowPlayingPage_Large extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _DesktopLyricSwitch(),
+                    spacer,
+                    _ExclusiveModeSwitch(),
+                    spacer,
+                    IconButton(
+                      tooltip: "均衡器",
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => const EqualizerDialog(),
+                        );
+                      },
+                      icon: const Icon(Symbols.graphic_eq),
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
                   ],
                 ),
               ),
@@ -136,6 +150,8 @@ class _NowPlayingPage_Large extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    const NowPlayingPitchControl(),
+                    spacer,
                     _NowPlayingMoreAction(),
                   ],
                 ),
