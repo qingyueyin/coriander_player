@@ -173,6 +173,8 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
               fontFamily: theme.fontFamily,
               colorScheme: theme.darkScheme,
             ),
+            themeAnimationDuration: const Duration(milliseconds: 560),
+            themeAnimationCurve: Curves.easeInOutCubic,
             themeMode: theme.themeMode,
             localizationsDelegates: GlobalMaterialLocalizations.delegates,
             supportedLocales: supportedLocales,
@@ -326,7 +328,16 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
         path: app_paths.NOW_PLAYING_PAGE,
         pageBuilder: (context, state) => CustomTransitionPage(
           maintainState: false,
-          transitionsBuilder: (context, animation, _, child) => child,
+          transitionDuration: const Duration(milliseconds: 360),
+          reverseTransitionDuration: const Duration(milliseconds: 360),
+          transitionsBuilder: (context, animation, _, child) {
+            final fade = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOutCubic,
+              reverseCurve: Curves.easeInOutCubic,
+            );
+            return FadeTransition(opacity: fade, child: child);
+          },
           child: const NowPlayingPage(),
         ),
       ),

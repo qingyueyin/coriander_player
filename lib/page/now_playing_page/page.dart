@@ -166,41 +166,79 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                         fit: StackFit.expand,
                         children: [
                           ColoredBox(color: scheme.surface),
-                          if (nowPlayingCover != null) ...[
-                            Image(
-                              image: nowPlayingCover!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  const SizedBox.shrink(),
-                            ),
-                            BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 72, sigmaY: 72),
-                              child:
-                                  const ColoredBox(color: Colors.transparent),
-                            ),
-                            DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: switch (brightness) {
-                                    Brightness.dark => [
-                                        Colors.black.withValues(alpha: 0.44),
-                                        Colors.black.withValues(alpha: 0.20),
-                                        Colors.black.withValues(alpha: 0.44),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 560),
+                            switchInCurve: Curves.easeInOutCubic,
+                            switchOutCurve: Curves.easeInOutCubic,
+                            layoutBuilder: (currentChild, previousChildren) {
+                              return Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  ...previousChildren,
+                                  if (currentChild != null) currentChild,
+                                ],
+                              );
+                            },
+                            transitionBuilder: (child, animation) {
+                              final fade = CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeInOutCubic,
+                              );
+                              return FadeTransition(opacity: fade, child: child);
+                            },
+                            child: nowPlayingCover == null
+                                ? const SizedBox.expand(
+                                    key: ValueKey("now-playing-bg-none"),
+                                  )
+                                : KeyedSubtree(
+                                    key: ValueKey(_nowPlayingCoverPath),
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        Image(
+                                          image: nowPlayingCover!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              const SizedBox.shrink(),
+                                        ),
+                                        BackdropFilter(
+                                          filter: ImageFilter.blur(
+                                              sigmaX: 72, sigmaY: 72),
+                                          child: const ColoredBox(
+                                              color: Colors.transparent),
+                                        ),
+                                        DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: switch (brightness) {
+                                                Brightness.dark => [
+                                                    Colors.black.withValues(
+                                                        alpha: 0.44),
+                                                    Colors.black.withValues(
+                                                        alpha: 0.20),
+                                                    Colors.black.withValues(
+                                                        alpha: 0.44),
+                                                  ],
+                                                Brightness.light => [
+                                                    Colors.black.withValues(
+                                                        alpha: 0.34),
+                                                    Colors.black.withValues(
+                                                        alpha: 0.18),
+                                                    Colors.black.withValues(
+                                                        alpha: 0.34),
+                                                  ],
+                                              },
+                                              stops: const [0.0, 0.6, 1.0],
+                                            ),
+                                          ),
+                                          child: const SizedBox.expand(),
+                                        ),
                                       ],
-                                    Brightness.light => [
-                                        Colors.black.withValues(alpha: 0.34),
-                                        Colors.black.withValues(alpha: 0.18),
-                                        Colors.black.withValues(alpha: 0.34),
-                                      ],
-                                  },
-                                  stops: const [0.0, 0.6, 1.0],
-                                ),
-                              ),
-                              child: const SizedBox.expand(),
-                            ),
-                          ],
+                                    ),
+                                  ),
+                          ),
                         ],
                       ),
                     ),
