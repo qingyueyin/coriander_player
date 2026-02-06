@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 
 import 'package:coriander_player/library/audio_library.dart';
@@ -12,7 +11,7 @@ import 'package:music_api/api/kugou/kugou.dart';
 import 'package:music_api/api/netease/netease.dart';
 import 'package:music_api/api/qq/qq.dart';
 
-enum ResultSource { qq, kugou, netease, lrclib }
+enum ResultSource { qq, kugou, netease }
 
 double _computeScore(Audio audio, String title, String artists, String album) {
   int maxScore = audio.title.length + audio.artist.length + audio.album.length;
@@ -42,7 +41,6 @@ class SongSearchResult {
   String artists;
   String album;
   double score;
-  int? durationMs;
 
   /// for qq result
   int? qqSongId;
@@ -53,16 +51,9 @@ class SongSearchResult {
   /// for kugou result
   String? kugouSongHash;
 
-  /// for lrclib result
-  String? lrclibId;
-
   SongSearchResult(
       this.source, this.title, this.artists, this.album, this.score,
-      {this.qqSongId,
-      this.neteaseSongId,
-      this.kugouSongHash,
-      this.lrclibId,
-      this.durationMs});
+      {this.qqSongId, this.neteaseSongId, this.kugouSongHash});
 
   @override
   String toString() {
@@ -132,98 +123,12 @@ class SongSearchResult {
       kugouSongHash: info["hash"],
     );
   }
-
-  static SongSearchResult fromLrclibSearchResult(Map info, Audio audio) {
-    final title = (info["trackName"] ?? "").toString();
-    final album = (info["albumName"] ?? "").toString();
-    final artists = (info["artistName"] ?? "").toString();
-    final durationSec = info["duration"];
-    final durationMs = durationSec is num ? (durationSec * 1000).round() : null;
-    final id = info["id"];
-    return SongSearchResult(
-      ResultSource.lrclib,
-      title,
-      artists,
-      album,
-      _computeScore(audio, title, artists, album),
-      lrclibId: id?.toString(),
-      durationMs: durationMs,
-    );
-  }
 }
-
-Future<List<SongSearchResult>> _lrclibSearchSong(Audio audio, String query) async {
-  try {
-    final client = HttpClient();
-    final uri = Uri.https("lrclib.net", "/api/search", {"q": query});
-    final req = await client.getUrl(uri);
-    req.headers.set(HttpHeaders.acceptHeader, "application/json");
-    req.headers.set(HttpHeaders.userAgentHeader, "coriander_player");
-    final resp = await req.close();
-    final body = await resp.transform(utf8.decoder).join();
-    final decoded = json.decode(body);
-    if (decoded is! List) return [];
-    final out = <SongSearchResult>[];
-    for (var i = 0; i < decoded.length && i < 8; i++) {
-      final item = decoded[i];
-      if (item is! Map) continue;
-      out.add(SongSearchResult.fromLrclibSearchResult(item, audio));
-    }
-    client.close(force: true);
-    return out;
-  } catch (_) {
-    return [];
-  }
-}
-
-<<<<<<< HEAD
-=======
-Future<List<SongSearchResult>> _uniSearchOnce(Audio audio, String query) async {
-  List<SongSearchResult> result = [];
-
-  final lrclibResultList = await _lrclibSearchSong(audio, query);
-  result.addAll(lrclibResultList);
-
-  final Map kugouAnswer = (await KuGou.searchSong(keyword: query)).data;
-  final List kugouResultList = kugouAnswer["data"]["info"];
-  for (int j = 0; j < kugouResultList.length; j++) {
-    if (j >= 5) break;
-    result.add(SongSearchResult.fromKugouSearchResult(
-      kugouResultList[j],
-      audio,
-    ));
-  }
-
-  final Map neteaseAnswer = (await Netease.search(keyWord: query)).data;
-  final List neteaseResultList = neteaseAnswer["result"]["songs"];
-  for (int k = 0; k < neteaseResultList.length; k++) {
-    if (k >= 5) break;
-    result.add(SongSearchResult.fromNeteaseSearchResult(
-      neteaseResultList[k],
-      audio,
-    ));
-  }
-
-  final Map qqAnswer = (await QQ.search(keyWord: query)).data;
-  final List qqResultList = qqAnswer["req"]["data"]["body"]["item_song"];
-  for (int i = 0; i < qqResultList.length; i++) {
-    if (i >= 5) break;
-    result.add(SongSearchResult.fromQQSearchResult(
-      qqResultList[i],
-      audio,
-    ));
-  }
-
-  return result;
-}
-
->>>>>>> 4db0256cbef7afac08daba7f53a38cf9b4e9115b
 Future<List<SongSearchResult>> uniSearch(Audio audio) async {
   final query = audio.title;
   try {
     List<SongSearchResult> result = [];
 
-<<<<<<< HEAD
     final Map kugouAnswer = (await KuGou.searchSong(keyword: query)).data;
     final List kugouResultList = kugouAnswer["data"]["info"];
     for (int j = 0; j < kugouResultList.length; j++) {
@@ -252,26 +157,6 @@ Future<List<SongSearchResult>> uniSearch(Audio audio) async {
         qqResultList[i],
         audio,
       ));
-=======
-    for (final query in queries) {
-      final batch = await _uniSearchOnce(audio, query);
-      for (final item in batch) {
-        final key = switch (item.source) {
-          ResultSource.qq => 'qq:${item.qqSongId ?? '${item.title}|${item.artists}|${item.album}'}',
-          ResultSource.netease => 'netease:${item.neteaseSongId ?? '${item.title}|${item.artists}|${item.album}'}',
-          ResultSource.kugou => 'kugou:${item.kugouSongHash ?? '${item.title}|${item.artists}|${item.album}'}',
-          ResultSource.lrclib => 'lrclib:${item.lrclibId ?? '${item.title}|${item.artists}|${item.album}'}',
-        };
-        final existing = merged[key];
-        if (existing == null || item.score > existing.score) {
-          merged[key] = item;
-        }
-        if (item.score > bestScore) bestScore = item.score;
-      }
-      if (bestScore >= 0.52) {
-        break;
-      }
->>>>>>> 4db0256cbef7afac08daba7f53a38cf9b4e9115b
     }
 
     result.sort((a, b) => b.score.compareTo(a.score));
@@ -334,44 +219,10 @@ Future<Krc?> _getKugouSyncLyric(String kugouSongHash) async {
   return null;
 }
 
-Future<Lrc?> _getLrclibLyric({
-  required String trackName,
-  required String artistName,
-  required String albumName,
-  required int durationMs,
-}) async {
-  try {
-    final client = HttpClient();
-    final uri = Uri.https("lrclib.net", "/api/get", {
-      "track_name": trackName,
-      "artist_name": artistName,
-      "album_name": albumName,
-      "duration": (durationMs / 1000.0).toString(),
-    });
-    final req = await client.getUrl(uri);
-    req.headers.set(HttpHeaders.acceptHeader, "application/json");
-    req.headers.set(HttpHeaders.userAgentHeader, "coriander_player");
-    final resp = await req.close();
-    final body = await resp.transform(utf8.decoder).join();
-    final decoded = json.decode(body);
-    if (decoded is! Map) return null;
-    final synced = decoded["syncedLyrics"];
-    if (synced is String && synced.trim().isNotEmpty) {
-      return Lrc.fromLrcText(synced, LrcSource.web);
-    }
-  } catch (_) {}
-  return null;
-}
-
 Future<Lyric?> getOnlineLyric({
   int? qqSongId,
   String? kugouSongHash,
   String? neteaseSongId,
-  String? lrclibTrackName,
-  String? lrclibArtistName,
-  String? lrclibAlbumName,
-  int? lrclibDurationMs,
-  Audio? lrclibAudioFallback,
 }) async {
   Lyric? lyric;
   if (qqSongId != null) {
@@ -380,23 +231,6 @@ Future<Lyric?> getOnlineLyric({
     lyric = (await _getKugouSyncLyric(kugouSongHash));
   } else if (neteaseSongId != null) {
     lyric = await _getNeteaseUnsyncLyric(neteaseSongId);
-  } else {
-    final trackName = lrclibTrackName ?? lrclibAudioFallback?.title;
-    final artistName = lrclibArtistName ?? lrclibAudioFallback?.artist;
-    final albumName = lrclibAlbumName ?? lrclibAudioFallback?.album;
-    final durationMs =
-        lrclibDurationMs ?? ((lrclibAudioFallback?.duration ?? 0) * 1000);
-    if (trackName != null &&
-        artistName != null &&
-        albumName != null &&
-        durationMs > 0) {
-      lyric = await _getLrclibLyric(
-        trackName: trackName,
-        artistName: artistName,
-        albumName: albumName,
-        durationMs: durationMs,
-      );
-    }
   }
   return lyric;
 }
@@ -413,12 +247,5 @@ Future<Lyric?> getMostMatchedLyric(Audio audio) async {
       getOnlineLyric(kugouSongHash: mostMatch.kugouSongHash),
     ResultSource.netease =>
       getOnlineLyric(neteaseSongId: mostMatch.neteaseSongId),
-    ResultSource.lrclib => getOnlineLyric(
-        lrclibTrackName: mostMatch.title,
-        lrclibArtistName: mostMatch.artists,
-        lrclibAlbumName: mostMatch.album,
-        lrclibDurationMs: mostMatch.durationMs ?? audio.duration * 1000,
-        lrclibAudioFallback: audio,
-      ),
   };
 }

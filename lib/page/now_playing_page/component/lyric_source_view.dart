@@ -190,17 +190,6 @@ class _LyricSourceTileState extends State<_LyricSourceTile> {
     qqSongId: widget.searchResult.qqSongId,
     kugouSongHash: widget.searchResult.kugouSongHash,
     neteaseSongId: widget.searchResult.neteaseSongId,
-    lrclibTrackName: widget.searchResult.source == ResultSource.lrclib
-        ? widget.searchResult.title
-        : null,
-    lrclibArtistName: widget.searchResult.source == ResultSource.lrclib
-        ? widget.searchResult.artists
-        : null,
-    lrclibAlbumName: widget.searchResult.source == ResultSource.lrclib
-        ? widget.searchResult.album
-        : null,
-    lrclibDurationMs: widget.searchResult.durationMs,
-    lrclibAudioFallback: widget.audio,
   );
 
   @override
@@ -254,7 +243,6 @@ class _LyricSourceTileState extends State<_LyricSourceTile> {
       ResultSource.qq => "QQ",
       ResultSource.kugou => "酷狗",
       ResultSource.netease => "网易",
-      ResultSource.lrclib => "LRC Lib",
     };
 
     final hasTranslation = lyric.lines.any((line) {
@@ -269,21 +257,12 @@ class _LyricSourceTileState extends State<_LyricSourceTile> {
           ResultSource.qq => LyricSourceType.qq,
           ResultSource.kugou => LyricSourceType.kugou,
           ResultSource.netease => LyricSourceType.netease,
-          ResultSource.lrclib => LyricSourceType.lrclib,
         };
         LYRIC_SOURCES[audio.path] = LyricSource(
           source,
           qqSongId: searchResult.qqSongId,
           kugouSongHash: searchResult.kugouSongHash,
           neteaseSongId: searchResult.neteaseSongId,
-          lrclibTrackName:
-              searchResult.source == ResultSource.lrclib ? searchResult.title : null,
-          lrclibArtistName: searchResult.source == ResultSource.lrclib
-              ? searchResult.artists
-              : null,
-          lrclibAlbumName:
-              searchResult.source == ResultSource.lrclib ? searchResult.album : null,
-          lrclibDurationMs: searchResult.durationMs,
         );
         PlayService.instance.lyricService.useSpecificLyric(lyric);
 

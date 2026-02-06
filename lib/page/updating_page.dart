@@ -61,7 +61,7 @@ class _UpdatingStateViewState extends State<UpdatingStateView> {
     _subscription?.cancel();
     final ctx = context;
     if (ctx.mounted) {
-      ctx.go(app_paths.START_PAGES[AppPreference.instance.startPage]);
+      ctx.go(app_paths.AUDIOS_PAGE);
     }
   }
 

@@ -61,6 +61,12 @@ class _SideNavState extends State<SideNav> {
       AppPreference.instance.save();
     }
 
+    final toggleBtnStyle = IconButton.styleFrom(
+      backgroundColor: scheme.surfaceContainerHigh,
+      foregroundColor: scheme.onSurface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+    );
+
     return ResponsiveBuilder(
       builder: (context, screenType) {
         switch (screenType) {
@@ -107,7 +113,8 @@ class _SideNavState extends State<SideNav> {
                           padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
                           child: Row(
                             children: [
-                              IconButton(
+                              IconButton.filledTonal(
+                                style: toggleBtnStyle,
                                 onPressed: toggleSidebar,
                                 icon: const Icon(Symbols.menu_open),
                                 tooltip: "收起侧边栏",
@@ -133,10 +140,14 @@ class _SideNavState extends State<SideNav> {
                     selectedIndex: selectedIndex,
                     onDestinationSelected: onDestinationSelected,
                     extended: false,
-                    leading: IconButton(
-                      onPressed: toggleSidebar,
-                      icon: const Icon(Symbols.menu),
-                      tooltip: "展开侧边栏",
+                    leading: Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: IconButton.filledTonal(
+                        style: toggleBtnStyle,
+                        onPressed: toggleSidebar,
+                        icon: const Icon(Symbols.menu),
+                        tooltip: "展开侧边栏",
+                      ),
                     ),
                     destinations: List.generate(
                       destinations.length,
