@@ -77,13 +77,7 @@ class LyricViewTile extends StatelessWidget {
     final isMainLine = d == 0;
     final blurSigma =
         lyricViewController.enableLyricBlur ? min(d * 1.6, 6.0) : 0.0;
-    final scale = isMainLine
-        ? 1.1
-        : switch (d) {
-            1 => 0.98,
-            2 => 0.94,
-            _ => 0.90,
-          };
+    final scale = isMainLine ? 1.1 : 1.0;
 
     Widget content = InkWell(
       onTap: onTap,
@@ -113,8 +107,8 @@ class LyricViewTile extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
             child: TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 220),
-              curve: const Cubic(0.2, 0.0, 0.0, 1.0),
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOutQuad,
               tween: Tween(begin: 0.0, end: blurSigma),
               builder: (context, sigma, child) {
                 final filtered = sigma <= 0.01
@@ -125,16 +119,16 @@ class LyricViewTile extends StatelessWidget {
                         child: child,
                       );
                 return AnimatedOpacity(
-                  duration: const Duration(milliseconds: 280),
-                  curve: const Cubic(0.2, 0.0, 0.0, 1.0),
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOutQuad,
                   opacity: opacity,
                   child: AnimatedSlide(
-                    duration: const Duration(milliseconds: 220),
-                    curve: const Cubic(0.2, 0.0, 0.0, 1.0),
-                    offset: isMainLine ? Offset.zero : const Offset(0.0, 0.01),
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOutQuad,
+                    offset: Offset.zero,
                     child: AnimatedScale(
-                      duration: const Duration(milliseconds: 220),
-                      curve: const Cubic(0.2, 0.0, 0.0, 1.0),
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOutQuad,
                       alignment: alignment,
                       scale: scale,
                       child: filtered,
@@ -179,6 +173,7 @@ class _SyncLineContent extends StatelessWidget {
         _effectiveLyricFontSize(lyricFontSize, isMainLine: isMainLine);
     final translationSize =
         _effectiveTranslationFontSize(lyricFontSize, isMainLine: isMainLine);
+    final verticalPad = (lyricFontSize * 0.35).clamp(10.0, 18.0);
 
     if (!isMainLine) {
       if (syncLine.words.isEmpty) {
@@ -223,69 +218,62 @@ class _SyncLineContent extends StatelessWidget {
         stream: PlayService.instance.playbackService.positionStream,
         builder: (context, snapshot) {
           final posInMs = (snapshot.data ?? 0) * 1000;
-          return RichText(
-            softWrap: true,
-            overflow: TextOverflow.clip,
-            textAlign: switch (alignment) {
-              LyricTextAlign.left => TextAlign.left,
-              LyricTextAlign.center => TextAlign.center,
-              LyricTextAlign.right => TextAlign.right,
+          final strut = StrutStyle(fontSize: primarySize, height: 1.5);
+          return Wrap(
+            alignment: switch (alignment) {
+              LyricTextAlign.left => WrapAlignment.start,
+              LyricTextAlign.center => WrapAlignment.center,
+              LyricTextAlign.right => WrapAlignment.end,
             },
-            text: TextSpan(
-              children: List.generate(
-                syncLine.words.length,
-                (i) {
-                  final word = syncLine.words[i];
-                  final wordLenMs = word.length.inMilliseconds;
-                  final wordStartMs = word.start.inMilliseconds.toDouble();
-                  final wordEndMs = wordStartMs + wordLenMs;
-                  final progress = wordLenMs <= 0
-                      ? (posInMs >= wordEndMs ? 1.0 : 0.0)
-                      : ((posInMs - wordStartMs) / wordLenMs).clamp(0.0, 1.0);
-                  return WidgetSpan(
-                    child: Stack(
-                      children: [
-                        // 底层：未播放状态（暗色）
-                        Text(
-                          word.content,
-                          style: _lyricTextStyle(
-                            color: Colors.white.withValues(alpha: 0.22),
-                            fontSize: primarySize,
-                            weight: fontWeight,
-                            height: 1.5,
-                          ),
-                        ),
-                        // 顶层：已播放状态（亮色），通过 ShaderMask 裁剪
-                        if (progress > 0.0)
-                          ShaderMask(
-                            blendMode: BlendMode.dstIn,
-                            shaderCallback: (bounds) {
-                              return LinearGradient(
-                                colors: const [
-                                  Colors.white,
-                                  Colors.white,
-                                  Colors.transparent,
-                                  Colors.transparent
-                                ],
-                                stops: [0, progress, progress + 0.05, 1],
-                              ).createShader(bounds);
-                            },
-                            child: Text(
-                              word.content,
-                              style: _lyricTextStyle(
-                                color: Colors.white,
-                                fontSize: primarySize,
-                                weight: fontWeight,
-                                height: 1.5,
-                              ),
-                            ),
-                          ),
-                      ],
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: List.generate(syncLine.words.length, (i) {
+              final word = syncLine.words[i];
+              final wordLenMs = word.length.inMilliseconds;
+              final wordStartMs = word.start.inMilliseconds.toDouble();
+              final wordEndMs = wordStartMs + wordLenMs;
+              final progress = wordLenMs <= 0
+                  ? (posInMs >= wordEndMs ? 1.0 : 0.0)
+                  : ((posInMs - wordStartMs) / wordLenMs).clamp(0.0, 1.0);
+              return Stack(
+                children: [
+                  Text(
+                    word.content,
+                    strutStyle: strut,
+                    style: _lyricTextStyle(
+                      color: Colors.white.withValues(alpha: 0.22),
+                      fontSize: primarySize,
+                      weight: fontWeight,
+                      height: 1.5,
                     ),
-                  );
-                },
-              ),
-            ),
+                  ),
+                  if (progress > 0.0)
+                    ShaderMask(
+                      blendMode: BlendMode.dstIn,
+                      shaderCallback: (bounds) {
+                        return LinearGradient(
+                          colors: const [
+                            Colors.white,
+                            Colors.white,
+                            Colors.transparent,
+                            Colors.transparent
+                          ],
+                          stops: [0, progress, progress + 0.05, 1],
+                        ).createShader(bounds);
+                      },
+                      child: Text(
+                        word.content,
+                        strutStyle: strut,
+                        style: _lyricTextStyle(
+                          color: Colors.white,
+                          fontSize: primarySize,
+                          weight: fontWeight,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            }),
           );
         },
       )
@@ -301,7 +289,7 @@ class _SyncLineContent extends StatelessWidget {
       ));
     }
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+      padding: EdgeInsets.symmetric(vertical: verticalPad, horizontal: 12.0),
       child: Column(
         crossAxisAlignment: switch (alignment) {
           LyricTextAlign.left => CrossAxisAlignment.start,
@@ -393,6 +381,7 @@ class _LrcLineContent extends StatelessWidget {
         _effectiveLyricFontSize(lyricFontSize, isMainLine: isMainLine);
     final translationSize =
         _effectiveTranslationFontSize(lyricFontSize, isMainLine: isMainLine);
+    final verticalPad = (lyricFontSize * 0.32).clamp(10.0, 16.0);
 
     final splited = lrcLine.content.split("┃");
     final List<Widget> contents = [
@@ -418,7 +407,7 @@ class _LrcLineContent extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.all(12.0),
+      padding: EdgeInsets.symmetric(vertical: verticalPad, horizontal: 12.0),
       child: Column(
         crossAxisAlignment: switch (alignment) {
           LyricTextAlign.left => CrossAxisAlignment.start,

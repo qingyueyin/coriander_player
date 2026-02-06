@@ -283,43 +283,40 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
               stops: [0.0, _fadeExtent, 1.0 - _fadeExtent, 1.0],
             ).createShader(bounds);
           },
-          child: SingleChildScrollView(
-            key: ValueKey(widget.lyric.hashCode),
-            controller: scrollController,
-            padding: EdgeInsets.symmetric(
-              vertical: widget.centerVertically ? spacerHeight : 0,
-            ),
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (notification is UserScrollNotification) {
-                  _userScrollHoldTimer?.cancel();
-                  _userScrolling = true;
-                  _userScrollHoldTimer = Timer(const Duration(seconds: 2), () {
-                    if (!mounted) return;
-                    _userScrolling = false;
-                    _scrollToCurrent();
-                  });
-                }
-                return false;
-              },
-              child: Column(
-                children: List.generate(
-                  widget.lyric.lines.length,
-                  (i) {
-                    final dist = (i - _mainLine).abs();
-                    final opacity = dist == 0
-                        ? 1.0
-                        : (1.0 - dist * 0.28).clamp(0.18, 0.80);
-                    return LyricViewTile(
-                      key: dist == 0 ? currentLyricTileKey : null,
-                      line: widget.lyric.lines[i],
-                      opacity: opacity,
-                      distance: dist,
-                      onTap: widget.enableSeekOnTap ? () => _seekToLyricLine(i) : null,
-                    );
-                  },
-                ),
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is UserScrollNotification) {
+                _userScrollHoldTimer?.cancel();
+                _userScrolling = true;
+                _userScrollHoldTimer = Timer(const Duration(seconds: 2), () {
+                  if (!mounted) return;
+                  _userScrolling = false;
+                  _scrollToCurrent();
+                });
+              }
+              return false;
+            },
+            child: ListView.builder(
+              key: ValueKey(widget.lyric.hashCode),
+              controller: scrollController,
+              padding: EdgeInsets.symmetric(
+                vertical: widget.centerVertically ? spacerHeight : 0,
               ),
+              itemCount: widget.lyric.lines.length,
+              itemBuilder: (context, i) {
+                final dist = (i - _mainLine).abs();
+                final opacity = dist == 0
+                    ? 1.0
+                    : pow(0.72, dist).toDouble().clamp(0.16, 0.78);
+                return LyricViewTile(
+                  key: dist == 0 ? currentLyricTileKey : null,
+                  line: widget.lyric.lines[i],
+                  opacity: opacity,
+                  distance: dist,
+                  onTap:
+                      widget.enableSeekOnTap ? () => _seekToLyricLine(i) : null,
+                );
+              },
             ),
           ),
         ),
