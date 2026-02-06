@@ -171,7 +171,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
     });
   }
 
-  void _animateTo(double targetOffset) {
+  void _animateTo(double targetOffset, {Duration? duration}) {
     if (!scrollController.hasClients) return;
     final minExtent = scrollController.position.minScrollExtent;
     final maxExtent = scrollController.position.maxScrollExtent;
@@ -179,11 +179,11 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
     final to = targetOffset.clamp(minExtent, maxExtent);
     final dist = (to - from).abs();
     if (dist < 0.5) return;
-    scrollController.animateTo(
-      to,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeInOut,
-    );
+    final computed = duration ??
+        Duration(
+          milliseconds: (280 + dist * 0.22).round().clamp(320, 650),
+        );
+    scrollController.animateTo(to, duration: computed, curve: Curves.easeOutQuart);
   }
 
   void _scrollToCurrent([Duration? duration]) {
@@ -205,10 +205,12 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
       final alignment = widget.centerVertically ? 0.4 : 0.25;
       final viewport = scrollController.position.viewportDimension;
       final estimated = (_estimatedItemExtent * _mainLine) - viewport * alignment;
-      _animateTo(estimated);
+      final minExtent = scrollController.position.minScrollExtent;
+      final maxExtent = scrollController.position.maxScrollExtent;
+      scrollController.jumpTo(estimated.clamp(minExtent, maxExtent));
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _scrollToCurrent(const Duration(milliseconds: 220));
+        _scrollToCurrent(duration ?? const Duration(milliseconds: 420));
       });
       return;
     }
@@ -230,7 +232,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
       _estimatedItemExtent = _estimatedItemExtent * 0.8 + h * 0.2;
     }
 
-    _animateTo(targetOffset);
+    _animateTo(targetOffset, duration: duration);
   }
 
   void _initLyricView() {

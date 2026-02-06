@@ -549,7 +549,7 @@ class PlaybackService extends ChangeNotifier {
     LOGGER.i("[action] seek=$position");
     AudioEchoLogRecorder.instance.mark('seek', extra: {'pos': position});
     _player.seek(position);
-    playService.lyricService.findCurrLyricLine();
+    playService.lyricService.findCurrLyricLineAt(position);
   }
 
   void close() {

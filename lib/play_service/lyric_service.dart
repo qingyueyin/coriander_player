@@ -15,9 +15,16 @@ class LyricService extends ChangeNotifier {
   final PlayService playService;
 
   late StreamSubscription _positionStreamSubscription;
+  double _lastPos = 0.0;
   LyricService(this.playService) {
     _positionStreamSubscription =
         playService.playbackService.positionStream.listen((pos) {
+      final jumped = (pos - _lastPos).abs() > 1.0;
+      _lastPos = pos;
+      if (jumped) {
+        findCurrLyricLineAt(pos);
+        return;
+      }
       currLyricFuture.then((value) {
         if (value == null) return;
         if (_nextLyricLine >= value.lines.length) return;
@@ -56,16 +63,29 @@ class LyricService extends ChangeNotifier {
 
   /// 重新计算歌词进行到第几行
   void findCurrLyricLine() {
+    findCurrLyricLineAt(playService.playbackService.position);
+  }
+
+  void findCurrLyricLineAt(double positionSeconds) {
     currLyricFuture.then((value) {
       if (value == null) return;
 
       final next = value.lines.indexWhere(
         (element) =>
             element.start.inMilliseconds / 1000 >
-            playService.playbackService.position,
+            positionSeconds,
       );
       _nextLyricLine = next == -1 ? value.lines.length : next;
-      _lyricLineStreamController.add(max(_nextLyricLine - 1, 0));
+      final currLineIndex = max(_nextLyricLine - 1, 0);
+      _lyricLineStreamController.add(currLineIndex);
+
+      if (currLineIndex < 0 || currLineIndex >= value.lines.length) return;
+      playService.desktopLyricService.canSendMessage.then((canSend) {
+        if (!canSend) return;
+        playService.desktopLyricService.sendLyricLineMessage(
+          value.lines[currLineIndex],
+        );
+      });
     });
   }
 
