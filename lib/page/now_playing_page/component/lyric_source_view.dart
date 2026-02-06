@@ -66,7 +66,7 @@ class _SetLyricSourceBtn extends StatelessWidget {
             final nowPlaying = PlayService.instance.playbackService.nowPlaying;
             showDialog<String>(
               context: context,
-              builder: (context) => _SetLyricSourceDialog(audio: nowPlaying!),
+              builder: (context) => SetLyricSourceDialog(audio: nowPlaying!),
             );
           },
           child: const Text("指定默认歌词"),
@@ -99,8 +99,8 @@ class _SetLyricSourceBtn extends StatelessWidget {
   }
 }
 
-class _SetLyricSourceDialog extends StatelessWidget {
-  const _SetLyricSourceDialog({required this.audio});
+class SetLyricSourceDialog extends StatelessWidget {
+  const SetLyricSourceDialog({super.key, required this.audio});
 
   final Audio audio;
 

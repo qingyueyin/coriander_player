@@ -1,6 +1,7 @@
 // ignore_for_file: camel_case_types
 
 import 'package:coriander_player/app_preference.dart';
+import 'package:coriander_player/component/motion.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
 import 'package:coriander_player/app_paths.dart' as app_paths;
 import 'package:flutter/material.dart';
@@ -80,7 +81,7 @@ class _SideNavState extends State<SideNav> {
           case ScreenType.medium:
             return NavigationRail(
               backgroundColor: scheme.surfaceContainer,
-              minWidth: 72.0,
+              minWidth: 80.0,
               selectedIndex: selectedIndex,
               onDestinationSelected: onDestinationSelected,
               destinations: List.generate(
@@ -95,61 +96,92 @@ class _SideNavState extends State<SideNav> {
             return ValueListenableBuilder(
               valueListenable: sidebarExpanded,
               builder: (context, expanded, _) {
-                if (expanded) {
-                  return SizedBox(
-                    width: 220.0,
-                    child: NavigationDrawer(
-                      backgroundColor: scheme.surfaceContainer,
-                      selectedIndex: selectedIndex == null ? null : selectedIndex + 1,
-                      onDestinationSelected: (value) {
-                        if (value == 0) {
-                          toggleSidebar();
-                          return;
-                        }
-                        onDestinationSelected(value - 1);
-                      },
-                      children: [
-                        const NavigationDrawerDestination(
-                          icon: Icon(Symbols.menu_open),
-                          label: Text("收起侧边栏"),
-                        ),
-                        ...List.generate(
-                          destinations.length,
-                          (i) => NavigationDrawerDestination(
-                            icon: Icon(destinations[i].icon),
-                            label: Text(destinations[i].label),
-                          ),
-                        )
-                      ],
-                    ),
-                  );
-                } else {
-                  return NavigationRail(
-                    backgroundColor: scheme.surfaceContainer,
-                    minWidth: 72.0,
-                    selectedIndex: selectedIndex == null ? null : selectedIndex + 1,
-                    onDestinationSelected: (value) {
-                      if (value == 0) {
-                        toggleSidebar();
-                        return;
-                      }
-                      onDestinationSelected(value - 1);
-                    },
-                    extended: false,
-                    destinations: List.generate(
-                      destinations.length + 1,
-                      (i) => i == 0
-                          ? const NavigationRailDestination(
-                              icon: Icon(Symbols.menu),
-                              label: Text("展开"),
-                            )
-                          : NavigationRailDestination(
-                              icon: Icon(destinations[i - 1].icon),
-                              label: Text(destinations[i - 1].label),
+                final Widget child = expanded
+                    ? SizedBox(
+                        key: const ValueKey("sidebar_drawer"),
+                        width: 240.0,
+                        child: NavigationDrawer(
+                          backgroundColor: scheme.surfaceContainer,
+                          selectedIndex:
+                              selectedIndex == null ? null : selectedIndex + 1,
+                          onDestinationSelected: (value) {
+                            if (value == 0) {
+                              toggleSidebar();
+                              return;
+                            }
+                            onDestinationSelected(value - 1);
+                          },
+                          children: [
+                            const NavigationDrawerDestination(
+                              icon: Icon(Symbols.menu_open),
+                              label: Text("收起侧边栏"),
                             ),
+                            ...List.generate(
+                              destinations.length,
+                              (i) => NavigationDrawerDestination(
+                                icon: Icon(destinations[i].icon),
+                                label: Text(destinations[i].label),
+                              ),
+                            )
+                          ],
+                        ),
+                      )
+                    : SizedBox(
+                        key: const ValueKey("sidebar_rail"),
+                        width: 80.0,
+                        child: NavigationRail(
+                          backgroundColor: scheme.surfaceContainer,
+                          minWidth: 80.0,
+                          selectedIndex:
+                              selectedIndex == null ? null : selectedIndex + 1,
+                          onDestinationSelected: (value) {
+                            if (value == 0) {
+                              toggleSidebar();
+                              return;
+                            }
+                            onDestinationSelected(value - 1);
+                          },
+                          extended: false,
+                          destinations: List.generate(
+                            destinations.length + 1,
+                            (i) => i == 0
+                                ? const NavigationRailDestination(
+                                    icon: Icon(Symbols.menu),
+                                    label: Text("展开"),
+                                  )
+                                : NavigationRailDestination(
+                                    icon: Icon(destinations[i - 1].icon),
+                                    label: Text(destinations[i - 1].label),
+                                  ),
+                          ),
+                        ),
+                      );
+
+                return ClipRect(
+                  child: AnimatedSize(
+                    duration: MotionDuration.slow,
+                    curve: MotionCurve.standard,
+                    alignment: Alignment.centerLeft,
+                    child: AnimatedSwitcher(
+                      duration: MotionDuration.base,
+                      switchInCurve: MotionCurve.standard,
+                      switchOutCurve: MotionCurve.standard,
+                      transitionBuilder: (child, animation) {
+                        final offsetAnimation =
+                            Tween(begin: const Offset(0.06, 0.0), end: Offset.zero)
+                                .animate(animation);
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: offsetAnimation,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: child,
                     ),
-                  );
-                }
+                  ),
+                );
               },
             );
         }

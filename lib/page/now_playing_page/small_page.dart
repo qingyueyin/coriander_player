@@ -74,7 +74,9 @@ class _NowPlayingPage_SmallState extends State<_NowPlayingPage_Small> {
                 ),
                 Expanded(
                   child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 150),
+                    duration: MotionDuration.base,
+                    switchInCurve: MotionCurve.standard,
+                    switchOutCurve: MotionCurve.standard,
                     child: switch (views[1]) {
                       NowPlayingViewMode.onlyMain =>
                         const Center(child: _NowPlayingInfo()),
@@ -119,10 +121,7 @@ class _NowPlayingPage_SmallState extends State<_NowPlayingPage_Small> {
             children: [
               _DesktopLyricSwitch(),
               _NowPlayingPlaybackModeSwitch(),
-              NowPlayingPitchControl(),
-              SetLyricSourceBtn(),
               _NowPlayingVolDspSlider(),
-              _ExclusiveModeSwitch(),
               _NowPlayingMoreAction(),
             ],
           )

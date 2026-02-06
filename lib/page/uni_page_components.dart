@@ -126,7 +126,7 @@ class SortOrderSwitch<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     var isAscending = sortOrder == SortOrder.ascending;
     return IconButton.filledTonal(
-      tooltip: "切换排序顺序；现在：${isAscending ? "升序" : "降序"}",
+      tooltip: "切换排序顺序（${isAscending ? "升序" : "降序"}）",
       onPressed: () => setSortOrder(
         isAscending ? SortOrder.decending : SortOrder.ascending,
       ),
@@ -157,7 +157,7 @@ class ContentViewSwitch<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     var isListView = contentView == ContentView.list;
     return IconButton.filledTonal(
-      tooltip: "切换页面视图；现在：${isListView ? "列表" : "表格"}",
+      tooltip: "切换页面视图（${isListView ? "列表" : "表格"}）",
       onPressed: () => setContentView(
         isListView ? ContentView.table : ContentView.list,
       ),

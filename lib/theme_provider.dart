@@ -3,10 +3,28 @@ import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/play_service/play_service.dart';
 import 'package:flutter/material.dart';
 
+Color _softenLightSurface(Color color) {
+  return Color.alphaBlend(const Color(0xFF000000).withAlpha(14), color);
+}
+
+ColorScheme _softenLightScheme(ColorScheme scheme) {
+  return scheme.copyWith(
+    surface: _softenLightSurface(scheme.surface),
+    background: _softenLightSurface(scheme.background),
+    surfaceContainerLowest: _softenLightSurface(scheme.surfaceContainerLowest),
+    surfaceContainerLow: _softenLightSurface(scheme.surfaceContainerLow),
+    surfaceContainer: _softenLightSurface(scheme.surfaceContainer),
+    surfaceContainerHigh: _softenLightSurface(scheme.surfaceContainerHigh),
+    surfaceContainerHighest: _softenLightSurface(scheme.surfaceContainerHighest),
+  );
+}
+
 class ThemeProvider extends ChangeNotifier {
-  ColorScheme lightScheme = ColorScheme.fromSeed(
-    seedColor: Color(AppSettings.instance.defaultTheme),
-    brightness: Brightness.light,
+  ColorScheme lightScheme = _softenLightScheme(
+    ColorScheme.fromSeed(
+      seedColor: Color(AppSettings.instance.defaultTheme),
+      brightness: Brightness.light,
+    ),
   );
 
   ColorScheme darkScheme = ColorScheme.fromSeed(
@@ -39,10 +57,10 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   void applyTheme({required Color seedColor}) {
-    lightScheme = ColorScheme.fromSeed(
+    lightScheme = _softenLightScheme(ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: Brightness.light,
-    );
+    ));
 
     darkScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
@@ -80,7 +98,7 @@ class ThemeProvider extends ChangeNotifier {
     if (cached != null) {
       switch (brightness) {
         case Brightness.light:
-          lightScheme = cached;
+          lightScheme = _softenLightScheme(cached);
           break;
         case Brightness.dark:
           darkScheme = cached.copyWith(
@@ -123,7 +141,7 @@ class ThemeProvider extends ChangeNotifier {
 
       switch (brightness) {
         case Brightness.light:
-          lightScheme = value;
+          lightScheme = _softenLightScheme(value);
           break;
         case Brightness.dark:
           darkScheme = value.copyWith(

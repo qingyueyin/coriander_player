@@ -19,7 +19,9 @@ class _NowPlayingPage_Large extends StatelessWidget {
                     child: ValueListenableBuilder(
                       valueListenable: NOW_PLAYING_VIEW_MODE,
                       builder: (context, value, _) => AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 150),
+                        duration: MotionDuration.base,
+                        switchInCurve: MotionCurve.standard,
+                        switchOutCurve: MotionCurve.standard,
                         child: switch (value) {
                           NowPlayingViewMode.withPlaylist =>
                             const CurrentPlaylistView(),
@@ -64,20 +66,6 @@ class _NowPlayingPage_Large extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _DesktopLyricSwitch(),
-                    spacer,
-                    _ExclusiveModeSwitch(),
-                    spacer,
-                    IconButton(
-                      tooltip: "均衡器",
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => const EqualizerDialog(),
-                        );
-                      },
-                      icon: const Icon(Symbols.graphic_eq),
-                      color: Theme.of(context).colorScheme.onSecondaryContainer,
-                    ),
                   ],
                 ),
               ),
@@ -148,10 +136,6 @@ class _NowPlayingPage_Large extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    NowPlayingPitchControl(),
-                    spacer,
-                    SetLyricSourceBtn(),
-                    spacer,
                     _NowPlayingMoreAction(),
                   ],
                 ),
@@ -188,7 +172,8 @@ class _AutoHidingControlBarState extends State<_AutoHidingControlBar> {
           borderRadius: BorderRadius.circular(32),
         ),
         child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 200),
+          duration: MotionDuration.base,
+          curve: MotionCurve.standard,
           opacity: _isHovering ? 1.0 : 0.0,
           child: widget.child,
         ),

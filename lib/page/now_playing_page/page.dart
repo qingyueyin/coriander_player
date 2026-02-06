@@ -418,6 +418,62 @@ class _NowPlayingMoreAction extends StatelessWidget {
             leadingIcon: const Icon(Symbols.info),
             child: const Text("详细信息"),
           ),
+          MenuItemButton(
+            style: menuItemStyle,
+            onPressed: () {
+              showDialog<void>(
+                context: context,
+                builder: (context) => SetLyricSourceDialog(audio: nowPlaying),
+              );
+            },
+            leadingIcon: const Icon(Symbols.lyrics),
+            child: const Text("歌词来源"),
+          ),
+          MenuItemButton(
+            style: menuItemStyle,
+            onPressed: PlayService.instance.lyricService.useOnlineLyric,
+            leadingIcon: const Icon(Symbols.language),
+            child: const Text("使用在线歌词"),
+          ),
+          MenuItemButton(
+            style: menuItemStyle,
+            onPressed: PlayService.instance.lyricService.useLocalLyric,
+            leadingIcon: const Icon(Symbols.folder),
+            child: const Text("使用本地歌词"),
+          ),
+          MenuItemButton(
+            style: menuItemStyle,
+            onPressed: () {
+              showDialog<void>(
+                context: context,
+                builder: (context) => const NowPlayingPitchDialog(),
+              );
+            },
+            leadingIcon: const Icon(Symbols.music_note),
+            child: const Text("音调"),
+          ),
+          MenuItemButton(
+            style: menuItemStyle,
+            onPressed: () {
+              showDialog<void>(
+                context: context,
+                builder: (context) => const EqualizerDialog(),
+              );
+            },
+            leadingIcon: const Icon(Symbols.graphic_eq),
+            child: const Text("均衡器"),
+          ),
+          ValueListenableBuilder(
+            valueListenable: PlayService.instance.playbackService.wasapiExclusive,
+            builder: (context, exclusive, _) => MenuItemButton(
+              style: menuItemStyle,
+              onPressed: () {
+                PlayService.instance.playbackService.useExclusiveMode(!exclusive);
+              },
+              leadingIcon: exclusive ? const Icon(Symbols.check) : null,
+              child: const Text("独占模式"),
+            ),
+          ),
           SubmenuButton(
             style: menuItemStyle,
             menuChildren: List.generate(

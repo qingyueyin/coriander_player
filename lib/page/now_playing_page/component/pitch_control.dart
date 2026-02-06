@@ -12,31 +12,9 @@ class NowPlayingPitchControl extends StatefulWidget {
 }
 
 class _NowPlayingPitchControlState extends State<NowPlayingPitchControl> {
-  Timer? _indicatorTimer;
-  bool _showCustomIndicator = false;
-  // New state variable for hover
-  bool _isHovering = false;
-
-  void _triggerIndicator() {
-    setState(() => _showCustomIndicator = true);
-    _indicatorTimer?.cancel();
-    _indicatorTimer = Timer(const Duration(milliseconds: 1000), () {
-      if (mounted) {
-        setState(() => _showCustomIndicator = false);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _indicatorTimer?.cancel();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final playbackService = PlayService.instance.playbackService;
 
     return MenuAnchor(
       style: MenuStyle(
@@ -61,136 +39,185 @@ class _NowPlayingPitchControlState extends State<NowPlayingPitchControl> {
       menuChildren: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-          child: SizedBox(
-            width: 300,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (!playbackService.isBassFxLoaded)
-                  Container(
-                      margin: const EdgeInsets.only(bottom: 8.0),
-                      padding: const EdgeInsets.all(8.0),
-                      decoration: BoxDecoration(
-                        color: scheme.errorContainer,
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      child: Text(
-                        "BASS_FX missing",
-                        style: TextStyle(
-                            color: scheme.onErrorContainer, fontSize: 12),
-                      ),
-                    ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("音调(半音)", style: TextStyle(color: scheme.onSurface)),
-                      IconButton(
-                        icon: const Icon(Symbols.restart_alt, size: 16),
-                        onPressed: () => playbackService.setPitch(0.0),
-                        tooltip: "重置音调",
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                  SliderTheme(
-                    data: const SliderThemeData(
-                      showValueIndicator: ShowValueIndicator.never,
-                    ),
-                    child: ValueListenableBuilder(
-                      valueListenable: playbackService.pitch,
-                      builder: (context, pitchValue, _) => Row(
-                        children: [
-                          IconButton(
-                            onPressed: playbackService.isBassFxLoaded
-                                ? () {
-                                    final newValue =
-                                        (pitchValue - 1.0).clamp(-12.0, 12.0);
-                                    playbackService.setPitch(newValue);
-                                    _triggerIndicator();
-                                  }
-                                : null,
-                            icon: const Icon(Symbols.remove),
-                            color: scheme.onSurface,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                          Expanded(
-                            child: LayoutBuilder(builder: (context, constraints) {
-                              // Slider default padding is 24.0 on each side for overlay
-                              const double padding = 24.0;
-                              final double trackWidth =
-                                  constraints.maxWidth - (padding * 2);
-                              const double min = -12.0;
-                              const double max = 12.0;
-                              final double percent =
-                                  (pitchValue - min) / (max - min);
-                              final double leftOffset =
-                                  padding + (trackWidth * percent);
-
-                              return MouseRegion(
-                                onEnter: (_) => setState(() => _isHovering = true),
-                                onExit: (_) => setState(() => _isHovering = false),
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  alignment: Alignment.centerLeft,
-                                  children: [
-                                    Slider(
-                                      thumbColor: scheme.primary,
-                                      activeColor: scheme.primary,
-                                      inactiveColor: scheme.outline,
-                                      min: min,
-                                      max: max,
-                                      divisions: 24,
-                                      value: pitchValue,
-                                      onChanged: playbackService.isBassFxLoaded
-                                          ? (value) {
-                                              playbackService.setPitch(value);
-                                            }
-                                          : null,
-                                    ),
-                                    if (_showCustomIndicator || _isHovering)
-                                      Positioned(
-                                        left: leftOffset -
-                                            24.0, // Center the bubble (width 48)
-                                        top: -40,
-                                        child: IgnorePointer(
-                                          child: _CustomValueIndicator(
-                                            value: pitchValue,
-                                            color: scheme.primary,
-                                            textColor: scheme.onPrimary,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              );
-                            }),
-                          ),
-                          IconButton(
-                            onPressed: playbackService.isBassFxLoaded
-                                ? () {
-                                    final newValue =
-                                        (pitchValue + 1.0).clamp(-12.0, 12.0);
-                                    playbackService.setPitch(newValue);
-                                    _triggerIndicator();
-                                  }
-                                : null,
-                            icon: const Icon(Symbols.add),
-                            color: scheme.onSurface,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+          child: NowPlayingPitchPanel(width: 300),
         ),
       ],
+    );
+  }
+}
+
+class NowPlayingPitchDialog extends StatelessWidget {
+  const NowPlayingPitchDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: NowPlayingPitchPanel(width: 360),
+      ),
+    );
+  }
+}
+
+class NowPlayingPitchPanel extends StatefulWidget {
+  const NowPlayingPitchPanel({super.key, required this.width});
+
+  final double width;
+
+  @override
+  State<NowPlayingPitchPanel> createState() => _NowPlayingPitchPanelState();
+}
+
+class _NowPlayingPitchPanelState extends State<NowPlayingPitchPanel> {
+  Timer? _indicatorTimer;
+  bool _showCustomIndicator = false;
+  bool _isHovering = false;
+
+  void _triggerIndicator() {
+    setState(() => _showCustomIndicator = true);
+    _indicatorTimer?.cancel();
+    _indicatorTimer = Timer(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        setState(() => _showCustomIndicator = false);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _indicatorTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final playbackService = PlayService.instance.playbackService;
+
+    return SizedBox(
+      width: widget.width,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!playbackService.isBassFxLoaded)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8.0),
+              padding: const EdgeInsets.all(8.0),
+              decoration: BoxDecoration(
+                color: scheme.errorContainer,
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child: Text(
+                "BASS_FX missing",
+                style: TextStyle(color: scheme.onErrorContainer, fontSize: 12),
+              ),
+            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("音调(半音)", style: TextStyle(color: scheme.onSurface)),
+              IconButton(
+                icon: const Icon(Symbols.restart_alt, size: 16),
+                onPressed: () => playbackService.setPitch(0.0),
+                tooltip: "重置音调",
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+          SliderTheme(
+            data: const SliderThemeData(
+              showValueIndicator: ShowValueIndicator.never,
+            ),
+            child: ValueListenableBuilder(
+              valueListenable: playbackService.pitch,
+              builder: (context, pitchValue, _) => Row(
+                children: [
+                  IconButton(
+                    onPressed: playbackService.isBassFxLoaded
+                        ? () {
+                            final newValue =
+                                (pitchValue - 1.0).clamp(-12.0, 12.0);
+                            playbackService.setPitch(newValue);
+                            _triggerIndicator();
+                          }
+                        : null,
+                    icon: const Icon(Symbols.remove),
+                    color: scheme.onSurface,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  Expanded(
+                    child: LayoutBuilder(builder: (context, constraints) {
+                      const double padding = 24.0;
+                      final double trackWidth =
+                          constraints.maxWidth - (padding * 2);
+                      const double min = -12.0;
+                      const double max = 12.0;
+                      final double percent = (pitchValue - min) / (max - min);
+                      final double leftOffset = padding + (trackWidth * percent);
+
+                      return MouseRegion(
+                        onEnter: (_) => setState(() => _isHovering = true),
+                        onExit: (_) => setState(() => _isHovering = false),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.centerLeft,
+                          children: [
+                            Slider(
+                              thumbColor: scheme.primary,
+                              activeColor: scheme.primary,
+                              inactiveColor: scheme.outline,
+                              min: min,
+                              max: max,
+                              divisions: 24,
+                              value: pitchValue,
+                              onChanged: playbackService.isBassFxLoaded
+                                  ? (value) {
+                                      playbackService.setPitch(value);
+                                    }
+                                  : null,
+                            ),
+                            if (_showCustomIndicator || _isHovering)
+                              Positioned(
+                                left: leftOffset - 24.0,
+                                top: -40,
+                                child: IgnorePointer(
+                                  child: _CustomValueIndicator(
+                                    value: pitchValue,
+                                    color: scheme.primary,
+                                    textColor: scheme.onPrimary,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ),
+                  IconButton(
+                    onPressed: playbackService.isBassFxLoaded
+                        ? () {
+                            final newValue =
+                                (pitchValue + 1.0).clamp(-12.0, 12.0);
+                            playbackService.setPitch(newValue);
+                            _triggerIndicator();
+                          }
+                        : null,
+                    icon: const Icon(Symbols.add),
+                    color: scheme.onSurface,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
