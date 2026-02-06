@@ -24,6 +24,10 @@ Future<String?> getLyricFromPath({required String path}) =>
     RustLib.instance.api.crateApiTagReaderGetLyricFromPath(path: path);
 
 /// for Flutter
+Future<String> readAudioExtraMetadata({required String path}) =>
+    RustLib.instance.api.crateApiTagReaderReadAudioExtraMetadata(path: path);
+
+/// for Flutter
 /// 扫描给定路径下所有子文件夹（包括自己）的音乐文件并把索引保存在 index_path/index.json。
 Stream<IndexActionState> buildIndexFromFoldersRecursively(
         {required List<String> folders, required String indexPath}) =>

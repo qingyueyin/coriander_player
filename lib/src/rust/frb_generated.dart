@@ -75,7 +75,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 36203228;
+  int get rustContentHash => 36203229;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -117,6 +117,8 @@ abstract class RustLibApi extends BaseApi {
 
   Future<Uint8List?> crateApiTagReaderGetPictureFromPath(
       {required String path, required int width, required int height});
+
+  Future<String> crateApiTagReaderReadAudioExtraMetadata({required String path});
 
   Stream<String> crateApiLoggerInitRustLogger();
 
@@ -446,6 +448,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "get_picture_from_path",
         argNames: ["path", "width", "height"],
+      );
+
+  @override
+  Future<String> crateApiTagReaderReadAudioExtraMetadata({required String path}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(path, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 23, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiTagReaderReadAudioExtraMetadataConstMeta,
+      argValues: [path],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiTagReaderReadAudioExtraMetadataConstMeta =>
+      const TaskConstMeta(
+        debugName: "read_audio_extra_metadata",
+        argNames: ["path"],
       );
 
   @override

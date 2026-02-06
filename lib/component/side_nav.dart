@@ -61,12 +61,6 @@ class _SideNavState extends State<SideNav> {
       AppPreference.instance.save();
     }
 
-    final toggleBtnStyle = IconButton.styleFrom(
-      backgroundColor: scheme.surfaceContainerHigh,
-      foregroundColor: scheme.onSurface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-    );
-
     return ResponsiveBuilder(
       builder: (context, screenType) {
         switch (screenType) {
@@ -106,22 +100,18 @@ class _SideNavState extends State<SideNav> {
                     width: 220.0,
                     child: NavigationDrawer(
                       backgroundColor: scheme.surfaceContainer,
-                      selectedIndex: selectedIndex,
-                      onDestinationSelected: onDestinationSelected,
+                      selectedIndex: selectedIndex == null ? null : selectedIndex + 1,
+                      onDestinationSelected: (value) {
+                        if (value == 0) {
+                          toggleSidebar();
+                          return;
+                        }
+                        onDestinationSelected(value - 1);
+                      },
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-                          child: Row(
-                            children: [
-                              IconButton.filledTonal(
-                                style: toggleBtnStyle,
-                                onPressed: toggleSidebar,
-                                icon: const Icon(Symbols.menu_open),
-                                tooltip: "收起侧边栏",
-                              ),
-                              const Spacer(),
-                            ],
-                          ),
+                        const NavigationDrawerDestination(
+                          icon: Icon(Symbols.menu_open),
+                          label: Text("收起侧边栏"),
                         ),
                         ...List.generate(
                           destinations.length,
@@ -129,7 +119,7 @@ class _SideNavState extends State<SideNav> {
                             icon: Icon(destinations[i].icon),
                             label: Text(destinations[i].label),
                           ),
-                        ),
+                        )
                       ],
                     ),
                   );
@@ -137,24 +127,26 @@ class _SideNavState extends State<SideNav> {
                   return NavigationRail(
                     backgroundColor: scheme.surfaceContainer,
                     minWidth: 72.0,
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: onDestinationSelected,
+                    selectedIndex: selectedIndex == null ? null : selectedIndex + 1,
+                    onDestinationSelected: (value) {
+                      if (value == 0) {
+                        toggleSidebar();
+                        return;
+                      }
+                      onDestinationSelected(value - 1);
+                    },
                     extended: false,
-                    leading: Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: IconButton.filledTonal(
-                        style: toggleBtnStyle,
-                        onPressed: toggleSidebar,
-                        icon: const Icon(Symbols.menu),
-                        tooltip: "展开侧边栏",
-                      ),
-                    ),
                     destinations: List.generate(
-                      destinations.length,
-                      (i) => NavigationRailDestination(
-                        icon: Icon(destinations[i].icon),
-                        label: Text(destinations[i].label),
-                      ),
+                      destinations.length + 1,
+                      (i) => i == 0
+                          ? const NavigationRailDestination(
+                              icon: Icon(Symbols.menu),
+                              label: Text("展开"),
+                            )
+                          : NavigationRailDestination(
+                              icon: Icon(destinations[i - 1].icon),
+                              label: Text(destinations[i - 1].label),
+                            ),
                     ),
                   );
                 }
