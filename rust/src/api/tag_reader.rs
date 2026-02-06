@@ -24,6 +24,84 @@ use crate::frb_generated::StreamSink;
 use super::library_db;
 use super::logger::log_to_dart;
 
+/// for Flutter
+pub fn read_audio_extra_metadata(path: String) -> String {
+    let file_size = fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+    let extension = Path::new(&path)
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_string();
+
+    let mut root = serde_json::Map::new();
+    root.insert("extension".to_string(), serde_json::Value::String(extension));
+    root.insert(
+        "file_size".to_string(),
+        serde_json::Value::Number(file_size.into()),
+    );
+
+    let mut items: Vec<serde_json::Value> = vec![];
+
+    if let Ok(tagged_file) = lofty::read_from_path(&path) {
+        let props = tagged_file.properties();
+        if let Some(ch) = props.channels() {
+            root.insert(
+                "channels".to_string(),
+                serde_json::Value::Number((ch as u64).into()),
+            );
+        }
+        if let Some(bd) = props.bit_depth() {
+            root.insert(
+                "bit_depth".to_string(),
+                serde_json::Value::Number((bd as u64).into()),
+            );
+        }
+
+        if let Some(tag) = tagged_file.primary_tag().or_else(|| tagged_file.first_tag()) {
+            let mut push_kv = |key: &str, val: Option<&str>| {
+                if let Some(v) = val {
+                    if !v.trim().is_empty() {
+                        let mut m = serde_json::Map::new();
+                        m.insert(
+                            "key".to_string(),
+                            serde_json::Value::String(key.to_string()),
+                        );
+                        m.insert(
+                            "value".to_string(),
+                            serde_json::Value::String(v.to_string()),
+                        );
+                        items.push(serde_json::Value::Object(m));
+                    }
+                }
+            };
+
+            push_kv(
+                "genre",
+                tag.get(&ItemKey::Genre).and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "date",
+                tag.get(&ItemKey::RecordingDate).and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "disc",
+                tag.get(&ItemKey::DiscNumber).and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "composer",
+                tag.get(&ItemKey::Composer).and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "comment",
+                tag.get(&ItemKey::Comment).and_then(|v| v.value().text()),
+            );
+        }
+    }
+
+    root.insert("items".to_string(), serde_json::Value::Array(items));
+    serde_json::Value::Object(root).to_string()
+}
+
 /// K: extension, V: can read tags by using Lofty
 static SUPPORT_FORMAT: phf::Map<&'static str, bool> = phf::phf_map! {
     "mp3" => true, "mp2" => false, "mp1" => false,
