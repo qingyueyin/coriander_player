@@ -51,6 +51,7 @@ class _AppShell_Large extends StatelessWidget {
   const _AppShell_Large({required this.page});
 
   final Widget page;
+  static const double _collapsedSidebarWidth = 80.0;
 
   @override
   Widget build(BuildContext context) {
@@ -61,19 +62,29 @@ class _AppShell_Large extends StatelessWidget {
         preferredSize: Size.fromHeight(48.0),
         child: TitleBar(),
       ),
-      body: Row(
+      body: Stack(
         children: [
-          const SideNav(),
-          Expanded(
-            child: Stack(children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(8.0),
-                ),
-                child: page,
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.only(left: _collapsedSidebarWidth),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(8.0),
+                    ),
+                    child: page,
+                  ),
+                  const MiniNowPlaying(),
+                ],
               ),
-              const MiniNowPlaying()
-            ]),
+            ),
+          ),
+          const Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: SideNav(),
           ),
         ],
       ),

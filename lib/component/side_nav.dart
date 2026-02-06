@@ -139,66 +139,84 @@ class _SmoothLargeSideNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = expanded ? _expandedWidth : _collapsedWidth;
     final iconLeft = (_collapsedWidth - _iconSize) / 2;
 
-    return AnimatedContainer(
-      duration: MotionDuration.medium,
-      curve: MotionCurve.emphasized,
-      width: width,
-      decoration: BoxDecoration(color: colorScheme.surfaceContainer),
-      child: ClipRect(
-        child: OverflowBox(
-          alignment: Alignment.centerLeft,
-          minWidth: _expandedWidth,
-          maxWidth: _expandedWidth,
-          child: TweenAnimationBuilder<double>(
-            duration: MotionDuration.medium,
-            curve: MotionCurve.emphasized,
-            tween: Tween(begin: 0.0, end: expanded ? 1.0 : 0.0),
-            builder: (context, t, _) {
-              return Column(
-                children: [
-                  const SizedBox(height: 12),
-                  _NavItem(
-                    height: _itemHeight,
-                    iconLeft: iconLeft,
-                    icon: expanded ? Symbols.menu_open : Symbols.menu,
-                    label: "侧边栏",
-                    expandedT: t,
-                    selected: false,
-                    onTap: onToggle,
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      itemCount: destinations.length,
-                      itemBuilder: (context, i) {
-                        final selected = selectedIndex == i;
-                        return _NavItem(
-                          height: _itemHeight,
-                          iconLeft: iconLeft,
-                          icon: destinations[i].icon,
-                          label: destinations[i].label,
-                          expandedT: t,
-                          selected: selected,
-                          onTap: () {
-                            onSelect(i);
-                            final scaffold = Scaffold.of(context);
-                            if (scaffold.hasDrawer) scaffold.closeDrawer();
+    return RepaintBoundary(
+      child: SizedBox(
+        width: _expandedWidth,
+        child: TweenAnimationBuilder<double>(
+          duration: MotionDuration.medium,
+          curve: MotionCurve.emphasized,
+          tween: Tween(begin: 0.0, end: expanded ? 1.0 : 0.0),
+          builder: (context, t, _) {
+            final visibleWidth =
+                (lerpDouble(_collapsedWidth, _expandedWidth, t) ?? _collapsedWidth)
+                    .clamp(_collapsedWidth, _expandedWidth);
+            return ClipRect(
+              clipper: _SidebarClipper(width: visibleWidth),
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: colorScheme.surfaceContainer),
+                child: OverflowBox(
+                  alignment: Alignment.centerLeft,
+                  minWidth: _expandedWidth,
+                  maxWidth: _expandedWidth,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      _NavItem(
+                        height: _itemHeight,
+                        iconLeft: iconLeft,
+                        icon: expanded ? Symbols.menu_open : Symbols.menu,
+                        label: "侧边栏",
+                        expandedT: t,
+                        selected: false,
+                        onTap: onToggle,
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          itemCount: destinations.length,
+                          itemBuilder: (context, i) {
+                            final selected = selectedIndex == i;
+                            return _NavItem(
+                              height: _itemHeight,
+                              iconLeft: iconLeft,
+                              icon: destinations[i].icon,
+                              label: destinations[i].label,
+                              expandedT: t,
+                              selected: selected,
+                              onTap: () {
+                                onSelect(i);
+                                final scaffold = Scaffold.of(context);
+                                if (scaffold.hasDrawer) scaffold.closeDrawer();
+                              },
+                            );
                           },
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              );
-            },
-          ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
+  }
+}
+
+class _SidebarClipper extends CustomClipper<Rect> {
+  final double width;
+  const _SidebarClipper({required this.width});
+
+  @override
+  Rect getClip(Size size) => Rect.fromLTWH(0, 0, width, size.height);
+
+  @override
+  bool shouldReclip(covariant _SidebarClipper oldClipper) {
+    return (oldClipper.width - width).abs() > 0.1;
   }
 }
 
@@ -230,11 +248,12 @@ class _NavItem extends StatelessWidget {
     final fg = selected ? scheme.onSecondaryContainer : scheme.onSurface;
     final textOpacity = expandedT.clamp(0.0, 1.0);
     final dx = lerpDouble(-12, 0, expandedT) ?? 0.0;
+    const hPad = 10.0;
 
     return SizedBox(
       height: height,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: hPad, vertical: 4),
         child: Material(
           color: bg,
           borderRadius: BorderRadius.circular(14),
@@ -245,7 +264,7 @@ class _NavItem extends StatelessWidget {
               alignment: Alignment.centerLeft,
               children: [
                 Positioned(
-                  left: iconLeft,
+                  left: iconLeft - hPad,
                   child: Icon(icon, size: 24, color: fg.withValues(alpha: 0.90)),
                 ),
                 Positioned(

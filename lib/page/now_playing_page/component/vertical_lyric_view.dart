@@ -134,6 +134,8 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
   LyricViewController? _lyricViewController;
   Timer? _ensureVisibleTimer;
   Timer? _userScrollHoldTimer;
+  Timer? _sizeChangeTimer;
+  double _lastHeight = 0.0;
   bool _userScrolling = false;
   static const double _fadeExtent = 0.12;
   int _mainLine = 0;
@@ -179,6 +181,10 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
     final to = targetOffset.clamp(minExtent, maxExtent);
     final dist = (to - from).abs();
     if (dist < 0.5) return;
+    if (duration != null && duration.inMilliseconds <= 16) {
+      scrollController.jumpTo(to);
+      return;
+    }
     final computed = duration ??
         Duration(
           milliseconds: (280 + dist * 0.22).round().clamp(320, 650),
@@ -268,6 +274,15 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
+      final h = constraints.maxHeight;
+      if ((_lastHeight - h).abs() > 1.0) {
+        _lastHeight = h;
+        _sizeChangeTimer?.cancel();
+        _sizeChangeTimer = Timer(const Duration(milliseconds: 40), () {
+          if (!mounted) return;
+          _scrollToCurrent(const Duration(milliseconds: 1));
+        });
+      }
       final spacerHeight = constraints.maxHeight / 2.0;
       return RepaintBoundary(
         child: ShaderMask(
@@ -331,6 +346,7 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
     super.dispose();
     _ensureVisibleTimer?.cancel();
     _userScrollHoldTimer?.cancel();
+    _sizeChangeTimer?.cancel();
     _lyricViewController?.removeListener(_scheduleEnsureCurrentVisible);
     lyricLineStreamSubscription.cancel();
     scrollController.dispose();

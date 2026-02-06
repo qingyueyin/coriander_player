@@ -16,6 +16,8 @@ class LyricService extends ChangeNotifier {
 
   late StreamSubscription _positionStreamSubscription;
   double _lastPos = 0.0;
+  Lyric? _currLyric;
+  List<int> _lineStartMs = const [];
   LyricService(this.playService) {
     _positionStreamSubscription =
         playService.playbackService.positionStream.listen((pos) {
@@ -25,23 +27,25 @@ class LyricService extends ChangeNotifier {
         findCurrLyricLineAt(pos);
         return;
       }
-      currLyricFuture.then((value) {
-        if (value == null) return;
-        if (_nextLyricLine >= value.lines.length) return;
+      final lyric = _currLyric;
+      if (lyric == null) return;
+      if (_nextLyricLine >= lyric.lines.length) return;
 
-        if ((pos * 1000) > value.lines[_nextLyricLine].start.inMilliseconds) {
-          _nextLyricLine += 1;
+      final posMs = (pos * 1000).round();
+      while (_nextLyricLine < _lineStartMs.length &&
+          posMs > _lineStartMs[_nextLyricLine]) {
+        _nextLyricLine += 1;
+      }
 
-          final currLineIndex = _nextLyricLine - 1;
-          _lyricLineStreamController.add(currLineIndex);
+      final currLineIndex = _nextLyricLine - 1;
+      if (currLineIndex < 0 || currLineIndex >= lyric.lines.length) return;
+      _lyricLineStreamController.add(currLineIndex);
 
-          playService.desktopLyricService.canSendMessage.then((canSend) {
-            if (!canSend) return;
-
-            final currLine = value.lines[currLineIndex];
-            playService.desktopLyricService.sendLyricLineMessage(currLine);
-          });
-        }
+      playService.desktopLyricService.canSendMessage.then((canSend) {
+        if (!canSend) return;
+        playService.desktopLyricService.sendLyricLineMessage(
+          lyric.lines[currLineIndex],
+        );
       });
     });
   }
@@ -67,26 +71,49 @@ class LyricService extends ChangeNotifier {
   }
 
   void findCurrLyricLineAt(double positionSeconds) {
-    currLyricFuture.then((value) {
-      if (value == null) return;
-
-      final next = value.lines.indexWhere(
-        (element) =>
-            element.start.inMilliseconds / 1000 >
-            positionSeconds,
-      );
-      _nextLyricLine = next == -1 ? value.lines.length : next;
-      final currLineIndex = max(_nextLyricLine - 1, 0);
-      _lyricLineStreamController.add(currLineIndex);
-
-      if (currLineIndex < 0 || currLineIndex >= value.lines.length) return;
-      playService.desktopLyricService.canSendMessage.then((canSend) {
-        if (!canSend) return;
-        playService.desktopLyricService.sendLyricLineMessage(
-          value.lines[currLineIndex],
-        );
+    final lyric = _currLyric;
+    if (lyric == null) {
+      currLyricFuture.then((value) {
+        if (value == null) return;
+        _setCurrLyric(value);
+        findCurrLyricLineAt(positionSeconds);
       });
+      return;
+    }
+
+    final posMs = (positionSeconds * 1000).round();
+    final next = _lowerBoundGreater(_lineStartMs, posMs);
+    _nextLyricLine = next == -1 ? lyric.lines.length : next;
+    final currLineIndex = max(_nextLyricLine - 1, 0);
+    _lyricLineStreamController.add(currLineIndex);
+
+    if (currLineIndex < 0 || currLineIndex >= lyric.lines.length) return;
+    playService.desktopLyricService.canSendMessage.then((canSend) {
+      if (!canSend) return;
+      playService.desktopLyricService.sendLyricLineMessage(
+        lyric.lines[currLineIndex],
+      );
     });
+  }
+
+  int _lowerBoundGreater(List<int> arr, int x) {
+    if (arr.isEmpty) return -1;
+    int lo = 0;
+    int hi = arr.length;
+    while (lo < hi) {
+      final mid = (lo + hi) >> 1;
+      if (arr[mid] > x) {
+        hi = mid;
+      } else {
+        lo = mid + 1;
+      }
+    }
+    return lo >= arr.length ? -1 : lo;
+  }
+
+  void _setCurrLyric(Lyric lyric) {
+    _currLyric = lyric;
+    _lineStartMs = lyric.lines.map((e) => e.start.inMilliseconds).toList();
   }
 
   Future<Lyric?> _getLyricDefault(bool localFirst) async {
@@ -109,6 +136,8 @@ class LyricService extends ChangeNotifier {
     if (nowPlaying == null) return;
 
     currLyricFuture.ignore();
+    _currLyric = null;
+    _lineStartMs = const [];
 
     final lyricSource = LYRIC_SOURCES[nowPlaying.path];
     if (lyricSource == null) {
@@ -126,7 +155,10 @@ class LyricService extends ChangeNotifier {
     }
 
     currLyricFuture.then((value) {
+      if (value == null) return;
       _nextLyricLine = 0;
+      _setCurrLyric(value);
+      findCurrLyricLineAt(playService.playbackService.position);
     });
 
     notifyListeners();
@@ -137,9 +169,13 @@ class LyricService extends ChangeNotifier {
     if (nowPlaying == null) return;
 
     currLyricFuture.ignore();
+    _currLyric = null;
+    _lineStartMs = const [];
 
     currLyricFuture = Lrc.fromAudioPath(nowPlaying);
     currLyricFuture.then((value) {
+      if (value == null) return;
+      _setCurrLyric(value);
       findCurrLyricLine();
     });
 
@@ -151,9 +187,13 @@ class LyricService extends ChangeNotifier {
     if (nowPlaying == null) return;
 
     currLyricFuture.ignore();
+    _currLyric = null;
+    _lineStartMs = const [];
 
     currLyricFuture = getMostMatchedLyric(nowPlaying);
     currLyricFuture.then((value) {
+      if (value == null) return;
+      _setCurrLyric(value);
       findCurrLyricLine();
     });
 
@@ -165,6 +205,8 @@ class LyricService extends ChangeNotifier {
 
     currLyricFuture = Future.value(lyric);
     currLyricFuture.then((value) {
+      if (value == null) return;
+      _setCurrLyric(value);
       findCurrLyricLine();
     });
 

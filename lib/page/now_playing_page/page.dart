@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:coriander_player/app_preference.dart';
@@ -38,6 +39,91 @@ final NOW_PLAYING_VIEW_MODE = ValueNotifier(
   AppPreference.instance.nowPlayingPagePref.nowPlayingViewMode,
 );
 
+class _MeshBackgroundPainter extends CustomPainter {
+  final ColorScheme scheme;
+  final Brightness brightness;
+  final Animation<double> animation;
+
+  _MeshBackgroundPainter({
+    required this.scheme,
+    required this.brightness,
+    required Listenable repaint,
+  })  : animation = repaint as Animation<double>,
+        super(repaint: repaint);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    if (!w.isFinite || !h.isFinite || w <= 1 || h <= 1) return;
+
+    final t = animation.value * 6.283185307179586;
+    final alphaBase = brightness == Brightness.dark ? 0.20 : 0.16;
+    final blur = brightness == Brightness.dark ? 120.0 : 140.0;
+
+    void circle({
+      required Color color,
+      required Offset center,
+      required double radius,
+      double alpha = 1.0,
+    }) {
+      final paint = Paint()
+        ..color = color.withValues(alpha: (alphaBase * alpha).clamp(0.0, 1.0))
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, blur);
+      canvas.drawCircle(center, radius, paint);
+    }
+
+    circle(
+      color: scheme.primary,
+      center: Offset(
+        w * (0.22 + 0.10 * sin(t * 0.9 + 0.2)),
+        h * (0.25 + 0.10 * cos(t * 0.7 + 0.8)),
+      ),
+      radius: w * 0.45,
+      alpha: 1.0,
+    );
+    circle(
+      color: scheme.tertiary,
+      center: Offset(
+        w * (0.78 + 0.10 * cos(t * 0.8 + 1.6)),
+        h * (0.20 + 0.12 * sin(t * 0.6 + 0.4)),
+      ),
+      radius: w * 0.40,
+      alpha: 0.95,
+    );
+    circle(
+      color: scheme.secondary,
+      center: Offset(
+        w * (0.62 + 0.14 * sin(t * 0.65 + 2.2)),
+        h * (0.78 + 0.10 * cos(t * 0.55 + 1.1)),
+      ),
+      radius: w * 0.52,
+      alpha: 0.85,
+    );
+    circle(
+      color: scheme.primaryContainer,
+      center: Offset(
+        w * (0.30 + 0.10 * cos(t * 0.5 + 0.6)),
+        h * (0.78 + 0.14 * sin(t * 0.7 + 2.8)),
+      ),
+      radius: w * 0.36,
+      alpha: 0.70,
+    );
+
+    final overlay = Paint()
+      ..color = (brightness == Brightness.dark
+              ? Colors.black.withValues(alpha: 0.10)
+              : Colors.white.withValues(alpha: 0.06))
+          .withValues(alpha: 1.0);
+    canvas.drawRect(Offset.zero & size, overlay);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MeshBackgroundPainter oldDelegate) {
+    return oldDelegate.scheme != scheme || oldDelegate.brightness != brightness;
+  }
+}
+
 class NowPlayingPage extends StatefulWidget {
   const NowPlayingPage({super.key});
 
@@ -45,13 +131,15 @@ class NowPlayingPage extends StatefulWidget {
   State<NowPlayingPage> createState() => _NowPlayingPageState();
 }
 
-class _NowPlayingPageState extends State<NowPlayingPage> {
+class _NowPlayingPageState extends State<NowPlayingPage>
+    with SingleTickerProviderStateMixin {
   final playbackService = PlayService.instance.playbackService;
   ImageProvider<Object>? nowPlayingCover;
   ImageProvider<Object>? nowPlayingBgCover;
   String? _nowPlayingCoverPath;
   Timer? _coverDebounceTimer;
   Timer? _cursorHideTimer;
+  late final AnimationController _bgController;
   bool _cursorHidden = false;
   bool _lastImmersive = false;
 
@@ -62,7 +150,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
         _cursorHidden = false;
       });
     }
-    _cursorHideTimer = Timer(const Duration(milliseconds: 1800), () {
+    _cursorHideTimer = Timer(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
       setState(() {
         _cursorHidden = true;
@@ -114,6 +202,10 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   @override
   void initState() {
     super.initState();
+    _bgController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 22),
+    )..repeat();
     playbackService.addListener(updateCover);
     updateCover();
     _bumpCursor();
@@ -122,6 +214,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   @override
   void dispose() {
     playbackService.removeListener(updateCover);
+    _bgController.dispose();
     _coverDebounceTimer?.cancel();
     _cursorHideTimer?.cancel();
     super.dispose();
@@ -188,6 +281,16 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                         fit: StackFit.expand,
                         children: [
                           ColoredBox(color: scheme.surface),
+                          RepaintBoundary(
+                            child: CustomPaint(
+                              painter: _MeshBackgroundPainter(
+                                scheme: scheme,
+                                brightness: brightness,
+                                repaint: _bgController,
+                              ),
+                              child: const SizedBox.expand(),
+                            ),
+                          ),
                           AnimatedSwitcher(
                             duration: const Duration(milliseconds: 560),
                             switchInCurve: Curves.easeInOutCubic,
@@ -217,17 +320,20 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                                     child: Stack(
                                       fit: StackFit.expand,
                                       children: [
-                                        ImageFiltered(
-                                          imageFilter: ImageFilter.blur(
-                                            sigmaX: 24,
-                                            sigmaY: 24,
-                                          ),
-                                          child: Image(
-                                            image: nowPlayingBgCover ?? nowPlayingCover!,
-                                            fit: BoxFit.cover,
-                                            filterQuality: FilterQuality.low,
-                                            errorBuilder: (_, __, ___) =>
-                                                const SizedBox.shrink(),
+                                        Opacity(
+                                          opacity: 0.24,
+                                          child: ImageFiltered(
+                                            imageFilter: ImageFilter.blur(
+                                              sigmaX: 22,
+                                              sigmaY: 22,
+                                            ),
+                                            child: Image(
+                                              image: nowPlayingBgCover ?? nowPlayingCover!,
+                                              fit: BoxFit.cover,
+                                              filterQuality: FilterQuality.low,
+                                              errorBuilder: (_, __, ___) =>
+                                                  const SizedBox.shrink(),
+                                            ),
                                           ),
                                         ),
                                         DecoratedBox(
