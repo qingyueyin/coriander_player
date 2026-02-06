@@ -1,5 +1,7 @@
 // ignore_for_file: camel_case_types
 
+import 'dart:ui';
+
 import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/component/motion.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
@@ -33,6 +35,10 @@ class SideNav extends StatefulWidget {
 
 class _SideNavState extends State<SideNav> {
   final sidebarExpanded = ValueNotifier(AppPreference.instance.sidebarExpanded);
+  static const double _collapsedWidth = 80.0;
+  static const double _expandedWidth = 240.0;
+  static const double _iconSize = 24.0;
+  static const double _itemHeight = 54.0;
 
   @override
   Widget build(BuildContext context) {
@@ -96,96 +102,181 @@ class _SideNavState extends State<SideNav> {
             return ValueListenableBuilder(
               valueListenable: sidebarExpanded,
               builder: (context, expanded, _) {
-                final Widget child = expanded
-                    ? SizedBox(
-                        key: const ValueKey("sidebar_drawer"),
-                        width: 240.0,
-                        child: NavigationDrawer(
-                          backgroundColor: scheme.surfaceContainer,
-                          selectedIndex:
-                              selectedIndex == null ? null : selectedIndex + 1,
-                          onDestinationSelected: (value) {
-                            if (value == 0) {
-                              toggleSidebar();
-                              return;
-                            }
-                            onDestinationSelected(value - 1);
-                          },
-                          children: [
-                            const NavigationDrawerDestination(
-                              icon: Icon(Symbols.menu_open),
-                              label: Text("收起侧边栏"),
-                            ),
-                            ...List.generate(
-                              destinations.length,
-                              (i) => NavigationDrawerDestination(
-                                icon: Icon(destinations[i].icon),
-                                label: Text(destinations[i].label),
-                              ),
-                            )
-                          ],
-                        ),
-                      )
-                    : SizedBox(
-                        key: const ValueKey("sidebar_rail"),
-                        width: 80.0,
-                        child: NavigationRail(
-                          backgroundColor: scheme.surfaceContainer,
-                          minWidth: 80.0,
-                          selectedIndex:
-                              selectedIndex == null ? null : selectedIndex + 1,
-                          onDestinationSelected: (value) {
-                            if (value == 0) {
-                              toggleSidebar();
-                              return;
-                            }
-                            onDestinationSelected(value - 1);
-                          },
-                          extended: false,
-                          destinations: List.generate(
-                            destinations.length + 1,
-                            (i) => i == 0
-                                ? const NavigationRailDestination(
-                                    icon: Icon(Symbols.menu),
-                                    label: Text("展开"),
-                                  )
-                                : NavigationRailDestination(
-                                    icon: Icon(destinations[i - 1].icon),
-                                    label: Text(destinations[i - 1].label),
-                                  ),
-                          ),
-                        ),
-                      );
-
-                return ClipRect(
-                  child: AnimatedSize(
-                    duration: MotionDuration.slow,
-                    curve: MotionCurve.standard,
-                    alignment: Alignment.centerLeft,
-                    child: AnimatedSwitcher(
-                      duration: MotionDuration.base,
-                      switchInCurve: MotionCurve.standard,
-                      switchOutCurve: MotionCurve.standard,
-                      transitionBuilder: (child, animation) {
-                        final offsetAnimation =
-                            Tween(begin: const Offset(0.06, 0.0), end: Offset.zero)
-                                .animate(animation);
-                        return FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: offsetAnimation,
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: child,
-                    ),
-                  ),
+                return _SmoothLargeSideNav(
+                  expanded: expanded,
+                  colorScheme: scheme,
+                  selectedIndex: selectedIndex,
+                  onToggle: toggleSidebar,
+                  onSelect: onDestinationSelected,
                 );
               },
             );
         }
       },
+    );
+  }
+}
+
+class _SmoothLargeSideNav extends StatelessWidget {
+  const _SmoothLargeSideNav({
+    required this.expanded,
+    required this.colorScheme,
+    required this.selectedIndex,
+    required this.onToggle,
+    required this.onSelect,
+  });
+
+  final bool expanded;
+  final ColorScheme colorScheme;
+  final int? selectedIndex;
+  final VoidCallback onToggle;
+  final void Function(int) onSelect;
+
+  static const double _collapsedWidth = _SideNavState._collapsedWidth;
+  static const double _expandedWidth = _SideNavState._expandedWidth;
+  static const double _iconSize = _SideNavState._iconSize;
+  static const double _itemHeight = _SideNavState._itemHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = expanded ? _expandedWidth : _collapsedWidth;
+    final iconLeft = (_collapsedWidth - _iconSize) / 2;
+
+    return AnimatedContainer(
+      duration: MotionDuration.medium,
+      curve: MotionCurve.emphasized,
+      width: width,
+      decoration: BoxDecoration(color: colorScheme.surfaceContainer),
+      child: ClipRect(
+        child: OverflowBox(
+          alignment: Alignment.centerLeft,
+          minWidth: _expandedWidth,
+          maxWidth: _expandedWidth,
+          child: TweenAnimationBuilder<double>(
+            duration: MotionDuration.medium,
+            curve: MotionCurve.emphasized,
+            tween: Tween(begin: 0.0, end: expanded ? 1.0 : 0.0),
+            builder: (context, t, _) {
+              return Column(
+                children: [
+                  const SizedBox(height: 12),
+                  _NavItem(
+                    height: _itemHeight,
+                    iconLeft: iconLeft,
+                    icon: expanded ? Symbols.menu_open : Symbols.menu,
+                    label: "侧边栏",
+                    expandedT: t,
+                    selected: false,
+                    onTap: onToggle,
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      itemCount: destinations.length,
+                      itemBuilder: (context, i) {
+                        final selected = selectedIndex == i;
+                        return _NavItem(
+                          height: _itemHeight,
+                          iconLeft: iconLeft,
+                          icon: destinations[i].icon,
+                          label: destinations[i].label,
+                          expandedT: t,
+                          selected: selected,
+                          onTap: () {
+                            onSelect(i);
+                            final scaffold = Scaffold.of(context);
+                            if (scaffold.hasDrawer) scaffold.closeDrawer();
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.height,
+    required this.iconLeft,
+    required this.icon,
+    required this.label,
+    required this.expandedT,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final double height;
+  final double iconLeft;
+  final IconData icon;
+  final String label;
+  final double expandedT;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final bg = selected
+        ? scheme.secondaryContainer.withValues(alpha: 0.85)
+        : Colors.transparent;
+    final fg = selected ? scheme.onSecondaryContainer : scheme.onSurface;
+    final textOpacity = expandedT.clamp(0.0, 1.0);
+    final dx = lerpDouble(-12, 0, expandedT) ?? 0.0;
+
+    return SizedBox(
+      height: height,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        child: Material(
+          color: bg,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: onTap,
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                Positioned(
+                  left: iconLeft,
+                  child: Icon(icon, size: 24, color: fg.withValues(alpha: 0.90)),
+                ),
+                Positioned(
+                  left: 56,
+                  right: 12,
+                  child: IgnorePointer(
+                    ignoring: expandedT < 0.98,
+                    child: Opacity(
+                      opacity: textOpacity,
+                      child: Transform.translate(
+                        offset: Offset(dx, 0),
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                          softWrap: false,
+                          style: TextStyle(
+                            color: fg,
+                            fontSize: 14.5,
+                            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
