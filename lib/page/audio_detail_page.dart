@@ -71,7 +71,7 @@ class AudioDetailPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 FutureBuilder(
                   future: audio.mediumCover,
@@ -101,55 +101,123 @@ class AudioDetailPage extends StatelessWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(audio.title, style: styleTitle),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            "歌名：",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: scheme.onSurface.withValues(alpha: 0.70),
+                            ),
+                          ),
+                          ActionChip(
+                            label: Text(
+                              audio.title,
+                              style: styleTitle.copyWith(fontSize: 15),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: false,
+                            ),
+                            onPressed: () async {
+                              await Clipboard.setData(
+                                ClipboardData(text: audio.title),
+                              );
+                              showTextOnSnackBar("已复制歌名");
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            "歌手：",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: scheme.onSurface.withValues(alpha: 0.70),
+                            ),
+                          ),
+                          ...audio.splitedArtists.map((name) {
+                            final artist =
+                                AudioLibrary.instance.artistCollection[name];
+                            if (artist == null) return const SizedBox.shrink();
+                            return ActionChip(
+                              label: Text(
+                                name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                softWrap: false,
+                              ),
+                              onPressed: () => context.push(
+                                app_paths.ARTIST_DETAIL_PAGE,
+                                extra: artist,
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            "专辑：",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: scheme.onSurface.withValues(alpha: 0.70),
+                            ),
+                          ),
+                          ActionChip(
+                            label: Text(
+                              audio.album,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: false,
+                            ),
+                            onPressed: () => context.push(
+                              app_paths.ALBUM_DETAIL_PAGE,
+                              extra: album,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          IconButton(
+                            tooltip: "在文件资源管理器中显示",
+                            onPressed: () async {
+                              final result = await showInExplorer(path: audio.path);
+                              if (!result && context.mounted) {
+                                showTextOnSnackBar("打开失败");
+                              }
+                            },
+                            icon: const Icon(Symbols.folder_open),
+                          ),
+                          IconButton(
+                            tooltip: "复制路径",
+                            onPressed: () async {
+                              await Clipboard.setData(ClipboardData(text: audio.path));
+                              showTextOnSnackBar("已复制");
+                            },
+                            icon: const Icon(Symbols.content_copy),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                ...audio.splitedArtists.map((name) {
-                  final artist = AudioLibrary.instance.artistCollection[name];
-                  if (artist == null) return const SizedBox.shrink();
-                  return ActionChip(
-                    label: Text(name),
-                    onPressed: () => context.push(
-                      app_paths.ARTIST_DETAIL_PAGE,
-                      extra: artist,
-                    ),
-                  );
-                }),
-                ActionChip(
-                  label: Text(audio.album),
-                  onPressed: () => context.push(
-                    app_paths.ALBUM_DETAIL_PAGE,
-                    extra: album,
-                  ),
-                ),
-                IconButton(
-                  tooltip: "在文件资源管理器中显示",
-                  onPressed: () async {
-                    final result = await showInExplorer(path: audio.path);
-                    if (!result && context.mounted) {
-                      showTextOnSnackBar("打开失败");
-                    }
-                  },
-                  icon: const Icon(Symbols.folder_open),
-                ),
-                IconButton(
-                  tooltip: "复制路径",
-                  onPressed: () async {
-                    await Clipboard.setData(ClipboardData(text: audio.path));
-                    showTextOnSnackBar("已复制");
-                  },
-                  icon: const Icon(Symbols.content_copy),
                 ),
               ],
             ),
@@ -240,20 +308,40 @@ class AudioDetailPage extends StatelessWidget {
                                 }
                                 final List items = (data["items"] as List?) ?? const [];
                                 final chips = <Widget>[];
+                                void addChip(String text) {
+                                  chips.add(_InfoChip(text: text));
+                                }
+                                addChip("trk: ${audio.track}");
+                                addChip(
+                                  "dur: ${Duration(milliseconds: (audio.duration * 1000).toInt()).toStringHMMSS()}",
+                                );
+                                if (audio.bitrate != null) {
+                                  addChip("br: ${audio.bitrate} kbps");
+                                }
+                                if (audio.sampleRate != null) {
+                                  addChip("sr: ${audio.sampleRate} hz");
+                                }
+                                addChip(
+                                  "fmt: ${p.extension(audio.path).replaceFirst('.', '').toUpperCase()}",
+                                );
+                                final fileSize = data["file_size"];
+                                if (fileSize is num && fileSize.toInt() > 0) {
+                                  addChip("size: ${_formatBytes(fileSize.toInt())}");
+                                }
                                 final bd = data["bit_depth"];
                                 final ch = data["channels"];
                                 if (bd != null) {
-                                  chips.add(_InfoChip(text: "bit: $bd"));
+                                  addChip("bit: $bd");
                                 }
                                 if (ch != null) {
-                                  chips.add(_InfoChip(text: "ch: $ch"));
+                                  addChip("ch: $ch");
                                 }
                                 for (final item in items) {
                                   if (item is! Map) continue;
                                   final k = item["key"];
                                   final v = item["value"];
                                   if (k is! String || v is! String) continue;
-                                  chips.add(_InfoChip(text: "$k: $v"));
+                                  addChip("$k: $v");
                                 }
                                 if (chips.isEmpty) {
                                   return Text("-", style: styleContent);
@@ -360,6 +448,9 @@ class _InfoChip extends StatelessWidget {
             fontSize: 12,
             height: 1.1,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          softWrap: false,
         ),
       ),
     );

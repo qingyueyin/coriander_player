@@ -75,6 +75,9 @@ pub fn read_audio_extra_metadata(path: String) -> String {
                 }
             };
 
+            let track_artist = tag.get_strings(&ItemKey::TrackArtist).collect::<Vec<_>>().join("/");
+            let album_artist = tag.get_strings(&ItemKey::AlbumArtist).collect::<Vec<_>>().join("/");
+
             push_kv(
                 "genre",
                 tag.get(&ItemKey::Genre).and_then(|v| v.value().text()),
@@ -84,16 +87,109 @@ pub fn read_audio_extra_metadata(path: String) -> String {
                 tag.get(&ItemKey::RecordingDate).and_then(|v| v.value().text()),
             );
             push_kv(
+                "year",
+                tag.get(&ItemKey::Year).and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "release_date",
+                tag.get(&ItemKey::ReleaseDate).and_then(|v| v.value().text()),
+            );
+            push_kv(
                 "disc",
                 tag.get(&ItemKey::DiscNumber).and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "disc_total",
+                tag.get(&ItemKey::DiscTotal).and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "track_total",
+                tag.get(&ItemKey::TrackTotal).and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "artist",
+                if track_artist.is_empty() {
+                    None
+                } else {
+                    Some(track_artist.as_str())
+                },
+            );
+            push_kv(
+                "album_artist",
+                if album_artist.is_empty() {
+                    None
+                } else {
+                    Some(album_artist.as_str())
+                },
             );
             push_kv(
                 "composer",
                 tag.get(&ItemKey::Composer).and_then(|v| v.value().text()),
             );
             push_kv(
+                "lyricist",
+                tag.get(&ItemKey::Lyricist).and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "label",
+                tag.get(&ItemKey::Label).and_then(|v| v.value().text()),
+            );
+            push_kv(
                 "comment",
                 tag.get(&ItemKey::Comment).and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "encoded_by",
+                tag.get(&ItemKey::EncodedBy).and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "encoder",
+                tag.get(&ItemKey::EncoderSoftware)
+                    .and_then(|v| v.value().text())
+                    .or_else(|| tag.get(&ItemKey::EncodedBy).and_then(|v| v.value().text())),
+            );
+            push_kv(
+                "encoder_settings",
+                tag.get(&ItemKey::EncoderSettings).and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "replaygain_track_gain",
+                tag.get(&ItemKey::ReplayGainTrackGain)
+                    .and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "replaygain_track_peak",
+                tag.get(&ItemKey::ReplayGainTrackPeak)
+                    .and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "replaygain_album_gain",
+                tag.get(&ItemKey::ReplayGainAlbumGain)
+                    .and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "replaygain_album_peak",
+                tag.get(&ItemKey::ReplayGainAlbumPeak)
+                    .and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "bpm",
+                tag.get(&ItemKey::Bpm)
+                    .and_then(|v| v.value().text())
+                    .or_else(|| tag.get(&ItemKey::IntegerBpm).and_then(|v| v.value().text())),
+            );
+            push_kv(
+                "language",
+                tag.get(&ItemKey::Language).and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "copyright",
+                tag.get(&ItemKey::CopyrightMessage)
+                    .and_then(|v| v.value().text()),
+            );
+            push_kv(
+                "license",
+                tag.get(&ItemKey::License).and_then(|v| v.value().text()),
             );
         }
     }

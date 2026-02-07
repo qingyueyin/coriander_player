@@ -152,6 +152,11 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
     _initLyricView();
     lyricLineStreamSubscription =
         lyricService.lyricLineStream.listen(_updateNextLyricLine);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      lyricService.findCurrLyricLineAt(playbackService.position);
+      _scrollToCurrent(const Duration(milliseconds: 320));
+    });
   }
 
   @override
