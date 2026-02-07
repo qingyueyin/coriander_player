@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/library/union_search_result.dart';
 import 'package:coriander_player/component/app_shell.dart';
+import 'package:coriander_player/component/motion.dart';
 import 'package:coriander_player/page/album_detail_page.dart';
 import 'package:coriander_player/page/albums_page.dart';
 import 'package:coriander_player/page/artist_detail_page.dart';
@@ -40,8 +41,8 @@ class SlideTransitionPage<T> extends CustomTransitionPage<T> {
     super.key,
   }) : super(
           transitionsBuilder: _transitionsBuilder,
-          transitionDuration: const Duration(milliseconds: 150),
-          reverseTransitionDuration: const Duration(milliseconds: 150),
+          transitionDuration: MotionDuration.medium,
+          reverseTransitionDuration: MotionDuration.medium,
         );
 
   static Widget _transitionsBuilder(
@@ -50,16 +51,14 @@ class SlideTransitionPage<T> extends CustomTransitionPage<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    final tween = Tween(
-      begin: const Offset(0, 0.10),
-      end: const Offset(0, 0),
-    );
-
-    return SlideTransition(
-      position: tween.animate(
-        CurvedAnimation(parent: animation, curve: Curves.fastOutSlowIn),
-      ),
-      child: child,
+    final fade = CurvedAnimation(parent: animation, curve: MotionCurve.emphasized);
+    final slide = Tween(
+      begin: const Offset(0.06, 0.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: animation, curve: MotionCurve.emphasized));
+    return FadeTransition(
+      opacity: fade,
+      child: SlideTransition(position: slide, child: child),
     );
   }
 }

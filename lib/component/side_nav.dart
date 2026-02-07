@@ -55,7 +55,7 @@ class _SideNavState extends State<SideNav> {
       final index = app_paths.START_PAGES.indexOf(destinations[value].desPath);
       if (index != -1) AppPreference.instance.startPage = index;
 
-      context.push(destinations[value].desPath);
+      context.go(destinations[value].desPath);
 
       var scaffold = Scaffold.of(context);
       if (scaffold.hasDrawer) scaffold.closeDrawer();
@@ -142,20 +142,19 @@ class _SmoothLargeSideNav extends StatelessWidget {
     final iconLeft = (_collapsedWidth - _iconSize) / 2;
 
     return RepaintBoundary(
-      child: SizedBox(
-        width: _expandedWidth,
-        child: TweenAnimationBuilder<double>(
-          duration: MotionDuration.medium,
-          curve: MotionCurve.emphasized,
-          tween: Tween(begin: 0.0, end: expanded ? 1.0 : 0.0),
-          builder: (context, t, _) {
-            final visibleWidth =
-                (lerpDouble(_collapsedWidth, _expandedWidth, t) ?? _collapsedWidth)
-                    .clamp(_collapsedWidth, _expandedWidth);
-            return ClipRect(
-              clipper: _SidebarClipper(width: visibleWidth),
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: colorScheme.surfaceContainer),
+      child: TweenAnimationBuilder<double>(
+        duration: MotionDuration.medium,
+        curve: MotionCurve.emphasized,
+        tween: Tween(begin: 0.0, end: expanded ? 1.0 : 0.0),
+        builder: (context, t, _) {
+          final visibleWidth = (lerpDouble(_collapsedWidth, _expandedWidth, t) ??
+                  _collapsedWidth)
+              .clamp(_collapsedWidth, _expandedWidth);
+          return SizedBox(
+            width: visibleWidth,
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: colorScheme.surfaceContainer),
+              child: ClipRect(
                 child: OverflowBox(
                   alignment: Alignment.centerLeft,
                   minWidth: _expandedWidth,
@@ -199,24 +198,11 @@ class _SmoothLargeSideNav extends StatelessWidget {
                   ),
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
-  }
-}
-
-class _SidebarClipper extends CustomClipper<Rect> {
-  final double width;
-  const _SidebarClipper({required this.width});
-
-  @override
-  Rect getClip(Size size) => Rect.fromLTWH(0, 0, width, size.height);
-
-  @override
-  bool shouldReclip(covariant _SidebarClipper oldClipper) {
-    return (oldClipper.width - width).abs() > 0.1;
   }
 }
 

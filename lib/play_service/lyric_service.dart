@@ -60,7 +60,7 @@ class LyricService extends ChangeNotifier {
 
   late final StreamController<int> _lyricLineStreamController =
       StreamController.broadcast(onListen: () {
-    _lyricLineStreamController.add(_nextLyricLine);
+    findCurrLyricLineAt(playService.playbackService.position);
   });
 
   Stream<int> get lyricLineStream => _lyricLineStreamController.stream;
