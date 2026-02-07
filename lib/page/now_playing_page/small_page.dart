@@ -53,13 +53,19 @@ class _NowPlayingPage_SmallState extends State<_NowPlayingPage_Small> {
     }
     setState(() {
       views = desView;
+      if (viewMode != NowPlayingViewMode.withLyric) {
+        _hideBottomPanel = false;
+      }
     });
     NOW_PLAYING_VIEW_MODE.value = viewMode;
     AppPreference.instance.nowPlayingPagePref.nowPlayingViewMode = viewMode;
   }
 
+  bool _hideBottomPanel = false;
+
   @override
   Widget build(BuildContext context) {
+    final showLyric = views[1] == NowPlayingViewMode.withLyric;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
@@ -87,10 +93,32 @@ class _NowPlayingPage_SmallState extends State<_NowPlayingPage_Small> {
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
-                                const Padding(
+                                Padding(
                                   padding:
                                       EdgeInsets.symmetric(horizontal: 8.0),
-                                  child: VerticalLyricView(),
+                                  child: VerticalLyricView(
+                                    showControls: !_hideBottomPanel,
+                                    centerVertically: _hideBottomPanel,
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 10,
+                                  right: 10,
+                                  child: IconButton.filledTonal(
+                                    tooltip: _hideBottomPanel
+                                        ? "显示控制栏"
+                                        : "隐藏控制栏并扩展歌词",
+                                    onPressed: () {
+                                      setState(() {
+                                        _hideBottomPanel = !_hideBottomPanel;
+                                      });
+                                    },
+                                    icon: Icon(
+                                      _hideBottomPanel
+                                          ? Symbols.expand_content
+                                          : Symbols.collapse_content,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -108,36 +136,40 @@ class _NowPlayingPage_SmallState extends State<_NowPlayingPage_Small> {
               ],
             ),
           ),
-          const SizedBox(height: 6.0),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: _NowPlayingSlider(),
-          ),
-          const SizedBox(height: 6.0),
-          const _NowPlayingMainControls(),
-          const SizedBox(height: 6.0),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              const _DesktopLyricSwitch(),
-              const _NowPlayingPlaybackModeSwitch(),
-              const NowPlayingPitchControl(),
-              const _NowPlayingVolDspSlider(),
-              const _ExclusiveModeSwitch(),
-              IconButton(
-                tooltip: "均衡器",
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => const EqualizerDialog(),
-                  );
-                },
-                icon: const Icon(Symbols.graphic_eq),
-                color: Theme.of(context).colorScheme.onSecondaryContainer,
-              ),
-              const _NowPlayingMoreAction(),
-            ],
-          )
+          if (!_hideBottomPanel) ...[
+            const SizedBox(height: 6.0),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: _NowPlayingSlider(),
+            ),
+            const SizedBox(height: 6.0),
+            const _NowPlayingMainControls(),
+            const SizedBox(height: 6.0),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                const _DesktopLyricSwitch(),
+                const _NowPlayingPlaybackModeSwitch(),
+                const NowPlayingPitchControl(),
+                const _NowPlayingVolDspSlider(),
+                const _ExclusiveModeSwitch(),
+                IconButton(
+                  tooltip: "均衡器",
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const EqualizerDialog(),
+                    );
+                  },
+                  icon: const Icon(Symbols.graphic_eq),
+                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                ),
+                const _NowPlayingMoreAction(),
+              ],
+            )
+          ] else ...[
+            if (!showLyric) const SizedBox(height: 6.0),
+          ],
         ],
       ),
     );

@@ -34,8 +34,8 @@ class DesktopLyricService extends ChangeNotifier {
       'desktop_lyric.exe',
     );
     if (!File(desktopLyricPath).existsSync()) {
-      LOGGER.e("[desktop lyric] desktop_lyric.exe not found: $desktopLyricPath");
-      showTextOnSnackBar("桌面歌词组件未找到，请重新打包或检查安装目录");
+      LOGGER
+          .e("[desktop lyric] desktop_lyric.exe not found: $desktopLyricPath");
       return;
     }
 
@@ -157,19 +157,29 @@ class DesktopLyricService extends ChangeNotifier {
 
   void sendLyricLineMessage(LyricLine line) {
     if (line is SyncLyricLine) {
+      final progressMs = ((_playbackService.position * 1000).round() -
+              line.start.inMilliseconds)
+          .clamp(0, line.length.inMilliseconds);
       sendMessage(msg.LyricLineChangedMessage(
         line.content,
         line.length,
         line.translation,
+        null,
+        progressMs,
       ));
     } else if (line is LrcLine) {
       final splitted = line.content.split("┃");
       final content = splitted.first;
       final translation = splitted.length > 1 ? splitted[1] : null;
+      final progressMs = ((_playbackService.position * 1000).round() -
+              line.start.inMilliseconds)
+          .clamp(0, line.length.inMilliseconds);
       sendMessage(msg.LyricLineChangedMessage(
         content,
         line.length,
         translation,
+        null,
+        progressMs,
       ));
     }
   }

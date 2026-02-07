@@ -210,6 +210,11 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     playbackService.addListener(updateCover);
     updateCover();
     _bumpCursor();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      PlayService.instance.lyricService
+          .findCurrLyricLineAt(playbackService.position);
+    });
   }
 
   @override
@@ -1562,7 +1567,7 @@ class _NowPlayingSliderState extends State<_NowPlayingSlider>
                   final pos = snapshot.data ?? 0.0;
                   return Text(
                     Duration(milliseconds: (pos * 1000).toInt())
-                        .toStringHMMSS(),
+                        .toStringMSS(),
                     style: TextStyle(
                       color: scheme.onSecondaryContainer,
                       fontSize: 12,
@@ -1583,7 +1588,7 @@ class _NowPlayingSliderState extends State<_NowPlayingSlider>
             child: Center(
               child: Text(
                 Duration(milliseconds: (nowPlayingLength * 1000).toInt())
-                    .toStringHMMSS(),
+                    .toStringMSS(),
                 style: TextStyle(
                   color: scheme.onSecondaryContainer,
                   fontSize: 12,

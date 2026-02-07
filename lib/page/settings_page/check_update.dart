@@ -1,3 +1,4 @@
+import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/app_settings.dart';
 import 'package:coriander_player/src/rust/api/utils.dart';
 import 'package:coriander_player/utils.dart';
@@ -31,7 +32,8 @@ class _CheckForUpdateState extends State<CheckForUpdate> {
                 try {
                   final newest = await AppSettings.github.repositories
                       .listReleases(
-                        RepositorySlug("qingyueyin", "coriander_player"),
+                        RepositorySlug.full(
+                            AppPreference.instance.updateRepoSlug),
                       )
                       .first;
                   final newestVer = int.tryParse(

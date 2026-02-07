@@ -204,6 +204,9 @@ class AppPreference {
       400,
       false);
 
+  String customCpFeedbackKey = "";
+  String updateRepoSlug = "qingyueyin/coriander_player";
+
   Future<void> save() async {
     try {
       final supportPath = (await getAppDataDir()).path;
@@ -223,6 +226,8 @@ class AppPreference {
         "sidebarExpanded": sidebarExpanded,
         "playbackPref": playbackPref.toMap(),
         "nowPlayingPagePref": nowPlayingPagePref.toMap(),
+        "customCpFeedbackKey": customCpFeedbackKey,
+        "updateRepoSlug": updateRepoSlug,
       };
 
       final prefJson = json.encode(prefMap);
@@ -270,6 +275,9 @@ class AppPreference {
           PlaybackPreference.fromMap(prefMap["playbackPref"]);
       instance.nowPlayingPagePref =
           NowPlayingPagePreference.fromMap(prefMap["nowPlayingPagePref"]);
+      instance.customCpFeedbackKey = prefMap["customCpFeedbackKey"] ?? "";
+      instance.updateRepoSlug =
+          prefMap["updateRepoSlug"] ?? "qingyueyin/coriander_player";
     } catch (err, trace) {
       LOGGER.e(err, stackTrace: trace);
     }

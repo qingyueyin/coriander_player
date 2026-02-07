@@ -38,7 +38,7 @@ class _NowPlayingShaderBackgroundState extends State<NowPlayingShaderBackground>
 
   ui.FragmentProgram? _program;
   StreamSubscription<Float32List>? _spectrumSub;
-  final ValueNotifier<Float32List> _spectrum = ValueNotifier(Float32List(8));
+  final _SpectrumNotifier _spectrum = _SpectrumNotifier();
 
   @override
   bool get wantKeepAlive => true;
@@ -69,11 +69,7 @@ class _NowPlayingShaderBackgroundState extends State<NowPlayingShaderBackground>
     if (stream == null) return;
     _spectrumSub = stream.listen((Float32List frame) {
       if (!mounted) return;
-      if (frame.isEmpty) return;
-      final n = frame.length >= 8 ? 8 : frame.length;
-      final next = Float32List(8);
-      next.setRange(0, n, frame);
-      _spectrum.value = next;
+      _spectrum.updateFrom(frame);
     });
   }
 
@@ -115,7 +111,7 @@ class _NowPlayingShaderPainter extends CustomPainter {
   final ColorScheme scheme;
   final Brightness brightness;
   final double intensity;
-  final ValueListenable<Float32List> spectrum;
+  final _SpectrumNotifier spectrum;
   final Animation<double> animation;
 
   _NowPlayingShaderPainter({
@@ -178,5 +174,30 @@ class _NowPlayingShaderPainter extends CustomPainter {
         oldDelegate.brightness != brightness ||
         oldDelegate.intensity != intensity ||
         oldDelegate.program != program;
+  }
+}
+
+class _SpectrumNotifier extends ChangeNotifier {
+  final Float32List value = Float32List(8);
+  int _lastUs = 0;
+
+  void updateFrom(Float32List frame) {
+    if (frame.isEmpty) return;
+
+    final nowUs = DateTime.now().microsecondsSinceEpoch;
+    if (nowUs - _lastUs < 10 * 1000) return;
+    _lastUs = nowUs;
+
+    final n = frame.length >= 8 ? 8 : frame.length;
+    var changed = false;
+    for (int i = 0; i < 8; i++) {
+      final next = i < n ? frame[i] : 0.0;
+      final prev = value[i];
+      if (!changed && (next - prev).abs() > 0.004) {
+        changed = true;
+      }
+      value[i] = next;
+    }
+    if (changed) notifyListeners();
   }
 }

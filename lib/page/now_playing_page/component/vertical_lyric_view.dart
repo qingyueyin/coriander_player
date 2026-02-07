@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:coriander_player/lyric/lrc.dart';
 import 'package:coriander_player/lyric/lyric.dart';
 import 'package:coriander_player/page/now_playing_page/component/lyric_view_controls.dart';
 import 'package:coriander_player/page/now_playing_page/component/lyric_view_tile.dart';
 import 'package:coriander_player/play_service/play_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 
@@ -139,11 +139,14 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
   bool _userScrolling = false;
   static const double _fadeExtent = 0.12;
   int _mainLine = 0;
-  double _estimatedItemExtent = 56.0;
   int _pendingScrollRetries = 0;
 
   /// 用来定位到当前歌词
   final currentLyricTileKey = GlobalKey();
+
+  List<double>? _cachedOffsets;
+  List<double>? _cachedHeights; // Store heights to center current line
+  double _cachedMaxWidth = 0.0;
 
   @override
   void initState() {
@@ -155,8 +158,104 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       lyricService.findCurrLyricLineAt(playbackService.position);
-      _scrollToCurrent(const Duration(milliseconds: 320));
     });
+  }
+
+  void _computeOffsets(double maxWidth) {
+    if (maxWidth <= 0) return;
+    
+    // Get style config
+    final controller = context.read<LyricViewController>();
+    final baseSize = controller.lyricFontSize;
+    final showTrans = controller.showLyricTranslation;
+    final weight = controller.lyricFontWeight;
+    
+    // Constants from LyricViewTile
+    const subScale = 0.88;
+    const subTransScale = 0.70;
+    const mainScale = 1.0;
+    const mainTransScale = 0.78;
+    
+    final subSize = baseSize * subScale;
+    final subTransSize = baseSize * subTransScale;
+    final mainSize = baseSize * mainScale;
+    final mainTransSize = baseSize * mainTransScale;
+    
+    final subVertPad = (baseSize * 0.35).clamp(10.0, 18.0); // Approximation
+    // LrcLine uses 0.32 scale, SyncLine uses 0.35. Let's use avg or Sync's.
+    
+    final painter = TextPainter(textDirection: TextDirection.ltr);
+    
+    double measureLine(LyricLine line, bool isMain) {
+      final primarySize = isMain ? mainSize : subSize;
+      final transSize = isMain ? mainTransSize : subTransSize;
+      final contentWidth = maxWidth - 24.0; // Horizontal padding
+      
+      double h = 0.0;
+      
+      // Primary text
+      String text = "";
+      if (line is SyncLyricLine) {
+        text = line.content;
+      } else if (line is LrcLine) {
+        text = line.content.split("┃").first;
+      }
+      
+      painter.text = TextSpan(
+        text: text,
+        style: TextStyle(fontSize: primarySize, fontWeight: FontWeight.w400, height: 1.5),
+      );
+      painter.layout(maxWidth: contentWidth);
+      h += painter.height;
+      
+      // Translation
+      if (showTrans) {
+        String? trans;
+        if (line is SyncLyricLine) {
+          trans = line.translation;
+        } else if (line is LrcLine) {
+          final parts = line.content.split("┃");
+          if (parts.length > 1) trans = parts.skip(1).join("\n");
+        }
+        
+        if (trans != null && trans.isNotEmpty) {
+          h += (isMain ? 6.0 : 4.0); // Spacing
+          painter.text = TextSpan(
+            text: trans,
+            style: TextStyle(fontSize: transSize, fontWeight: FontWeight.w400, height: 1.1),
+          );
+          painter.layout(maxWidth: contentWidth);
+          h += painter.height;
+        }
+      }
+      
+      // Vertical padding (top + bottom)
+      h += subVertPad * 2;
+      return h;
+    }
+
+    final offsets = <double>[];
+    final heights = <double>[];
+    double currentOffset = 0.0;
+    
+    for (int i = 0; i < widget.lyric.lines.length; i++) {
+      offsets.add(currentOffset);
+      // We assume all previous lines are NOT main lines (sub style)
+      // The current line will be rendered as Main, but for offset calculation of *next* lines,
+      // this line (when it becomes previous) will be Sub.
+      // So cachedOffsets[i] represents the top position of line i.
+      
+      // We also need the height of line i IF it is Main, to center it.
+      final hAsMain = measureLine(widget.lyric.lines[i], true);
+      heights.add(hAsMain);
+      
+      // Advance offset by its Sub height (for next items)
+      final hAsSub = measureLine(widget.lyric.lines[i], false);
+      currentOffset += hAsSub;
+    }
+    
+    _cachedOffsets = offsets;
+    _cachedHeights = heights;
   }
 
   @override
@@ -168,13 +267,23 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
     _lyricViewController?.removeListener(_scheduleEnsureCurrentVisible);
     _lyricViewController = controller;
     _lyricViewController?.addListener(_scheduleEnsureCurrentVisible);
+    
+    // Clear cache to recompute on next layout (font size might change)
+    _cachedMaxWidth = 0.0;
+    _cachedOffsets = null;
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _scrollToCurrent(const Duration(milliseconds: 100));
+    });
   }
 
   void _scheduleEnsureCurrentVisible() {
+    _cachedMaxWidth = 0.0; // Force recompute
     _ensureVisibleTimer?.cancel();
     _ensureVisibleTimer = Timer(const Duration(milliseconds: 60), () {
       if (!mounted) return;
-      _scrollToCurrent();
+      if (mounted) setState(() {}); // Trigger rebuild to recompute
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent());
     });
   }
 
@@ -182,14 +291,17 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
     if (!scrollController.hasClients) return;
     final minExtent = scrollController.position.minScrollExtent;
     final maxExtent = scrollController.position.maxScrollExtent;
-    final from = scrollController.offset;
     final to = targetOffset.clamp(minExtent, maxExtent);
-    final dist = (to - from).abs();
-    if (dist < 0.5) return;
+    
     if (duration != null && duration.inMilliseconds <= 16) {
       scrollController.jumpTo(to);
       return;
     }
+    
+    final from = scrollController.offset;
+    final dist = (to - from).abs();
+    if (dist < 0.5) return;
+
     final computed = duration ??
         Duration(
           milliseconds: (280 + dist * 0.22).round().clamp(320, 650),
@@ -211,39 +323,46 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
     }
     _pendingScrollRetries = 0;
 
-    final targetContext = currentLyricTileKey.currentContext;
-    if (targetContext == null || !targetContext.mounted) {
-      final alignment = widget.centerVertically ? 0.4 : 0.25;
+    // Use cached offsets if available
+    if (_cachedOffsets != null && _cachedHeights != null && 
+        _mainLine < _cachedOffsets!.length) {
+      
       final viewport = scrollController.position.viewportDimension;
-      final estimated = (_estimatedItemExtent * _mainLine) - viewport * alignment;
-      final minExtent = scrollController.position.minScrollExtent;
-      final maxExtent = scrollController.position.maxScrollExtent;
-      scrollController.jumpTo(estimated.clamp(minExtent, maxExtent));
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _scrollToCurrent(duration ?? const Duration(milliseconds: 420));
-      });
+      final spacer = widget.centerVertically ? viewport / 2.0 : 0.0;
+      final alignment = widget.centerVertically ? 0.5 : 0.25;
+      
+      final lineTop = _cachedOffsets![_mainLine];
+      final lineHeight = _cachedHeights![_mainLine];
+      
+      // Target position: 
+      // We want the center of the line to be at `viewport * alignment`.
+      // The content starts at `spacer`.
+      // lineTop is relative to the first item (which starts at spacer).
+      // So absolute lineTop = spacer + lineTop.
+      // absolute lineCenter = absolute lineTop + lineHeight / 2.
+      // scrollOffset = absolute lineCenter - (viewport * alignment).
+      
+      final targetScrollOffset = (spacer + lineTop + lineHeight / 2) - (viewport * alignment);
+      
+      _animateTo(targetScrollOffset, duration: duration);
       return;
     }
 
+    // Fallback to original logic (should rarely happen if layout built)
+    final targetContext = currentLyricTileKey.currentContext;
+    if (targetContext == null || !targetContext.mounted) {
+       // ... (Simplified fallback: just wait)
+       return;
+    }
+    
     final targetObject = targetContext.findRenderObject();
     if (targetObject is! RenderBox) return;
     final viewport = RenderAbstractViewport.of(targetObject);
     if (viewport == null) return;
 
-    final alignment = widget.centerVertically ? 0.4 : 0.25;
+    final alignment = widget.centerVertically ? 0.5 : 0.25;
     final revealed = viewport.getOffsetToReveal(targetObject, alignment);
-    final targetOffset = revealed.offset.clamp(
-      scrollController.position.minScrollExtent,
-      scrollController.position.maxScrollExtent,
-    );
-
-    final h = targetObject.size.height;
-    if (h.isFinite && h > 0) {
-      _estimatedItemExtent = _estimatedItemExtent * 0.8 + h * 0.2;
-    }
-
-    _animateTo(targetOffset, duration: duration);
+    _animateTo(revealed.offset, duration: duration);
   }
 
   void _initLyricView() {
@@ -279,15 +398,13 @@ class _VerticalLyricScrollViewState extends State<_VerticalLyricScrollView>
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
-      final h = constraints.maxHeight;
-      if ((_lastHeight - h).abs() > 1.0) {
-        _lastHeight = h;
-        _sizeChangeTimer?.cancel();
-        _sizeChangeTimer = Timer(const Duration(milliseconds: 40), () {
-          if (!mounted) return;
-          _scrollToCurrent(const Duration(milliseconds: 1));
-        });
+      if (constraints.maxWidth != _cachedMaxWidth) {
+        _cachedMaxWidth = constraints.maxWidth;
+        // Recompute in next frame to avoid blocking build? 
+        // Or compute now. It's better to compute now to have correct offsets immediately.
+        _computeOffsets(constraints.maxWidth);
       }
+      
       final spacerHeight = constraints.maxHeight / 2.0;
       return RepaintBoundary(
         child: ShaderMask(

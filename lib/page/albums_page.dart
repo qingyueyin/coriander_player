@@ -80,6 +80,9 @@ class AlbumsPage extends StatelessWidget {
         },
         icon: const Icon(Symbols.palette),
         label: const Text("优化专辑页"),
+        style: const ButtonStyle(
+          fixedSize: WidgetStatePropertyAll(Size.fromHeight(40)),
+        ),
       ),
       contentList: contentList,
       contentBuilder: (context, item, i, multiSelectController, view) => AlbumTile(

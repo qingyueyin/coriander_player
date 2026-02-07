@@ -184,6 +184,10 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
                             ),
                             color: scheme.onSecondaryContainer,
                           ),
+                        _MiniPlayPauseButton(
+                          dense: dense,
+                          onSecondaryContainer: scheme.onSecondaryContainer,
+                        ),
                         if (!dense)
                           IconButton(
                             tooltip: "下一曲",
@@ -195,11 +199,6 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
                             ),
                             color: scheme.onSecondaryContainer,
                           ),
-                        if (!minimal) _MiniShuffleButton(enabled: !dense),
-                        _MiniPlayPauseButton(
-                          dense: dense,
-                          onSecondaryContainer: scheme.onSecondaryContainer,
-                        ),
                         if (!dense) const SizedBox(width: 8.0),
                         if (!dense)
                           _MiniTimeText(color: scheme.onSecondaryContainer),

@@ -15,10 +15,15 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:go_router/go_router.dart';
 import 'package:coriander_player/app_paths.dart' as app_paths;
 
-const String cpFeedbackKey = String.fromEnvironment(
+const String _envCpFeedbackKey = String.fromEnvironment(
   'CPFEEDBACK_KEY',
   defaultValue: '',
 );
+
+String get cpFeedbackKey {
+  if (_envCpFeedbackKey.isNotEmpty) return _envCpFeedbackKey;
+  return AppPreference.instance.customCpFeedbackKey;
+}
 
 const bool enableIssueReporting = bool.fromEnvironment(
   'ENABLE_ISSUE_REPORTING',
@@ -52,6 +57,7 @@ class _SettingsIssuePageState extends State<SettingsIssuePage> {
   final titleEditingController = TextEditingController();
   final descEditingController = TextEditingController();
   final logEditingController = TextEditingController();
+  final keyEditingController = TextEditingController();
   final submitBtnController = WidgetStatesController();
 
   String _sanitizePaths(String text) {
@@ -157,9 +163,8 @@ class _SettingsIssuePageState extends State<SettingsIssuePage> {
   String _buildDescTemplate() {
     final pb = PlayService.instance.playbackService;
     final now = pb.nowPlaying;
-    final hint = now == null
-        ? ""
-        : "当前歌曲：${now.title} - ${now.artist} (${now.album})";
+    final hint =
+        now == null ? "" : "当前歌曲：${now.title} - ${now.artist} (${now.album})";
     return [
       "### 复现步骤",
       "1. ",
@@ -221,7 +226,7 @@ class _SettingsIssuePageState extends State<SettingsIssuePage> {
     }
     submitBtnController.update(WidgetState.disabled, true);
     final cpfeedback = GitHub(
-      auth: const Authentication.withToken(cpFeedbackKey),
+      auth: Authentication.withToken(cpFeedbackKey),
     );
     final issueBodyBuilder = StringBuffer();
     issueBodyBuilder
@@ -274,6 +279,7 @@ class _SettingsIssuePageState extends State<SettingsIssuePage> {
   @override
   void initState() {
     super.initState();
+    keyEditingController.text = AppPreference.instance.customCpFeedbackKey;
   }
 
   @override
@@ -285,6 +291,23 @@ class _SettingsIssuePageState extends State<SettingsIssuePage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            if (_envCpFeedbackKey.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: TextField(
+                  controller: keyEditingController,
+                  decoration: const InputDecoration(
+                    labelText: "CPFEEDBACK_KEY",
+                    hintText: "请输入 Issue 反馈密钥",
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    AppPreference.instance.customCpFeedbackKey = value;
+                    AppPreference.instance.save();
+                    setState(() {});
+                  },
+                ),
+              ),
             Row(
               children: [
                 Expanded(
@@ -331,7 +354,8 @@ class _SettingsIssuePageState extends State<SettingsIssuePage> {
                       descEditingController.text = _buildDescTemplate();
                     }
                     if (titleEditingController.text.trim().isEmpty) {
-                      final now = PlayService.instance.playbackService.nowPlaying;
+                      final now =
+                          PlayService.instance.playbackService.nowPlaying;
                       titleEditingController.text =
                           now == null ? "Bug: " : "Bug: ${now.title}";
                     }

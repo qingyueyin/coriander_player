@@ -70,48 +70,20 @@ class _SideNavState extends State<SideNav> {
 
     return ResponsiveBuilder(
       builder: (context, screenType) {
-        switch (screenType) {
-          case ScreenType.small:
-            return NavigationDrawer(
-              backgroundColor: scheme.surfaceContainer,
+        final expandedWidth = _expandedWidth;
+        return ValueListenableBuilder(
+          valueListenable: sidebarExpanded,
+          builder: (context, expanded, _) {
+            return _SmoothLargeSideNav(
+              expanded: expanded,
+              expandedWidth: expandedWidth,
+              colorScheme: scheme,
               selectedIndex: selectedIndex,
-              onDestinationSelected: onDestinationSelected,
-              children: List.generate(
-                destinations.length,
-                (i) => NavigationDrawerDestination(
-                  icon: Icon(destinations[i].icon),
-                  label: Text(destinations[i].label),
-                ),
-              ),
+              onToggle: toggleSidebar,
+              onSelect: onDestinationSelected,
             );
-          case ScreenType.medium:
-            return NavigationRail(
-              backgroundColor: scheme.surfaceContainer,
-              minWidth: 80.0,
-              selectedIndex: selectedIndex,
-              onDestinationSelected: onDestinationSelected,
-              destinations: List.generate(
-                destinations.length,
-                (i) => NavigationRailDestination(
-                  icon: Icon(destinations[i].icon),
-                  label: Text(destinations[i].label),
-                ),
-              ),
-            );
-          case ScreenType.large:
-            return ValueListenableBuilder(
-              valueListenable: sidebarExpanded,
-              builder: (context, expanded, _) {
-                return _SmoothLargeSideNav(
-                  expanded: expanded,
-                  colorScheme: scheme,
-                  selectedIndex: selectedIndex,
-                  onToggle: toggleSidebar,
-                  onSelect: onDestinationSelected,
-                );
-              },
-            );
-        }
+          },
+        );
       },
     );
   }
@@ -120,6 +92,7 @@ class _SideNavState extends State<SideNav> {
 class _SmoothLargeSideNav extends StatelessWidget {
   const _SmoothLargeSideNav({
     required this.expanded,
+    required this.expandedWidth,
     required this.colorScheme,
     required this.selectedIndex,
     required this.onToggle,
@@ -127,13 +100,13 @@ class _SmoothLargeSideNav extends StatelessWidget {
   });
 
   final bool expanded;
+  final double expandedWidth;
   final ColorScheme colorScheme;
   final int? selectedIndex;
   final VoidCallback onToggle;
   final void Function(int) onSelect;
 
   static const double _collapsedWidth = _SideNavState._collapsedWidth;
-  static const double _expandedWidth = _SideNavState._expandedWidth;
   static const double _iconSize = _SideNavState._iconSize;
   static const double _itemHeight = _SideNavState._itemHeight;
 
@@ -147,9 +120,9 @@ class _SmoothLargeSideNav extends StatelessWidget {
         curve: MotionCurve.emphasized,
         tween: Tween(begin: 0.0, end: expanded ? 1.0 : 0.0),
         builder: (context, t, _) {
-          final visibleWidth = (lerpDouble(_collapsedWidth, _expandedWidth, t) ??
+          final visibleWidth = (lerpDouble(_collapsedWidth, expandedWidth, t) ??
                   _collapsedWidth)
-              .clamp(_collapsedWidth, _expandedWidth);
+              .clamp(_collapsedWidth, expandedWidth);
           return SizedBox(
             width: visibleWidth,
             child: DecoratedBox(
@@ -157,8 +130,8 @@ class _SmoothLargeSideNav extends StatelessWidget {
               child: ClipRect(
                 child: OverflowBox(
                   alignment: Alignment.centerLeft,
-                  minWidth: _expandedWidth,
-                  maxWidth: _expandedWidth,
+                  minWidth: expandedWidth,
+                  maxWidth: expandedWidth,
                   child: Column(
                     children: [
                       const SizedBox(height: 12),

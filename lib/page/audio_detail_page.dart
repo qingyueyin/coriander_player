@@ -12,7 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:coriander_player/app_paths.dart' as app_paths;
 
 String _formatBytes(int bytes) {
-  if (bytes < 1024) return "${bytes} B";
+  if (bytes < 1024) return "$bytes B";
   const units = ["KB", "MB", "GB", "TB"];
   double size = bytes.toDouble();
   int unitIndex = -1;
@@ -225,170 +225,179 @@ class AudioDetailPage extends StatelessWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 final maxWidth = constraints.maxWidth > 960 ? 960.0 : constraints.maxWidth;
-                final wide = maxWidth >= 900;
-                final colWidth = wide ? (maxWidth - 16) / 2 : maxWidth;
+                final colCount = maxWidth > 600 ? 3 : 2;
+                final colWidth = (maxWidth - (colCount - 1) * 16) / colCount;
                 return Align(
                   alignment: Alignment.topLeft,
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 960),
-                    child: Wrap(
-                      spacing: 16,
-                      runSpacing: 12,
-                      children: [
-                        SizedBox(
-                          width: colWidth,
-                          child: _InfoTile(
-                            label: "音轨",
-                            child: Text(audio.track.toString(), style: styleContent),
-                          ),
-                        ),
-                        SizedBox(
-                          width: colWidth,
-                          child: _InfoTile(
-                            label: "时长",
-                            child: Text(
-                              Duration(
-                                milliseconds: (audio.duration * 1000).toInt(),
-                              ).toStringHMMSS(),
-                              style: styleContent,
+                    child: FutureBuilder<Map<String, Object?>>(
+                      future: _getAudioExtra(audio),
+                      builder: (context, snapshot) {
+                        final data = snapshot.data ?? const <String, Object?>{};
+
+                        final children = <Widget>[
+                          SizedBox(
+                            width: colWidth,
+                            child: _InfoTile(
+                              label: "音轨",
+                              child: Text(audio.track.toString(), style: styleContent),
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: colWidth,
-                          child: _InfoTile(
-                            label: "码率",
-                            child:
-                                Text("${audio.bitrate ?? "-"} kbps", style: styleContent),
-                          ),
-                        ),
-                        SizedBox(
-                          width: colWidth,
-                          child: _InfoTile(
-                            label: "采样率",
-                            child: Text("${audio.sampleRate ?? "-"} hz", style: styleContent),
-                          ),
-                        ),
-                        SizedBox(
-                          width: colWidth,
-                          child: _InfoTile(
-                            label: "格式",
-                            child: Text(
-                              p.extension(audio.path).replaceFirst(".", "").toUpperCase(),
-                              style: styleContent,
+                          SizedBox(
+                            width: colWidth,
+                            child: _InfoTile(
+                              label: "时长",
+                              child: Text(
+                                Duration(
+                                  milliseconds: (audio.duration * 1000).toInt(),
+                                ).toStringHMMSS(),
+                                style: styleContent,
+                              ),
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: colWidth,
-                          child: _InfoTile(
-                            label: "文件大小",
-                            child: FutureBuilder<FileStat>(
-                              future: File(audio.path).stat(),
-                              builder: (context, snapshot) {
-                                final size = snapshot.data?.size;
-                                return Text(
-                                  size == null ? "-" : _formatBytes(size),
-                                  style: styleContent,
-                                );
-                              },
+                          SizedBox(
+                            width: colWidth,
+                            child: _InfoTile(
+                              label: "码率",
+                              child:
+                                  Text("${audio.bitrate ?? "-"} kbps", style: styleContent),
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: colWidth,
-                          child: _InfoTile(
-                            label: "更多信息",
-                            child: FutureBuilder(
-                              future: _getAudioExtra(audio),
-                              builder: (context, snapshot) {
-                                final data = snapshot.data;
-                                if (data == null || data.isEmpty) {
-                                  return Text("-", style: styleContent);
-                                }
-                                final List items = (data["items"] as List?) ?? const [];
-                                final chips = <Widget>[];
-                                void addChip(String text) {
-                                  chips.add(_InfoChip(text: text));
-                                }
-                                addChip("trk: ${audio.track}");
-                                addChip(
-                                  "dur: ${Duration(milliseconds: (audio.duration * 1000).toInt()).toStringHMMSS()}",
-                                );
-                                if (audio.bitrate != null) {
-                                  addChip("br: ${audio.bitrate} kbps");
-                                }
-                                if (audio.sampleRate != null) {
-                                  addChip("sr: ${audio.sampleRate} hz");
-                                }
-                                addChip(
-                                  "fmt: ${p.extension(audio.path).replaceFirst('.', '').toUpperCase()}",
-                                );
-                                final fileSize = data["file_size"];
-                                if (fileSize is num && fileSize.toInt() > 0) {
-                                  addChip("size: ${_formatBytes(fileSize.toInt())}");
-                                }
-                                final bd = data["bit_depth"];
-                                final ch = data["channels"];
-                                if (bd != null) {
-                                  addChip("bit: $bd");
-                                }
-                                if (ch != null) {
-                                  addChip("ch: $ch");
-                                }
-                                for (final item in items) {
-                                  if (item is! Map) continue;
-                                  final k = item["key"];
-                                  final v = item["value"];
-                                  if (k is! String || v is! String) continue;
-                                  addChip("$k: $v");
-                                }
-                                if (chips.isEmpty) {
-                                  return Text("-", style: styleContent);
-                                }
-                                return Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: chips,
-                                );
-                              },
+                          SizedBox(
+                            width: colWidth,
+                            child: _InfoTile(
+                              label: "采样率",
+                              child: Text("${audio.sampleRate ?? "-"} hz", style: styleContent),
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: maxWidth,
-                          child: const SizedBox.shrink(),
-                        ),
-                        SizedBox(
-                          width: maxWidth,
-                          child: _InfoTile(
-                            label: "路径",
-                            child: Text(audio.path, style: styleContent),
-                          ),
-                        ),
-                        SizedBox(
-                          width: colWidth,
-                          child: _InfoTile(
-                            label: "修改时间",
-                            child: Text(
-                              DateTime.fromMillisecondsSinceEpoch(audio.modified * 1000)
-                                  .toString(),
-                              style: styleContent,
+                          SizedBox(
+                            width: colWidth,
+                            child: _InfoTile(
+                              label: "格式",
+                              child: Text(
+                                p.extension(audio.path)
+                                    .replaceFirst(".", "")
+                                    .toUpperCase(),
+                                style: styleContent,
+                              ),
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: colWidth,
-                          child: _InfoTile(
-                            label: "创建时间",
-                            child: Text(
-                              DateTime.fromMillisecondsSinceEpoch(audio.created * 1000)
-                                  .toString(),
-                              style: styleContent,
+                          SizedBox(
+                            width: colWidth,
+                            child: _InfoTile(
+                              label: "文件大小",
+                              child: Builder(
+                                builder: (context) {
+                                  final fileSize = data["file_size"];
+                                  if (fileSize is num && fileSize.toInt() > 0) {
+                                    return Text(
+                                      _formatBytes(fileSize.toInt()),
+                                      style: styleContent,
+                                    );
+                                  }
+                                  return FutureBuilder<FileStat>(
+                                    future: File(audio.path).stat(),
+                                    builder: (context, snapshot) {
+                                      final size = snapshot.data?.size;
+                                      return Text(
+                                        size == null ? "-" : _formatBytes(size),
+                                        style: styleContent,
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ];
+
+                        final bd = data["bit_depth"];
+                        final ch = data["channels"];
+                        if (bd != null) {
+                          children.add(
+                            SizedBox(
+                              width: colWidth,
+                              child: _InfoTile(
+                                label: "位深",
+                                child: Text(bd.toString(), style: styleContent),
+                              ),
+                            ),
+                          );
+                        }
+                        if (ch != null) {
+                          children.add(
+                            SizedBox(
+                              width: colWidth,
+                              child: _InfoTile(
+                                label: "声道",
+                                child: Text(ch.toString(), style: styleContent),
+                              ),
+                            ),
+                          );
+                        }
+
+                        final List items = (data["items"] as List?) ?? const [];
+                        for (final item in items) {
+                          if (item is! Map) continue;
+                          final k = item["key"];
+                          final v = item["value"];
+                          if (k is! String || v is! String) continue;
+                          final lk = k.trim().toLowerCase();
+                          if (lk == "artist" || lk == "encoder") continue;
+                          children.add(
+                            SizedBox(
+                              width: colWidth,
+                              child: _InfoTile(
+                                label: k,
+                                child: Text(v, style: styleContent),
+                              ),
+                            ),
+                          );
+                        }
+
+                        children.addAll([
+                          SizedBox(
+                            width: maxWidth,
+                            child: const SizedBox.shrink(),
+                          ),
+                          SizedBox(
+                            width: maxWidth,
+                            child: _InfoTile(
+                              label: "路径",
+                              child: Text(audio.path, style: styleContent),
+                            ),
+                          ),
+                          SizedBox(
+                            width: colWidth,
+                            child: _InfoTile(
+                              label: "修改时间",
+                              child: Text(
+                                DateTime.fromMillisecondsSinceEpoch(audio.modified * 1000)
+                                    .toString(),
+                                style: styleContent,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: colWidth,
+                            child: _InfoTile(
+                              label: "创建时间",
+                              child: Text(
+                                DateTime.fromMillisecondsSinceEpoch(audio.created * 1000)
+                                    .toString(),
+                                style: styleContent,
+                              ),
+                            ),
+                          ),
+                        ]);
+
+                        return Wrap(
+                          spacing: 16,
+                          runSpacing: 12,
+                          children: children,
+                        );
+                      },
                     ),
                   ),
                 );
@@ -427,32 +436,3 @@ class _InfoTile extends StatelessWidget {
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.text});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.secondaryContainer.withValues(alpha: 0.70),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: scheme.onSecondaryContainer,
-            fontSize: 12,
-            height: 1.1,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          softWrap: false,
-        ),
-      ),
-    );
-  }
-}

@@ -12,6 +12,13 @@ extension StringHMMSS on Duration {
   String toStringHMMSS() {
     return toString().split(".").first;
   }
+
+  String toStringMSS() {
+    final totalSeconds = inSeconds;
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
 }
 
 /// 把 dec 表示成两位 hex

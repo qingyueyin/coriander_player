@@ -81,3 +81,5 @@ todo/
 docs/
 output/
 output/data/
+release/
+build_release.ps1

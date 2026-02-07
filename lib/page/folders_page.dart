@@ -25,6 +25,9 @@ class FoldersPage extends StatelessWidget {
         onPressed: () => showFolderManagerDialog(context),
         icon: const Icon(Symbols.folder),
         label: const Text("文件夹管理"),
+        style: const ButtonStyle(
+          fixedSize: WidgetStatePropertyAll(Size.fromHeight(40)),
+        ),
       ),
       contentBuilder: (context, item, i, multiSelectController, view) =>
           AudioFolderTile(audioFolder: item),

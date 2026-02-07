@@ -35,13 +35,15 @@ class _AppShell_Small extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final size = MediaQuery.sizeOf(context);
+    final drawerWidth = (size.width * 0.78).clamp(220.0, 288.0);
     return Scaffold(
       backgroundColor: scheme.surfaceContainer,
       appBar: const PreferredSize(
         preferredSize: Size.fromHeight(48.0),
         child: TitleBar(),
       ),
-      drawer: const SideNav(),
+      drawer: SizedBox(width: drawerWidth, child: const SideNav()),
       body: Stack(children: [page, const MiniNowPlaying()]),
     );
   }

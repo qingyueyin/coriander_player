@@ -23,6 +23,7 @@ import 'package:coriander_player/page/updating_page.dart';
 import 'package:coriander_player/page/welcoming_page.dart';
 import 'package:coriander_player/library/playlist.dart';
 import 'package:coriander_player/play_service/audio_echo_log_recorder.dart';
+import 'package:coriander_player/component/app_scroll_behavior.dart';
 import 'package:coriander_player/theme_provider.dart';
 import 'package:coriander_player/utils.dart';
 import 'package:flutter/material.dart';
@@ -195,6 +196,7 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
           child: MaterialApp.router(
             scaffoldMessengerKey: SCAFFOLD_MESSAGER,
             debugShowCheckedModeBanner: false,
+            scrollBehavior: const AppScrollBehavior(),
             theme: fromSchemeAndFontFamily(
               fontFamily: theme.fontFamily,
               colorScheme: theme.lightScheme,

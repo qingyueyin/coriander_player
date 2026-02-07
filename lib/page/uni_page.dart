@@ -150,10 +150,8 @@ class _UniPageState<T> extends State<UniPage<T>> {
       } else {
         final renderObject = context.findRenderObject();
         if (renderObject is RenderBox) {
-          final ratio =
-              PlatformDispatcher.instance.views.first.devicePixelRatio;
-          final width = renderObject.size.width - 32;
-          final crossAxisCount = (width * ratio / 300).floor().clamp(1, 100);
+          final width = renderObject.size.width;
+          final crossAxisCount = (width / 300).ceil().clamp(1, 100);
           final offset = (targetAt ~/ crossAxisCount) * (64.0 + 8.0);
           scrollController.animateTo(
             offset,
@@ -226,10 +224,8 @@ class _UniPageState<T> extends State<UniPage<T>> {
       } else {
         final renderObject = context.findRenderObject();
         if (renderObject is RenderBox) {
-          final ratio =
-              PlatformDispatcher.instance.views.first.devicePixelRatio;
-          final width = renderObject.size.width - 32;
-          final crossAxisCount = (width * ratio / 300).floor().clamp(1, 100);
+          final width = renderObject.size.width;
+          final crossAxisCount = (width / 300).ceil().clamp(1, 100);
           final offset = (targetAt ~/ crossAxisCount) * (64.0 + 8.0);
           scrollController.jumpTo(offset);
         }

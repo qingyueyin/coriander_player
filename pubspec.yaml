@@ -1,7 +1,7 @@
 name: coriander_player
 description: Material You 风格的本地音乐播放器
 publish_to: none
-version: 0.1.0+1
+version: 0.0.4+1
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -20,7 +20,7 @@ dependencies:
   flutter_animate: ^4.5.0
   flutter_rust_bridge: 2.11.1
   flutter_volume_controller: ^1.3.3
-  go_router: ^14.8.0
+  go_router: ^17.1.0
   github: ^9.24.0
   hotkey_manager: ^0.2.3
   logger: ^2.5.0
@@ -49,9 +49,12 @@ flutter:
   uses-material-design: true
   assets:
     - assets/fonts/MiSans/MiSansVF.ttf
+    - app_icon.ico
   shaders:
     - assets/shaders/now_playing_bg.frag
   fonts:
     - family: MiSans
       fonts:
         - asset: assets/fonts/MiSans/MiSansVF.ttf
+
+
