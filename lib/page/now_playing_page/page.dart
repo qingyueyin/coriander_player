@@ -1757,11 +1757,16 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
   String? _loResCoverPath;
   ImageProvider<Object>? _hiResCover;
   String? _hiResCoverPath;
+  Timer? _hiResDebounceTimer;
+  int _coverRequestToken = 0;
 
   void _onPlaybackChange() {
+    _coverRequestToken += 1;
+    final token = _coverRequestToken;
     final nextAudio = playbackService.nowPlaying;
     if (nextAudio == null) {
       if (_loResCoverPath != null || _hiResCoverPath != null) {
+        _hiResDebounceTimer?.cancel();
         setState(() {
           _loResCover = null;
           _loResCoverPath = null;
@@ -1779,30 +1784,41 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
 
     nextAudio.cover.then((image) async {
       if (!mounted) return;
+      if (token != _coverRequestToken) return;
       // Double check if the audio is still the same
       if (playbackService.nowPlaying?.path != nextAudio.path) return;
 
       if (image != null) {
+        if (token != _coverRequestToken) return;
         await precacheImage(image, context);
       }
 
+      if (!mounted) return;
+      if (token != _coverRequestToken) return;
       setState(() {
         _loResCover = image;
         _loResCoverPath = nextAudio.path;
       });
     });
 
-    nextAudio.largeCover.then((image) async {
-      if (!mounted) return;
-      if (playbackService.nowPlaying?.path != nextAudio.path) return;
+    _hiResDebounceTimer?.cancel();
+    _hiResDebounceTimer = Timer(const Duration(milliseconds: 260), () {
+      nextAudio.largeCover.then((image) async {
+        if (!mounted) return;
+        if (token != _coverRequestToken) return;
+        if (playbackService.nowPlaying?.path != nextAudio.path) return;
 
-      if (image != null) {
-        await precacheImage(image, context);
-      }
+        if (image != null) {
+          if (token != _coverRequestToken) return;
+          await precacheImage(image, context);
+        }
 
-      setState(() {
-        _hiResCover = image;
-        _hiResCoverPath = nextAudio.path;
+        if (!mounted) return;
+        if (token != _coverRequestToken) return;
+        setState(() {
+          _hiResCover = image;
+          _hiResCoverPath = nextAudio.path;
+        });
       });
     });
   }
@@ -1987,6 +2003,7 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
   @override
   void dispose() {
     playbackService.removeListener(_onPlaybackChange);
+    _hiResDebounceTimer?.cancel();
     super.dispose();
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:coriander_player/app_settings.dart';
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/play_service/play_service.dart';
@@ -46,6 +48,7 @@ class ThemeProvider extends ChangeNotifier {
   final Map<String, ColorScheme> _schemeCache = {};
   final Map<String, Future<ColorScheme>> _schemeFutureCache = {};
   int _themeRequestToken = 0;
+  Timer? _themeDebounceTimer;
 
   static ThemeProvider? _instance;
 
@@ -181,27 +184,34 @@ class ThemeProvider extends ChangeNotifier {
     _themeRequestToken += 1;
     final token = _themeRequestToken;
 
-    audio.cover.then((image) {
-      if (image == null) return;
+    _themeDebounceTimer?.cancel();
+    _themeDebounceTimer = Timer(const Duration(milliseconds: 200), () {
+      audio.cover.then((image) {
+        if (image == null) return;
+        if (token != _themeRequestToken) return;
 
-      applyThemeFromImage(
-        image,
-        themeMode,
-        cacheKey: audio.path,
-        requestToken: token,
-      );
+        applyThemeFromImage(
+          image,
+          themeMode,
+          cacheKey: audio.path,
+          requestToken: token,
+        );
 
-      final second = switch (themeMode) {
-        ThemeMode.system => ThemeMode.dark,
-        ThemeMode.light => ThemeMode.dark,
-        ThemeMode.dark => ThemeMode.light,
-      };
-      applyThemeFromImage(
-        image,
-        second,
-        cacheKey: audio.path,
-        requestToken: token,
-      );
+        final second = switch (themeMode) {
+          ThemeMode.system => ThemeMode.dark,
+          ThemeMode.light => ThemeMode.dark,
+          ThemeMode.dark => ThemeMode.light,
+        };
+        Timer(const Duration(milliseconds: 420), () {
+          if (token != _themeRequestToken) return;
+          applyThemeFromImage(
+            image,
+            second,
+            cacheKey: audio.path,
+            requestToken: token,
+          );
+        });
+      });
     });
   }
 

@@ -65,6 +65,7 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
   bool _controlsVisible = false;
   Timer? _controlsHideTimer;
   String? _lastPrecachedCoverPath;
+  int _precacheToken = 0;
 
   void _maybePrecacheCover({
     required String path,
@@ -137,18 +138,13 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
               final nowPlaying =
                   PlayService.instance.playbackService.nowPlaying;
               if (nowPlaying != null) {
+                _precacheToken += 1;
+                final token = _precacheToken;
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!mounted) return;
-                  nowPlaying.cover.then((image) {
-                    if (!mounted) return;
-                    if (image != null) precacheImage(image, context);
-                  });
                   nowPlaying.mediumCover.then((image) {
                     if (!mounted) return;
-                    if (image != null) precacheImage(image, context);
-                  });
-                  nowPlaying.largeCover.then((image) {
-                    if (!mounted) return;
+                    if (token != _precacheToken) return;
                     if (image != null) precacheImage(image, context);
                   });
                 });

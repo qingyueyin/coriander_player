@@ -77,7 +77,6 @@ class LyricViewTile extends StatelessWidget {
     final isMainLine = d == 0;
     final blurSigma =
         lyricViewController.enableLyricBlur ? min(d * 1.6, 6.0) : 0.0;
-    final scale = isMainLine ? 1.1 : 1.0;
 
     Widget content = InkWell(
       onTap: onTap,
@@ -99,46 +98,124 @@ class LyricViewTile extends StatelessWidget {
       LyricTextAlign.right => Alignment.centerRight,
     };
 
+    double measureTextWidth(String text, TextStyle style) {
+      if (text.isEmpty) return 0.0;
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: Directionality.of(context),
+        maxLines: 1,
+      )..layout();
+      return painter.width;
+    }
+
+    double computeSafeScale(BoxConstraints constraints) {
+      if (!isMainLine) return 1.0;
+      const desired = 1.1;
+      final maxWidth = constraints.maxWidth;
+      if (!maxWidth.isFinite || maxWidth <= 1) return desired;
+
+      final baseFontSize = lyricViewController.lyricFontSize;
+      final showTranslation = lyricViewController.showLyricTranslation;
+      final weight = lyricViewController.lyricFontWeight;
+      final primarySize =
+          _effectiveLyricFontSize(baseFontSize, isMainLine: isMainLine);
+      final translationSize =
+          _effectiveTranslationFontSize(baseFontSize, isMainLine: isMainLine);
+
+      final primaryStyle = _lyricTextStyle(
+        color: Colors.white,
+        fontSize: primarySize,
+        weight: weight,
+        height: 1.5,
+      );
+      final translationStyle = _lyricTextStyle(
+        color: Colors.white.withValues(alpha: 0.70),
+        fontSize: translationSize,
+        weight: (weight - 50).clamp(100, 900),
+        height: 1.10,
+      );
+
+      final List<String> primaryTexts = [];
+      final List<String> translationTexts = [];
+      if (line is SyncLyricLine) {
+        final sync = line as SyncLyricLine;
+        primaryTexts.add(sync.content);
+        if (showTranslation && sync.translation != null) {
+          translationTexts.add(sync.translation!);
+        }
+      } else if (line is LrcLine) {
+        final lrc = line as LrcLine;
+        final splited = lrc.content.split("┃");
+        if (splited.isNotEmpty) {
+          primaryTexts.add(splited.first);
+          if (showTranslation && splited.length > 1) {
+            translationTexts.addAll(splited.skip(1));
+          }
+        }
+      }
+
+      double measured = 0.0;
+      for (final t in primaryTexts) {
+        measured = max(measured, measureTextWidth(t, primaryStyle));
+      }
+      for (final t in translationTexts) {
+        measured = max(measured, measureTextWidth(t, translationStyle));
+      }
+
+      const outerPad = 24.0;
+      const innerPad = 24.0;
+      final available = maxWidth - outerPad;
+      final contentWidth = measured + innerPad;
+      if (available <= 1.0 || contentWidth <= 1.0) return desired;
+      final cap = (available / contentWidth).clamp(0.0, desired).toDouble();
+      return cap < 1.0 ? 1.0 : cap;
+    }
+
     return Align(
       alignment: alignment,
       child: SizedBox(
         width: double.infinity,
-        child: ClipRect(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOutQuad,
-              tween: Tween(begin: 0.0, end: blurSigma),
-              builder: (context, sigma, child) {
-                final filtered = sigma <= 0.01
-                    ? child!
-                    : ImageFiltered(
-                        imageFilter:
-                            ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-                        child: child,
-                      );
-                return AnimatedOpacity(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final scale = computeSafeScale(constraints);
+            return ClipRect(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                child: TweenAnimationBuilder<double>(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOutQuad,
-                  opacity: opacity,
-                  child: AnimatedSlide(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOutQuad,
-                    offset: Offset.zero,
-                    child: AnimatedScale(
+                  tween: Tween(begin: 0.0, end: blurSigma),
+                  builder: (context, sigma, child) {
+                    final filtered = sigma <= 0.01
+                        ? child!
+                        : ImageFiltered(
+                            imageFilter:
+                                ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                            child: child,
+                          );
+                    return AnimatedOpacity(
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOutQuad,
-                      alignment: alignment,
-                      scale: scale,
-                      child: filtered,
-                    ),
-                  ),
-                );
-              },
-              child: content,
-            ),
-          ),
+                      opacity: opacity,
+                      child: AnimatedSlide(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOutQuad,
+                        offset: Offset.zero,
+                        child: AnimatedScale(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOutQuad,
+                          alignment: alignment,
+                          scale: scale,
+                          child: filtered,
+                        ),
+                      ),
+                    );
+                  },
+                  child: content,
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
