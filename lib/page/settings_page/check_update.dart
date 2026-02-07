@@ -31,7 +31,7 @@ class _CheckForUpdateState extends State<CheckForUpdate> {
                 try {
                   final newest = await AppSettings.github.repositories
                       .listReleases(
-                        RepositorySlug("Ferry-200", "coriander_player"),
+                        RepositorySlug("qingyueyin", "coriander_player"),
                       )
                       .first;
                   final newestVer = int.tryParse(

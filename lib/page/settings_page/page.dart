@@ -40,7 +40,6 @@ class SettingsPage extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 96.0),
         children: [
           const _SettingsSectionHeader("库与扫描"),
-          AudioLibraryEditor(),
           const SizedBox(height: 16.0),
           DefaultLyricSourceControl(),
 

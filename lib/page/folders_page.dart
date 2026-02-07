@@ -2,6 +2,7 @@ import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/utils.dart';
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/enums.dart';
+import 'package:coriander_player/page/folder_manager_dialog.dart';
 import 'package:coriander_player/page/uni_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +21,11 @@ class FoldersPage extends StatelessWidget {
       title: "文件夹",
       subtitle: "${contentList.length} 个文件夹",
       contentList: contentList,
+      primaryAction: FilledButton.icon(
+        onPressed: () => showFolderManagerDialog(context),
+        icon: const Icon(Symbols.folder),
+        label: const Text("文件夹管理"),
+      ),
       contentBuilder: (context, item, i, multiSelectController, view) =>
           AudioFolderTile(audioFolder: item),
       enableShufflePlay: false,
