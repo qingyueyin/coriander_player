@@ -135,9 +135,9 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
               }
             },
             onTap: () {
-              final nowPlaying =
-                  PlayService.instance.playbackService.nowPlaying;
-              if (nowPlaying != null) {
+              final playbackService = PlayService.instance.playbackService;
+              final nowPlaying = playbackService.nowPlaying;
+              if (nowPlaying != null && !playbackService.nowPlayingChangedRecently) {
                 _precacheToken += 1;
                 final token = _precacheToken;
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -159,6 +159,7 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
                 builder: (context, _) {
                   final playbackService = PlayService.instance.playbackService;
                   final nowPlaying = playbackService.nowPlaying;
+                  final heroEnabled = !playbackService.nowPlayingChangedRecently;
                   final placeholder = Icon(
                     Symbols.broken_image,
                     size: 48.0,
@@ -207,9 +208,8 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
                     return Row(
                       children: [
                         nowPlaying != null
-                            ? Hero(
-                                tag: nowPlaying.path,
-                                child: ClipRRect(
+                            ? Builder(builder: (context) {
+                                final cover = ClipRRect(
                                   borderRadius: BorderRadius.circular(8.0),
                                   child: SizedBox(
                                     width: 48.0,
@@ -218,26 +218,26 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
                                       future: nowPlaying.cover,
                                       builder: (context, snapshot) =>
                                           switch (snapshot.connectionState) {
-                                        ConnectionState.done =>
-                                          snapshot.data == null
-                                              ? Center(child: placeholder)
-                                              : Builder(builder: (context) {
-                                                  _maybePrecacheCover(
-                                                    path: nowPlaying.path,
-                                                    image: snapshot.data!,
-                                                  );
-                                                  return Image(
-                                                    image: snapshot.data!,
-                                                    fit: BoxFit.cover,
-                                                    gaplessPlayback: true,
-                                                    filterQuality:
-                                                        FilterQuality.medium,
-                                                    errorBuilder:
-                                                        (_, __, ___) => Center(
-                                                      child: placeholder,
-                                                    ),
-                                                  );
-                                                }),
+                                        ConnectionState.done => snapshot.data ==
+                                                null
+                                            ? Center(child: placeholder)
+                                            : Builder(builder: (context) {
+                                                _maybePrecacheCover(
+                                                  path: nowPlaying.path,
+                                                  image: snapshot.data!,
+                                                );
+                                                return Image(
+                                                  image: snapshot.data!,
+                                                  fit: BoxFit.cover,
+                                                  gaplessPlayback: true,
+                                                  filterQuality:
+                                                      FilterQuality.medium,
+                                                  errorBuilder: (_, __, ___) =>
+                                                      Center(
+                                                    child: placeholder,
+                                                  ),
+                                                );
+                                              }),
                                         _ => const Center(
                                             child: SizedBox(
                                               width: 20,
@@ -249,8 +249,10 @@ class _NowPlayingForegroundState extends State<_NowPlayingForeground> {
                                       },
                                     ),
                                   ),
-                                ),
-                              )
+                                );
+                                if (!heroEnabled) return cover;
+                                return Hero(tag: nowPlaying.path, child: cover);
+                              })
                             : SizedBox(
                                 width: 48.0,
                                 height: 48.0,

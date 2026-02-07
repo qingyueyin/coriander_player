@@ -1828,7 +1828,21 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
     super.initState();
     playbackService.addListener(_onPlaybackChange);
     // Initial load
-    _onPlaybackChange();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final delay = playbackService.nowPlayingChangedRecently
+          ? const Duration(milliseconds: 200)
+          : Duration.zero;
+      if (delay == Duration.zero) {
+        _onPlaybackChange();
+      } else {
+        _hiResDebounceTimer?.cancel();
+        _hiResDebounceTimer = Timer(delay, () {
+          if (!mounted) return;
+          _onPlaybackChange();
+        });
+      }
+    });
   }
 
   @override
@@ -1836,6 +1850,7 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
     final scheme = Theme.of(context).colorScheme;
     final nowPlaying = playbackService.nowPlaying;
     final nowPlayingPath = nowPlaying?.path;
+    final heroEnabled = !playbackService.nowPlayingChangedRecently;
 
     final placeholder = Image.asset(
       'app_icon.ico',
@@ -1954,19 +1969,21 @@ class __NowPlayingInfoState extends State<_NowPlayingInfo> {
                 SizedBox(
                   width: coverSize,
                   height: coverSize,
-                  child: Hero(
-                    tag: nowPlayingPath ?? 'now_playing_cover',
-                    createRectTween: (begin, end) => MaterialRectArcTween(
-                      begin: begin,
-                      end: end,
-                    ),
-                    flightShuttleBuilder: (flightContext, animation, direction,
-                        fromHeroContext, toHeroContext) {
-                      final fromHero = fromHeroContext.widget as Hero;
-                      return fromHero.child;
-                    },
-                    child: RepaintBoundary(child: coverWidget),
-                  ),
+                  child: heroEnabled && nowPlayingPath != null
+                      ? Hero(
+                          tag: nowPlayingPath,
+                          createRectTween: (begin, end) => MaterialRectArcTween(
+                            begin: begin,
+                            end: end,
+                          ),
+                          flightShuttleBuilder: (flightContext, animation,
+                              direction, fromHeroContext, toHeroContext) {
+                            final fromHero = fromHeroContext.widget as Hero;
+                            return fromHero.child;
+                          },
+                          child: RepaintBoundary(child: coverWidget),
+                        )
+                      : RepaintBoundary(child: coverWidget),
                 ),
                 const SizedBox(height: 24.0),
                 Text(

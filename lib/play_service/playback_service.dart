@@ -18,6 +18,7 @@ class PlaybackService extends ChangeNotifier {
 
   late StreamSubscription _playerStateStreamSub;
   late StreamSubscription _smtcEventStreamSub;
+  int _lastNowPlayingChangedMs = 0;
 
   PlaybackService(this.playService) {
     _playerStateStreamSub = playerStateStream.listen((event) {
@@ -247,6 +248,16 @@ class PlaybackService extends ChangeNotifier {
     _player.setSpectrumUpdateMode(mode);
   }
 
+  Duration get nowPlayingChangeAge {
+    final t = _lastNowPlayingChangedMs;
+    if (t <= 0) return const Duration(days: 999);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return Duration(milliseconds: (now - t).clamp(0, 1 << 31));
+  }
+
+  bool get nowPlayingChangedRecently =>
+      nowPlayingChangeAge.inMilliseconds < 220;
+
   /// 1. 更新 [_playlistIndex] 为 [audioIndex]
   /// 2. 更新 [nowPlaying] 为 playlist[_nowPlayingIndex]
   /// 3. _bassPlayer.setSource
@@ -258,6 +269,7 @@ class PlaybackService extends ChangeNotifier {
     try {
       _playlistIndex = audioIndex;
       nowPlaying = playlist[audioIndex];
+      _lastNowPlayingChangedMs = DateTime.now().millisecondsSinceEpoch;
       _player.setSource(nowPlaying!.path);
       setVolumeDsp(AppPreference.instance.playbackPref.volumeDsp);
 
@@ -432,6 +444,7 @@ class PlaybackService extends ChangeNotifier {
     _playlistBackup = List.from(restoredPlaylist);
     _playlistIndex = restoredIndex;
     nowPlaying = restoredPlaylist[restoredIndex];
+    _lastNowPlayingChangedMs = DateTime.now().millisecondsSinceEpoch;
 
     try {
       _player.setSource(nowPlaying!.path);

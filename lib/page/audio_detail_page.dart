@@ -1,7 +1,5 @@
 import 'package:coriander_player/utils.dart';
 import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/component/album_tile.dart';
-import 'package:coriander_player/component/artist_tile.dart';
 import 'package:coriander_player/src/rust/api/utils.dart';
 import 'package:coriander_player/src/rust/api/tag_reader.dart' as rust_tag_reader;
 import 'dart:io';
@@ -50,12 +48,6 @@ class AudioDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final artists = List.generate(
-      audio.splitedArtists.length,
-      (i) {
-        return AudioLibrary.instance.artistCollection[audio.splitedArtists[i]]!;
-      },
-    );
     final album = AudioLibrary.instance.albumCollection[audio.album]!;
     const space = SizedBox(height: 16.0);
 
@@ -112,20 +104,6 @@ class AudioDetailPage extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(audio.title, style: styleTitle),
-                      const SizedBox(height: 6),
-                      Text(
-                        audio.artist,
-                        style: styleContent,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        audio.album,
-                        style: styleContent,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
                     ],
                   ),
                 ),
@@ -291,34 +269,7 @@ class AudioDetailPage extends StatelessWidget {
                         ),
                         SizedBox(
                           width: maxWidth,
-                          child: ExpansionTile(
-                            title: const Text("相关"),
-                            tilePadding: EdgeInsets.zero,
-                            childrenPadding: const EdgeInsets.only(top: 8),
-                            children: [
-                              _InfoTile(
-                                label: "艺术家",
-                                child: Wrap(
-                                  spacing: 8.0,
-                                  runSpacing: 8.0,
-                                  children: List.generate(
-                                    artists.length,
-                                    (i) {
-                                      return SizedBox(
-                                        width: 300,
-                                        child: ArtistTile(artist: artists[i]),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              _InfoTile(
-                                label: "专辑",
-                                child: AlbumTile(album: album),
-                              ),
-                            ],
-                          ),
+                          child: const SizedBox.shrink(),
                         ),
                         SizedBox(
                           width: maxWidth,
