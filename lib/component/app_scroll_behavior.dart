@@ -15,7 +15,7 @@ class AppScrollBehavior extends MaterialScrollBehavior {
       thickness: 10,
       radius: const Radius.circular(999),
       mainAxisMargin: 4,
-      crossAxisMargin: -12,
+      crossAxisMargin: 4,
       child: child,
     );
   }

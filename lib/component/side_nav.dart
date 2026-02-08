@@ -68,14 +68,19 @@ class _SideNavState extends State<SideNav> {
       AppPreference.instance.save();
     }
 
+    final isDrawer = Scaffold.maybeOf(context)?.hasDrawer ?? false;
+
     return ResponsiveBuilder(
       builder: (context, screenType) {
         final expandedWidth = _expandedWidth;
         return ValueListenableBuilder(
           valueListenable: sidebarExpanded,
           builder: (context, expanded, _) {
+            final effectiveExpanded = isDrawer || expanded;
+            final effectiveT = effectiveExpanded ? 1.0 : 0.0;
             return _SmoothLargeSideNav(
-              expanded: expanded,
+              expanded: effectiveExpanded,
+              t: effectiveT,
               expandedWidth: expandedWidth,
               colorScheme: scheme,
               selectedIndex: selectedIndex,
@@ -92,6 +97,7 @@ class _SideNavState extends State<SideNav> {
 class _SmoothLargeSideNav extends StatelessWidget {
   const _SmoothLargeSideNav({
     required this.expanded,
+    required this.t,
     required this.expandedWidth,
     required this.colorScheme,
     required this.selectedIndex,
@@ -100,6 +106,7 @@ class _SmoothLargeSideNav extends StatelessWidget {
   });
 
   final bool expanded;
+  final double t;
   final double expandedWidth;
   final ColorScheme colorScheme;
   final int? selectedIndex;
@@ -125,6 +132,7 @@ class _SmoothLargeSideNav extends StatelessWidget {
               .clamp(_collapsedWidth, expandedWidth);
           return SizedBox(
             width: visibleWidth,
+            height: double.infinity,
             child: DecoratedBox(
               decoration: BoxDecoration(color: colorScheme.surfaceContainer),
               child: ClipRect(

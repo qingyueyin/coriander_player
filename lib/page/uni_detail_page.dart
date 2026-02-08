@@ -160,7 +160,7 @@ class _UniDetailPageState<P, S, T> extends State<UniDetailPage<P, S, T>> {
   Widget result(MultiSelectController<S>? multiSelectController,
       List<Widget> actions, ColorScheme scheme) {
     return ColoredBox(
-      color: scheme.surface,
+      color: scheme.surfaceContainer,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

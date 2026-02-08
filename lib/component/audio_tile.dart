@@ -69,26 +69,22 @@ class _AudioTileState extends State<AudioTile> {
             style: menuStyle,
             menuChildren: [
               /// artists
-              SubmenuButton(
-                style: menuItemStyle,
-                menuChildren: List.generate(
-                  audio.splitedArtists.length,
-                  (i) => MenuItemButton(
-                    style: menuItemStyle,
-                    onPressed: () {
-                      final Artist artist = AudioLibrary
-                          .instance.artistCollection[audio.splitedArtists[i]]!;
-                      context.push(
-                        app_paths.ARTIST_DETAIL_PAGE,
-                        extra: artist,
-                      );
-                    },
-                    leadingIcon: const Icon(Symbols.artist),
-                    child: Text(audio.splitedArtists[i]),
-                  ),
-                ),
-                child: const Text("艺术家"),
-              ),
+              ...List.generate(audio.splitedArtists.length, (i) {
+                final name = audio.splitedArtists[i];
+                final artist = AudioLibrary.instance.artistCollection[name];
+                if (artist == null) return const SizedBox.shrink();
+                return MenuItemButton(
+                  style: menuItemStyle,
+                  onPressed: () {
+                    context.push(
+                      app_paths.ARTIST_DETAIL_PAGE,
+                      extra: artist,
+                    );
+                  },
+                  leadingIcon: const Icon(Symbols.artist),
+                  child: Text(name),
+                );
+              }),
 
               /// album
               MenuItemButton(
@@ -113,12 +109,12 @@ class _AudioTileState extends State<AudioTile> {
               ),
 
               /// 多选
-          if (widget.multiSelectController != null)
+              if (widget.multiSelectController != null)
                 MenuItemButton(
                   style: menuItemStyle,
                   onPressed: () {
-                widget.multiSelectController!.useMultiSelectView(true);
-                widget.multiSelectController!.select(audio);
+                    widget.multiSelectController!.useMultiSelectView(true);
+                    widget.multiSelectController!.select(audio);
                   },
                   leadingIcon: const Icon(Symbols.select),
                   child: const Text("多选"),
@@ -213,6 +209,14 @@ class _AudioTileState extends State<AudioTile> {
                         }
                       }
                     },
+                    onLongPress: () {
+                      if (widget.multiSelectController == null) return;
+                      if (widget.multiSelectController!.enableMultiSelectView) {
+                        return;
+                      }
+                      widget.multiSelectController!.useMultiSelectView(true);
+                      widget.multiSelectController!.select(audio);
+                    },
                     onSecondaryTapDown: (details) {
                       if (widget.multiSelectController?.enableMultiSelectView ==
                           true) {
@@ -284,7 +288,22 @@ class _AudioTileState extends State<AudioTile> {
                                 : scheme.onSurface,
                           ),
                         ),
-                    if (widget.action != null)
+                        if (widget.multiSelectController != null &&
+                            widget.multiSelectController!.enableMultiSelectView)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: Checkbox(
+                              value: isSelected,
+                              onChanged: (v) {
+                                if (v == true) {
+                                  widget.multiSelectController!.select(audio);
+                                } else {
+                                  widget.multiSelectController!.unselect(audio);
+                                }
+                              },
+                            ),
+                          ),
+                        if (widget.action != null)
                           Padding(
                             padding: const EdgeInsets.only(left: 8.0),
                             child: widget.action!,

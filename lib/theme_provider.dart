@@ -6,18 +6,18 @@ import 'package:coriander_player/play_service/play_service.dart';
 import 'package:flutter/material.dart';
 
 Color _softenLightSurface(Color color) {
-  return Color.alphaBlend(const Color(0xFF000000).withAlpha(14), color);
+  return Color.alphaBlend(const Color(0xFF000000).withAlpha(6), color);
 }
 
 ColorScheme _softenLightScheme(ColorScheme scheme) {
   return scheme.copyWith(
     surface: _softenLightSurface(scheme.surface),
-    background: _softenLightSurface(scheme.background),
     surfaceContainerLowest: _softenLightSurface(scheme.surfaceContainerLowest),
     surfaceContainerLow: _softenLightSurface(scheme.surfaceContainerLow),
     surfaceContainer: _softenLightSurface(scheme.surfaceContainer),
     surfaceContainerHigh: _softenLightSurface(scheme.surfaceContainerHigh),
-    surfaceContainerHighest: _softenLightSurface(scheme.surfaceContainerHighest),
+    surfaceContainerHighest:
+        _softenLightSurface(scheme.surfaceContainerHighest),
   );
 }
 

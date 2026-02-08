@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:io';
 
 import 'package:coriander_player/app_settings.dart';
 import 'package:coriander_player/library/audio_library.dart';
@@ -8,7 +9,9 @@ import 'package:coriander_player/lyric/lyric.dart';
 import 'package:coriander_player/lyric/lyric_source.dart';
 import 'package:coriander_player/music_matcher.dart';
 import 'package:coriander_player/play_service/play_service.dart';
+import 'package:coriander_player/src/rust/api/tag_reader.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 
 /// 只通知 lyric 变更
 class LyricService extends ChangeNotifier {
@@ -59,6 +62,105 @@ class LyricService extends ChangeNotifier {
   }
 
   Audio? _getNowPlaying() => playService.playbackService.nowPlaying;
+
+  String? _buildLyricLrcText(
+    Lyric lyric, {
+    required bool enhancedIfPossible,
+  }) {
+    if (lyric.lines.isEmpty) return null;
+
+    String formatTimeTag(Duration t) {
+      final totalMs = max(0, t.inMilliseconds);
+      final m = totalMs ~/ 60000;
+      final s = (totalMs % 60000) / 1000.0;
+      final mm = m.toString().padLeft(2, '0');
+      final ss = s.toStringAsFixed(2).padLeft(5, '0');
+      return '[$mm:$ss]';
+    }
+
+    String formatWordTag(Duration t) {
+      final totalMs = max(0, t.inMilliseconds);
+      final m = totalMs ~/ 60000;
+      final s = (totalMs % 60000) / 1000.0;
+      final mm = m.toString().padLeft(2, '0');
+      final ss = s.toStringAsFixed(2).padLeft(5, '0');
+      return '<$mm:$ss>';
+    }
+
+    String buildEnhancedLine(SyncLyricLine line) {
+      final buffer = StringBuffer();
+      buffer.write(formatTimeTag(line.start));
+      for (final w in line.words) {
+        if (w.content.isEmpty) continue;
+        buffer.write(formatWordTag(w.start));
+        buffer.write(w.content);
+      }
+      if (line.translation != null && line.translation!.trim().isNotEmpty) {
+        buffer.write('┃');
+        buffer.write(line.translation!.trim());
+      }
+      return buffer.toString();
+    }
+
+    String buildUnsyncLine(LrcLine line) {
+      return '${formatTimeTag(line.start)}${line.content}';
+    }
+
+    final lines = <String>[];
+    for (final line in lyric.lines) {
+      if (enhancedIfPossible && line is SyncLyricLine) {
+        lines.add(buildEnhancedLine(line));
+      } else if (line is LrcLine) {
+        lines.add(buildUnsyncLine(line));
+      } else if (line is SyncLyricLine) {
+        lines.add(buildEnhancedLine(line));
+      }
+    }
+    if (lines.isEmpty) return null;
+    return lines.join('\n');
+  }
+
+  Future<void> writeCurrentLyricToTag({bool enhancedIfPossible = true}) async {
+    final nowPlaying = _getNowPlaying();
+    if (nowPlaying == null) return;
+
+    final lyric = _currLyric ?? await currLyricFuture;
+    if (lyric == null) return;
+
+    final lrcText =
+        _buildLyricLrcText(lyric, enhancedIfPossible: enhancedIfPossible);
+    if (lrcText == null || lrcText.trim().isEmpty) return;
+
+    await writeLyricToPath(path: nowPlaying.path, lyric: lrcText);
+  }
+
+  Future<String?> saveCurrentLyricAsLrc({bool enhancedIfPossible = true}) async {
+    final nowPlaying = _getNowPlaying();
+    if (nowPlaying == null) return null;
+
+    final lyric = _currLyric ?? await currLyricFuture;
+    if (lyric == null) return null;
+
+    final lrcText =
+        _buildLyricLrcText(lyric, enhancedIfPossible: enhancedIfPossible);
+    if (lrcText == null) return null;
+
+    final dir = p.dirname(nowPlaying.path);
+    final base = p.basenameWithoutExtension(nowPlaying.path);
+    final outPath = p.join(dir, '$base.lrc');
+    final outFile = File(outPath);
+
+    if (outFile.existsSync()) {
+      final bakPath = p.join(dir, '$base.lrc.bak');
+      try {
+        await outFile.copy(bakPath);
+      } catch (_) {}
+    }
+
+    await outFile.writeAsString(lrcText, flush: true);
+
+    return outPath;
+  }
 
   /// 供 widget 使用
   Future<Lyric?> currLyricFuture = Future.value(null);

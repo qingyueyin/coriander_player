@@ -4,6 +4,30 @@ import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/lyric/lyric.dart';
 import 'package:coriander_player/src/rust/api/tag_reader.dart';
 
+class EnhancedLrc extends Lyric {
+  final LrcSource source;
+  EnhancedLrc(super.lines, this.source);
+
+  @override
+  String toString() {
+    return {"type": source, "lyric": lines}.toString();
+  }
+}
+
+class EnhancedLrcLine extends SyncLyricLine {
+  EnhancedLrcLine(super.start, super.length, super.words, [super.translation]);
+}
+
+class _EnhancedLrcRawLine {
+  final Duration start;
+  final String content;
+  _EnhancedLrcRawLine(this.start, this.content);
+}
+
+class EnhancedLrcWord extends SyncLyricWord {
+  EnhancedLrcWord(super.start, super.length, super.content);
+}
+
 class LrcLine extends UnsyncLyricLine {
   bool isBlank;
   Duration length;
@@ -178,17 +202,206 @@ class Lrc extends Lyric {
     return result._combineLrcLine(separator);
   }
 
+  static Lyric? fromLrcTextAuto(
+    String lrc,
+    LrcSource source, {
+    String? separator,
+  }) {
+    final hasWordTags =
+        RegExp(r'<(\d+:\d+\.\d+|\d+)>').hasMatch(lrc);
+    if (!hasWordTags) {
+      return fromLrcText(lrc, source, separator: separator);
+    }
+    return _parseEnhancedLrcText(lrc, source, separator: separator);
+  }
+
+  static Lyric? _parseEnhancedLrcText(
+    String lrc,
+    LrcSource source, {
+    String? separator,
+  }) {
+    final lrcLines = lrc.split('\n');
+
+    int? offsetInMilliseconds;
+    final offsetPattern = RegExp(r'\[\s*offset\s*:\s*([+-]?\d+)\s*\]');
+    for (final line in lrcLines) {
+      final matched = offsetPattern.firstMatch(line);
+      if (matched == null) continue;
+      offsetInMilliseconds = int.tryParse(matched.group(1) ?? '');
+      break;
+    }
+    final offsetMs = offsetInMilliseconds ?? 0;
+
+    final timeTagRe = RegExp(r'\[(\d{1,2}):(\d{2}(?:\.\d{1,3})?)\]');
+    final wordTagRe = RegExp(r'<(\d+:\d+\.\d+|\d+)>([^<]*)');
+
+    final rawLines = <_EnhancedLrcRawLine>[];
+
+    for (final raw in lrcLines) {
+      final line = raw.trimRight();
+      if (line.trim().isEmpty) continue;
+
+      final timeMatches = timeTagRe.allMatches(line).toList(growable: false);
+      if (timeMatches.isEmpty) continue;
+
+      final contentRaw = line.replaceAll(timeTagRe, '').trim();
+
+      for (final m in timeMatches) {
+        final minute = int.tryParse(m.group(1) ?? '');
+        final sec = double.tryParse(m.group(2) ?? '');
+        if (minute == null || sec == null) continue;
+        final lineStartMs =
+            max(((minute * 60 + sec) * 1000).round() - offsetMs, 0);
+
+        rawLines.add(_EnhancedLrcRawLine(
+          Duration(milliseconds: lineStartMs),
+          contentRaw,
+        ));
+      }
+    }
+
+    if (rawLines.isEmpty) return null;
+
+    // Group by timestamp
+    final grouped = <Duration, List<String>>{};
+    for (final rl in rawLines) {
+      grouped.putIfAbsent(rl.start, () => []).add(rl.content);
+    }
+
+    final parsedLines = <EnhancedLrcLine>[];
+
+    for (final entry in grouped.entries) {
+      final start = entry.key;
+      final contents = entry.value;
+
+      // Identify primary (one with word tags)
+      String primaryText = contents.first;
+      String? translationText;
+
+      if (contents.length > 1) {
+        // Find line with word tags
+        int primaryIndex = 0;
+        int maxTags = -1;
+        for (int i = 0; i < contents.length; i++) {
+          final tagCount = wordTagRe.allMatches(contents[i]).length;
+          if (tagCount > maxTags) {
+            maxTags = tagCount;
+            primaryIndex = i;
+          }
+        }
+        primaryText = contents[primaryIndex];
+        final translations = <String>[];
+        for (int i = 0; i < contents.length; i++) {
+          if (i == primaryIndex) continue;
+          // Clean up any remaining time tags from translation
+          final cleaned =
+              contents[i].replaceAll(RegExp(r'<[^>]*>'), '').trim();
+          if (cleaned.isNotEmpty) {
+            translations.add(cleaned);
+          }
+        }
+        translationText = translations.join(separator ?? '┃');
+      }
+
+      final words = <EnhancedLrcWord>[];
+      bool hasWordTimestamps = false;
+
+      for (final w in wordTagRe.allMatches(primaryText)) {
+        final timeStr = w.group(1);
+        final text = w.group(2) ?? ''; // Don't trim to preserve spaces
+        if (timeStr == null || text.isEmpty) continue;
+
+        int? wordStartMs;
+        if (timeStr.contains(':')) {
+          final p = timeStr.split(':');
+          if (p.length == 2) {
+            final wm = int.tryParse(p[0]);
+            final ws = double.tryParse(p[1]);
+            if (wm != null && ws != null) {
+              wordStartMs = max(((wm * 60 + ws) * 1000).round() - offsetMs, 0);
+            }
+          }
+        } else {
+          final rawMs = int.tryParse(timeStr);
+          if (rawMs != null) {
+            wordStartMs = max(rawMs - offsetMs, 0);
+          }
+        }
+        if (wordStartMs == null) continue;
+
+        words.add(
+          EnhancedLrcWord(
+            Duration(milliseconds: wordStartMs),
+            Duration.zero,
+            text,
+          ),
+        );
+        hasWordTimestamps = true;
+      }
+
+      if (!hasWordTimestamps && primaryText.isNotEmpty) {
+        words.add(
+          EnhancedLrcWord(
+            start,
+            Duration.zero,
+            primaryText,
+          ),
+        );
+      }
+
+      parsedLines.add(
+        EnhancedLrcLine(
+          start,
+          Duration.zero,
+          words,
+          translationText?.isEmpty == true ? null : translationText,
+        ),
+      );
+    }
+
+    if (parsedLines.isEmpty) return null;
+
+    parsedLines.sort((a, b) => a.start.compareTo(b.start));
+
+    for (int i = 0; i < parsedLines.length; i++) {
+      final line = parsedLines[i];
+      final nextStart =
+          i < parsedLines.length - 1 ? parsedLines[i + 1].start : null;
+      final lineLen = nextStart == null
+          ? const Duration(seconds: 5)
+          : (nextStart - line.start);
+      line.length = lineLen.isNegative ? Duration.zero : lineLen;
+
+      if (line.words.isEmpty) continue;
+      final words = line.words.cast<EnhancedLrcWord>();
+      for (int j = 0; j < words.length; j++) {
+        final curr = words[j];
+        final nextWordStart =
+            j < words.length - 1 ? words[j + 1].start : null;
+        final end = nextWordStart ?? (line.start + line.length);
+        final d = end - curr.start;
+        curr.length = d.isNegative
+            ? Duration.zero
+            : (d < const Duration(milliseconds: 50)
+                ? const Duration(milliseconds: 50)
+                : d);
+      }
+    }
+
+    return EnhancedLrc(parsedLines, source);
+  }
+
   /// 只支持读取 ID3V2, VorbisComment, Mp4Ilst 存储的内嵌歌词
   /// 以及相同目录相同文件名的 .lrc 外挂歌词（utf-8 or utf-16）
-  static Future<Lrc?> fromAudioPath(
+  static Future<Lyric?> fromAudioPath(
     Audio belongTo, {
     String? separator = "┃",
   }) async {
-    Lrc? lyric = await getLyricFromPath(path: belongTo.path).then((value) {
+    Lyric? lyric = await getLyricFromPath(path: belongTo.path).then((value) {
       if (value == null) {
         return null;
       }
-      return Lrc.fromLrcText(value, LrcSource.local, separator: separator);
+      return Lrc.fromLrcTextAuto(value, LrcSource.local, separator: separator);
     });
 
     return lyric;

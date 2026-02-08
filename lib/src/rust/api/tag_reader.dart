@@ -6,9 +6,13 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `_get_lyric_from_lofty`, `_get_lyric_from_lrc_file`, `_get_picture_by_lofty`, `_get_picture_by_windows`, `_update_index_below_1_1_0`, `new_with_path`, `read_by_lofty`, `read_by_win_music_properties`, `read_from_folder_recursively`, `read_from_folder`, `read_from_path`, `to_json_value`, `to_json_value`
+// These functions are ignored because they are not marked as `pub`: `_get_lyric_from_lofty`, `_get_lyric_from_lrc_file`, `_get_picture_by_lofty`, `_get_picture_by_windows`, `_picture_cache_key`, `_update_index_below_1_1_0`, `new_with_path`, `read_by_lofty`, `read_by_win_music_properties`, `read_from_folder_recursively`, `read_from_folder`, `read_from_path`, `to_json_value`, `to_json_value`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `AudioFolder`, `Audio`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `fmt`, `fmt`
+
+/// for Flutter
+Future<String> readAudioExtraMetadata({required String path}) =>
+    RustLib.instance.api.crateApiTagReaderReadAudioExtraMetadata(path: path);
 
 /// for Flutter
 /// 如果无法通过 Lofty 获取则通过 Windows 获取
@@ -24,8 +28,10 @@ Future<String?> getLyricFromPath({required String path}) =>
     RustLib.instance.api.crateApiTagReaderGetLyricFromPath(path: path);
 
 /// for Flutter
-Future<String> readAudioExtraMetadata({required String path}) =>
-    RustLib.instance.api.crateApiTagReaderReadAudioExtraMetadata(path: path);
+/// 写入歌词到音频文件标签（ID3/VorbisComment/MP4 等），使用 Lofty 的 `ItemKey::Lyrics` 映射
+Future<void> writeLyricToPath({required String path, required String lyric}) =>
+    RustLib.instance.api
+        .crateApiTagReaderWriteLyricToPath(path: path, lyric: lyric);
 
 /// for Flutter
 /// 扫描给定路径下所有子文件夹（包括自己）的音乐文件并把索引保存在 index_path/index.json。

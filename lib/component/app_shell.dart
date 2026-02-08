@@ -1,9 +1,12 @@
 // ignore_for_file: camel_case_types
 
+import 'package:coriander_player/album_color_cache.dart';
+import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/component/mini_now_playing.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
 import 'package:coriander_player/component/side_nav.dart';
 import 'package:coriander_player/component/title_bar.dart';
+import 'package:coriander_player/play_service/play_service.dart';
 import 'package:flutter/material.dart';
 
 class AppShell extends StatelessWidget {
@@ -13,32 +16,69 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ResponsiveBuilder(
-      builder: (context, screenType) {
-        switch (screenType) {
-          case ScreenType.small:
-            return _AppShell_Small(page: page);
-          case ScreenType.medium:
-          case ScreenType.large:
-            return _AppShell_Large(page: page);
-        }
+    final playbackService = PlayService.instance.playbackService;
+    return ListenableBuilder(
+      listenable: playbackService,
+      builder: (context, _) {
+        final nowPlaying = playbackService.nowPlaying;
+        final scheme = Theme.of(context).colorScheme;
+
+        final album = nowPlaying == null
+            ? null
+            : AudioLibrary.instance.albumCollection[nowPlaying.album];
+
+        final albumColorFuture = album == null
+            ? null
+            : AlbumColorCache.instance.getAlbumColor(album);
+
+        return FutureBuilder<AlbumColor?>(
+          future: albumColorFuture,
+          builder: (context, snapshot) {
+            final dynamicColor = snapshot.data?.primary;
+            final backgroundColor = dynamicColor != null
+                ? Color.alphaBlend(
+                    dynamicColor.withOpacity(0.08), scheme.surfaceContainer)
+                : scheme.surfaceContainer;
+
+            return ResponsiveBuilder(
+              builder: (context, screenType) {
+                switch (screenType) {
+                  case ScreenType.small:
+                    return _AppShell_Small(
+                      page: page,
+                      backgroundColor: backgroundColor,
+                    );
+                  case ScreenType.medium:
+                  case ScreenType.large:
+                    return _AppShell_Large(
+                      page: page,
+                      backgroundColor: backgroundColor,
+                    );
+                }
+              },
+            );
+          },
+        );
       },
     );
   }
 }
 
 class _AppShell_Small extends StatelessWidget {
-  const _AppShell_Small({required this.page});
+  const _AppShell_Small({
+    required this.page,
+    required this.backgroundColor,
+  });
 
   final Widget page;
+  final Color backgroundColor;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final size = MediaQuery.sizeOf(context);
     final drawerWidth = (size.width * 0.78).clamp(220.0, 288.0);
     return Scaffold(
-      backgroundColor: scheme.surfaceContainer,
+      backgroundColor: backgroundColor,
       appBar: const PreferredSize(
         preferredSize: Size.fromHeight(48.0),
         child: TitleBar(),
@@ -50,15 +90,18 @@ class _AppShell_Small extends StatelessWidget {
 }
 
 class _AppShell_Large extends StatelessWidget {
-  const _AppShell_Large({required this.page});
+  const _AppShell_Large({
+    required this.page,
+    required this.backgroundColor,
+  });
 
   final Widget page;
+  final Color backgroundColor;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: scheme.surfaceContainer,
+      backgroundColor: backgroundColor,
       appBar: const PreferredSize(
         preferredSize: Size.fromHeight(48.0),
         child: TitleBar(),
@@ -69,12 +112,7 @@ class _AppShell_Large extends StatelessWidget {
           Expanded(
             child: Stack(
               children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(8.0),
-                  ),
-                  child: page,
-                ),
+                page,
                 const MiniNowPlaying(),
               ],
             ),

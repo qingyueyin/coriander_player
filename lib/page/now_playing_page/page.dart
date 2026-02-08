@@ -8,6 +8,7 @@ import 'dart:ui';
 import 'package:coriander_player/app_preference.dart';
 import 'package:coriander_player/component/hotkey_ui_feedback.dart';
 import 'package:coriander_player/component/motion.dart';
+import 'package:coriander_player/component/side_nav.dart';
 import 'package:coriander_player/component/title_bar.dart';
 import 'package:coriander_player/enums.dart';
 import 'package:coriander_player/immersive_mode.dart';
@@ -268,6 +269,8 @@ class _NowPlayingPageState extends State<NowPlayingPage>
             child: Scaffold(
               appBar: null,
               backgroundColor: Colors.transparent,
+              drawer: const SizedBox(width: 240, child: SideNav()),
+              drawerEnableOpenDragGesture: !immersive,
               body: Listener(
                 onPointerDown: (_) {
                   _bumpCursor();
@@ -438,6 +441,22 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                                 const EdgeInsets.symmetric(horizontal: 12.0),
                             child: Row(
                               children: [
+                                ResponsiveBuilder2(
+                                  builder: (context, screenType) {
+                                    if (screenType != ScreenType.small) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return Builder(
+                                      builder: (context) => IconButton(
+                                        tooltip: "侧边栏",
+                                        onPressed: () {
+                                          Scaffold.of(context).openDrawer();
+                                        },
+                                        icon: const Icon(Symbols.menu),
+                                      ),
+                                    );
+                                  },
+                                ),
                                 const NavBackBtn(),
                                 const Expanded(
                                   child: DragToMoveArea(
@@ -551,26 +570,6 @@ class _NowPlayingMoreAction extends StatelessWidget {
             leadingIcon: const Icon(Symbols.album),
             child: Text(nowPlaying.album),
           ),
-          MenuItemButton(
-            style: menuItemStyle,
-            onPressed: () {
-              context.pushReplacement(app_paths.AUDIO_DETAIL_PAGE,
-                  extra: nowPlaying);
-            },
-            leadingIcon: const Icon(Symbols.info),
-            child: const Text("详细信息"),
-          ),
-          MenuItemButton(
-            style: menuItemStyle,
-            onPressed: () {
-              showDialog<void>(
-                context: context,
-                builder: (context) => SetLyricSourceDialog(audio: nowPlaying),
-              );
-            },
-            leadingIcon: const Icon(Symbols.lyrics),
-            child: const Text("歌词来源"),
-          ),
           SubmenuButton(
             style: menuItemStyle,
             menuChildren: List.generate(
@@ -594,6 +593,26 @@ class _NowPlayingMoreAction extends StatelessWidget {
               ),
             ),
             child: const Text("添加到歌单"),
+          ),
+          MenuItemButton(
+            style: menuItemStyle,
+            onPressed: () {
+              showDialog<void>(
+                context: context,
+                builder: (context) => SetLyricSourceDialog(audio: nowPlaying),
+              );
+            },
+            leadingIcon: const Icon(Symbols.lyrics),
+            child: const Text("歌词来源"),
+          ),
+          MenuItemButton(
+            style: menuItemStyle,
+            onPressed: () {
+              context.pushReplacement(app_paths.AUDIO_DETAIL_PAGE,
+                  extra: nowPlaying);
+            },
+            leadingIcon: const Icon(Symbols.info),
+            child: const Text("详细信息"),
           ),
         ],
         builder: (context, controller, _) => IconButton(

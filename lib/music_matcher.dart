@@ -168,13 +168,13 @@ Future<List<SongSearchResult>> uniSearch(Audio audio) async {
   return Future.value([]);
 }
 
-Future<Lrc?> _getNeteaseUnsyncLyric(String neteaseSongId) async {
+Future<Lyric?> _getNeteaseUnsyncLyric(String neteaseSongId) async {
   try {
     final answer = await Netease.lyric(id: neteaseSongId);
     final lrcText = answer.data["lrc"]["lyric"];
     if (lrcText is String) {
       final lrcTrans = answer.data["tlyric"]["lyric"];
-      return Lrc.fromLrcText(
+      return Lrc.fromLrcTextAuto(
         lrcText + lrcTrans,
         LrcSource.web,
         separator: "┃",

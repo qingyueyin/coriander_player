@@ -1,7 +1,6 @@
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/component/motion.dart';
 import 'package:coriander_player/page/uni_page.dart';
-import 'package:coriander_player/theme_provider.dart';
 import 'package:coriander_player/enums.dart';
 import 'package:coriander_player/album_color_cache.dart';
 import 'package:flutter/material.dart';
@@ -51,14 +50,12 @@ class _AlbumTileState extends State<AlbumTile> {
     final scheme = Theme.of(context).colorScheme;
     final menuStyle = MenuStyle(
       shape: WidgetStatePropertyAll(
-        RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(ThemeProvider.radiusLarge)),
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     );
     final menuItemStyle = ButtonStyle(
       shape: WidgetStatePropertyAll(
-        RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(ThemeProvider.radiusMedium)),
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
     final placeholder = Icon(
@@ -103,9 +100,9 @@ class _AlbumTileState extends State<AlbumTile> {
             color: isSelected
                 ? scheme.secondaryContainer
                 : widget.view == ContentView.list && _hovered
-                    ? scheme.primary.withValues(alpha: 0.06)
+                    ? scheme.onSurface.withValues(alpha: 0.04)
                     : Colors.transparent,
-            borderRadius: BorderRadius.circular(ThemeProvider.radiusMedium),
+            borderRadius: BorderRadius.circular(8.0),
           ),
           child: Material(
             type: MaterialType.transparency,
@@ -143,121 +140,155 @@ class _AlbumTileState extends State<AlbumTile> {
                   position: details.localPosition.translate(0, -140),
                 );
               },
-              borderRadius: BorderRadius.circular(ThemeProvider.radiusMedium),
-              child: widget.view == ContentView.list
-                  ? Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          FutureBuilder(
-                            future: _coverFuture,
-                            builder: (context, snapshot) {
-                              if (snapshot.data == null) {
-                                return placeholder;
-                              }
-                              return ClipRRect(
-                                borderRadius: BorderRadius.circular(
-                                    ThemeProvider.radiusMedium),
-                                child: Image(
-                                  image: snapshot.data!,
-                                  width: 48.0,
-                                  height: 48.0,
-                                  errorBuilder: (_, __, ___) => placeholder,
-                                  fit: BoxFit.cover,
+              borderRadius: BorderRadius.circular(8.0),
+              child: Stack(
+                children: [
+                  widget.view == ContentView.list
+                      ? Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              FutureBuilder(
+                                future: _coverFuture,
+                                builder: (context, snapshot) {
+                                  if (snapshot.data == null) {
+                                    return placeholder;
+                                  }
+                                  return ClipRRect(
+                                    borderRadius: BorderRadius.circular(8.0),
+                                    child: Image(
+                                      image: snapshot.data!,
+                                      width: 48.0,
+                                      height: 48.0,
+                                      errorBuilder: (_, __, ___) => placeholder,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  );
+                                },
+                              ),
+                              Flexible(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 12.0),
+                                  child: Text(
+                                    widget.album.name,
+                                    softWrap: false,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(color: scheme.onSurface),
+                                  ),
                                 ),
-                              );
-                            },
+                              ),
+                              if (isMultiSelectView)
+                                Checkbox(
+                                  value: isSelected,
+                                  onChanged: (v) {
+                                    if (v == true) {
+                                      widget.multiSelectController
+                                          ?.select(widget.album);
+                                    } else {
+                                      widget.multiSelectController
+                                          ?.unselect(widget.album);
+                                    }
+                                  },
+                                ),
+                            ],
                           ),
-                          Flexible(
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 12.0),
-                              child: Text(
-                                widget.album.name,
-                                softWrap: false,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(color: scheme.onSurface),
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: FutureBuilder(
+                                  future: _coverFuture,
+                                  builder: (context, snapshot) {
+                                    if (snapshot.data == null) {
+                                      return placeholder;
+                                    }
+                                    return ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(8.0),
+                                      ),
+                                      child: Image(
+                                        image: snapshot.data!,
+                                        errorBuilder: (_, __, ___) =>
+                                            placeholder,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: FutureBuilder(
-                              future: _coverFuture,
+                            FutureBuilder(
+                              future: _albumColorFuture,
                               builder: (context, snapshot) {
                                 if (snapshot.data == null) {
-                                  return placeholder;
+                                  return Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        4.0, 8.0, 4.0, 4.0),
+                                    child: Text(
+                                      widget.album.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: scheme.onSurface,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  );
                                 }
-                                return ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(
-                                        ThemeProvider.radiusMedium),
+
+                                final primaryColor = snapshot.data!.primary;
+                                final onPrimaryColor = snapshot.data!.onPrimary;
+                                return Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12.0,
+                                    vertical: 8.0,
                                   ),
-                                  child: Image(
-                                    image: snapshot.data!,
-                                    errorBuilder: (_, __, ___) => placeholder,
-                                    fit: BoxFit.cover,
+                                  decoration: BoxDecoration(
+                                    color: primaryColor,
+                                    borderRadius:
+                                        const BorderRadius.vertical(
+                                      bottom: Radius.circular(8.0),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    widget.album.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: onPrimaryColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 );
                               },
                             ),
-                          ),
+                          ],
                         ),
-                        FutureBuilder(
-                          future: _albumColorFuture,
-                          builder: (context, snapshot) {
-                            if (snapshot.data == null) {
-                              return Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                    4.0, 8.0, 4.0, 4.0),
-                                child: Text(
-                                  widget.album.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: scheme.onSurface,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              );
+                  if (isMultiSelectView && widget.view != ContentView.list)
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: Checkbox(
+                          value: isSelected,
+                          onChanged: (v) {
+                            if (v == true) {
+                              widget.multiSelectController?.select(widget.album);
+                            } else {
+                              widget.multiSelectController?.unselect(widget.album);
                             }
-
-                            final primaryColor = snapshot.data!.primary;
-                            final onPrimaryColor = snapshot.data!.onPrimary;
-                            return Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12.0,
-                                vertical: 8.0,
-                              ),
-                              decoration: BoxDecoration(
-                                color: primaryColor,
-                                borderRadius: const BorderRadius.vertical(
-                                  bottom: Radius.circular(
-                                      ThemeProvider.radiusMedium),
-                                ),
-                              ),
-                              child: Text(
-                                widget.album.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: onPrimaryColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            );
                           },
                         ),
-                      ],
+                      ),
                     ),
+                ],
+              ),
             ),
           ),
         ),

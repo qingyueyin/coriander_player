@@ -52,14 +52,23 @@ class SlideTransitionPage<T> extends CustomTransitionPage<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    final fade = CurvedAnimation(parent: animation, curve: MotionCurve.emphasized);
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: MotionCurve.emphasized,
+      reverseCurve: MotionCurve.emphasized,
+    );
+    final fade = curved;
     final slide = Tween(
-      begin: const Offset(0.06, 0.0),
+      begin: const Offset(0.05, 0.0),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: animation, curve: MotionCurve.emphasized));
+    ).animate(curved);
+    final scale = Tween<double>(begin: 0.985, end: 1.0).animate(curved);
     return FadeTransition(
       opacity: fade,
-      child: SlideTransition(position: slide, child: child),
+      child: SlideTransition(
+        position: slide,
+        child: ScaleTransition(scale: scale, child: child),
+      ),
     );
   }
 }
@@ -165,8 +174,8 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
       colorScheme: colorScheme,
       brightness: colorScheme.brightness,
       primaryColor: primarySurfaceColor,
-      canvasColor: colorScheme.surface,
-      scaffoldBackgroundColor: colorScheme.surface,
+      canvasColor: colorScheme.surfaceContainer,
+      scaffoldBackgroundColor: colorScheme.surfaceContainer,
       cardColor: colorScheme.surface,
       dividerColor: colorScheme.onSurface.withOpacity(0.12),
       applyElevationOverlayColor: isDark,
@@ -231,14 +240,17 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
             pageBuilder: (context, state) {
               if (state.extra != null) {
                 return SlideTransitionPage(
-                    child: AudiosPage(locateTo: state.extra as Audio));
+                  key: state.pageKey,
+                  child: AudiosPage(locateTo: state.extra as Audio),
+                );
               }
-              return const SlideTransitionPage(child: AudiosPage());
+              return SlideTransitionPage(key: state.pageKey, child: const AudiosPage());
             },
             routes: [
               GoRoute(
                 path: "detail",
                 pageBuilder: (context, state) => DetailTransitionPage(
+                  key: state.pageKey,
                   child: AudioDetailPage(audio: state.extra as Audio),
                 ),
               ),
@@ -248,13 +260,13 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
           /// artists page
           GoRoute(
             path: app_paths.ARTISTS_PAGE,
-            pageBuilder: (context, state) => const SlideTransitionPage(
-              child: ArtistsPage(),
-            ),
+            pageBuilder: (context, state) =>
+                SlideTransitionPage(key: state.pageKey, child: const ArtistsPage()),
             routes: [
               GoRoute(
                 path: "detail",
                 pageBuilder: (context, state) => SlideTransitionPage(
+                  key: state.pageKey,
                   child: ArtistDetailPage(artist: state.extra as Artist),
                 ),
               ),
@@ -264,13 +276,13 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
           /// albums page
           GoRoute(
             path: app_paths.ALBUMS_PAGE,
-            pageBuilder: (context, state) => const SlideTransitionPage(
-              child: AlbumsPage(),
-            ),
+            pageBuilder: (context, state) =>
+                SlideTransitionPage(key: state.pageKey, child: const AlbumsPage()),
             routes: [
               GoRoute(
                 path: "detail",
                 pageBuilder: (context, state) => SlideTransitionPage(
+                  key: state.pageKey,
                   child: AlbumDetailPage(album: state.extra as Album),
                 ),
               ),
@@ -280,9 +292,8 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
           /// folders page
           GoRoute(
             path: app_paths.FOLDERS_PAGE,
-            pageBuilder: (context, state) => const SlideTransitionPage(
-              child: FoldersPage(),
-            ),
+            pageBuilder: (context, state) =>
+                SlideTransitionPage(key: state.pageKey, child: const FoldersPage()),
             routes: [
               /// folder detail page
               GoRoute(
@@ -290,6 +301,7 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
                 pageBuilder: (context, state) {
                   final folder = state.extra as AudioFolder;
                   return SlideTransitionPage(
+                    key: state.pageKey,
                     child: FolderDetailPage(folder: folder),
                   );
                 },
@@ -300,15 +312,15 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
           /// playlists page
           GoRoute(
             path: app_paths.PLAYLISTS_PAGE,
-            pageBuilder: (context, state) => const SlideTransitionPage(
-              child: PlaylistsPage(),
-            ),
+            pageBuilder: (context, state) =>
+                SlideTransitionPage(key: state.pageKey, child: const PlaylistsPage()),
             routes: [
               GoRoute(
                 path: "detail",
                 pageBuilder: (context, state) {
                   final playlist = state.extra as Playlist;
                   return SlideTransitionPage(
+                    key: state.pageKey,
                     child: PlaylistDetailPage(playlist: playlist),
                   );
                 },
@@ -319,9 +331,8 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
           /// search page
           GoRoute(
             path: app_paths.SEARCH_PAGE,
-            pageBuilder: (context, state) => const SlideTransitionPage(
-              child: SearchPage(),
-            ),
+            pageBuilder: (context, state) =>
+                SlideTransitionPage(key: state.pageKey, child: const SearchPage()),
             routes: [
               GoRoute(
                 path: "result",
@@ -329,10 +340,14 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
                   final extra = state.extra;
                   if (extra is UnionSearchResult) {
                     return SlideTransitionPage(
+                      key: state.pageKey,
                       child: SearchResultPage(searchResult: extra),
                     );
                   }
-                  return const SlideTransitionPage(child: SearchPage());
+                  return SlideTransitionPage(
+                    key: state.pageKey,
+                    child: const SearchPage(),
+                  );
                 },
               ),
             ],
@@ -341,14 +356,16 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
           /// settings page
           GoRoute(
               path: app_paths.SETTINGS_PAGE,
-              pageBuilder: (context, state) => const SlideTransitionPage(
-                    child: SettingsPage(),
+              pageBuilder: (context, state) => SlideTransitionPage(
+                    key: state.pageKey,
+                    child: const SettingsPage(),
                   ),
               routes: [
                 GoRoute(
                   path: "issue",
-                  pageBuilder: (context, state) => const SlideTransitionPage(
-                    child: SettingsIssuePage(),
+                  pageBuilder: (context, state) => SlideTransitionPage(
+                    key: state.pageKey,
+                    child: const SettingsIssuePage(),
                   ),
                 )
               ]),
@@ -359,6 +376,7 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
       GoRoute(
         path: app_paths.NOW_PLAYING_PAGE,
         pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
           maintainState: false,
           transitionDuration: const Duration(milliseconds: 360),
           reverseTransitionDuration: const Duration(milliseconds: 360),
@@ -377,17 +395,15 @@ class _EntryState extends State<Entry> with WindowListener, SingleTickerProvider
       /// welcoming page
       GoRoute(
         path: app_paths.WELCOMING_PAGE,
-        pageBuilder: (context, state) => const SlideTransitionPage(
-          child: WelcomingPage(),
-        ),
+        pageBuilder: (context, state) =>
+            SlideTransitionPage(key: state.pageKey, child: const WelcomingPage()),
       ),
 
       /// updating dialog
       GoRoute(
         path: app_paths.UPDATING_DIALOG,
-        pageBuilder: (context, state) => const SlideTransitionPage(
-          child: UpdatingPage(),
-        ),
+        pageBuilder: (context, state) =>
+            SlideTransitionPage(key: state.pageKey, child: const UpdatingPage()),
       ),
     ],
   );

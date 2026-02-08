@@ -354,21 +354,25 @@ class MultiSelectSelectOrClearAll<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: multiSelectController,
-      builder: (context, _) => IconButton.filledTonal(
-        tooltip: multiSelectController.selected.isEmpty ? "全选" : "取消全选",
-        onPressed: () {
-          if (multiSelectController.selected.isEmpty) {
-            multiSelectController.selectAll(contentList);
-          } else {
-            multiSelectController.clear();
-          }
-        },
-        icon: Icon(
-          multiSelectController.selected.isEmpty
-              ? Symbols.select_all
-              : Symbols.clear_all,
-        ),
-      ),
+      builder: (context, _) {
+        final allSelected = contentList.isNotEmpty &&
+            multiSelectController.selected.length >= contentList.length;
+        return IconButton.filledTonal(
+          tooltip: allSelected ? "取消全选" : "全选",
+          onPressed: contentList.isEmpty
+              ? null
+              : () {
+                  if (allSelected) {
+                    multiSelectController.clear();
+                  } else {
+                    multiSelectController.selectAll(contentList);
+                  }
+                },
+          icon: Icon(
+            allSelected ? Symbols.deselect : Symbols.select_all,
+          ),
+        );
+      },
     );
   }
 }

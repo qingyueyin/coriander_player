@@ -8,7 +8,9 @@ use std::{
 };
 
 use image::imageops;
+use lofty::config::WriteOptions;
 use lofty::prelude::{Accessor, AudioFile, ItemKey, TaggedFileExt};
+use lofty::tag::Tag;
 use windows::{
     core::Interface,
     core::HSTRING,
@@ -811,6 +813,34 @@ pub fn get_lyric_from_path(path: String) -> Option<String> {
             None
         }
     });
+}
+
+/// for Flutter
+/// 写入歌词到音频文件标签（ID3/VorbisComment/MP4 等），使用 Lofty 的 `ItemKey::Lyrics` 映射
+pub fn write_lyric_to_path(path: String, lyric: String) -> Result<(), String> {
+    let mut tagged_file = lofty::read_from_path(&path).map_err(|e| e.to_string())?;
+
+    let tag = if let Some(tag) = tagged_file.primary_tag_mut() {
+        tag
+    } else if let Some(tag) = tagged_file.first_tag_mut() {
+        tag
+    } else {
+        let tag_type = tagged_file.primary_tag_type();
+        tagged_file.insert_tag(Tag::new(tag_type));
+        if let Some(tag) = tagged_file.primary_tag_mut() {
+            tag
+        } else if let Some(tag) = tagged_file.first_tag_mut() {
+            tag
+        } else {
+            return Err("failed to create tag".to_string());
+        }
+    };
+
+    tag.insert_text(ItemKey::Lyrics, lyric);
+    tagged_file
+        .save_to_path(&path, WriteOptions::default())
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 /// for Flutter  

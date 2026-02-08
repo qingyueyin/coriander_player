@@ -135,6 +135,7 @@ class _UniPageState<T> extends State<UniPage<T>> {
   late SortOrder currSortOrder = widget.pref.sortOrder;
   late ContentView currContentView = widget.pref.contentView;
   late ScrollController scrollController = ScrollController();
+  bool _showScrollToTop = false;
   void _scrollToIndex(int targetAt) {
     if (targetAt < 0 || targetAt >= widget.contentList.length) return;
 
@@ -210,10 +211,58 @@ class _UniPageState<T> extends State<UniPage<T>> {
     );
   }
 
+  Widget _scrollToTopButton() {
+    return ResponsiveBuilder(
+      builder: (context, screenType) {
+        final bottom = screenType == ScreenType.small ? 88.0 : 112.0;
+        final right = screenType == ScreenType.small ? 88.0 : 128.0;
+        return Positioned(
+          right: right,
+          bottom: bottom + 56.0,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: _showScrollToTop ? 1.0 : 0.0),
+            duration: MotionDuration.base,
+            curve: MotionCurve.standard,
+            builder: (context, t, child) => IgnorePointer(
+              ignoring: t <= 0.01,
+              child: Opacity(
+                opacity: t,
+                child: Transform.translate(
+                  offset: Offset(0.0, (1 - t) * 10.0),
+                  child: child,
+                ),
+              ),
+            ),
+            child: IconButton.filledTonal(
+              tooltip: "回到顶部",
+              onPressed: () {
+                if (!scrollController.hasClients) return;
+                scrollController.animateTo(
+                  0.0,
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.fastOutSlowIn,
+                );
+              },
+              icon: const Icon(Symbols.vertical_align_top),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     currSortMethod?.method(widget.contentList, currSortOrder);
+    scrollController.addListener(() {
+      if (!mounted) return;
+      final shouldShow = scrollController.hasClients &&
+          scrollController.position.pixels > 320.0;
+      if (shouldShow != _showScrollToTop) {
+        setState(() => _showScrollToTop = shouldShow);
+      }
+    });
     if (widget.locateTo == null) return;
 
     int targetAt = widget.contentList.indexOf(widget.locateTo as T);
@@ -237,6 +286,12 @@ class _UniPageState<T> extends State<UniPage<T>> {
   void didUpdateWidget(covariant UniPage<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     currSortMethod?.method(widget.contentList, currSortOrder);
+  }
+
+  @override
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
   }
 
   void setSortMethod(SortMethodDesc<T> sortMethod) {
@@ -345,6 +400,7 @@ class _UniPageState<T> extends State<UniPage<T>> {
                   ),
                 ),
             },
+            _scrollToTopButton(),
             _locateNowPlayingButton(),
           ],
         ),

@@ -105,7 +105,7 @@ class PageScaffold extends StatelessWidget {
       }
 
       return ColoredBox(
-        color: scheme.surface,
+        color: scheme.surfaceContainer,
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: 16.0,

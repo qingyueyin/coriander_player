@@ -16,6 +16,23 @@ FontWeight _discreteFontWeight(int weight) {
   return FontWeight.values[((w / 100).round() - 1).clamp(0, 8)];
 }
 
+double _primaryLineHeight(int weight) {
+  final w = weight.clamp(100, 900);
+  return w >= 650 ? 1.62 : 1.50;
+}
+
+double _translationLineHeight(int weight) {
+  final w = weight.clamp(100, 900);
+  return w >= 650 ? 1.18 : 1.10;
+}
+
+double _lyricLetterSpacing(double fontSize, int weight) {
+  final w = weight.clamp(100, 900);
+  final t = ((w - 600).clamp(0, 300) / 300);
+  if (t <= 0) return 0.0;
+  return (fontSize / 48.0) * (0.8 * t);
+}
+
 TextStyle _lyricTextStyle({
   required Color color,
   required double fontSize,
@@ -32,6 +49,7 @@ TextStyle _lyricTextStyle({
     fontVariations: [FontVariation('wght', w.toDouble())],
     fontWeight: _discreteFontWeight(w),
     height: height ?? 1.5,
+    letterSpacing: _lyricLetterSpacing(fontSize, w),
     shadows: [
       Shadow(
         color: shadowColor,
@@ -126,13 +144,13 @@ class LyricViewTile extends StatelessWidget {
         color: Colors.white,
         fontSize: primarySize,
         weight: weight,
-        height: 1.5,
+        height: _primaryLineHeight(weight),
       );
       final translationStyle = _lyricTextStyle(
         color: Colors.white.withValues(alpha: 0.70),
         fontSize: translationSize,
         weight: (weight - 50).clamp(100, 900),
-        height: 1.10,
+        height: _translationLineHeight(weight),
       );
 
       final List<String> primaryTexts = [];
@@ -245,12 +263,17 @@ class _SyncLineContent extends StatelessWidget {
     final alignment = lyricViewController.lyricTextAlign;
     final showTranslation = lyricViewController.showLyricTranslation;
     final fontWeight = lyricViewController.lyricFontWeight;
+    final gapBoost =
+        ((fontWeight - 550).clamp(0, 350) / 350) * (isMainLine ? 2.0 : 1.5);
 
     final primarySize =
         _effectiveLyricFontSize(lyricFontSize, isMainLine: isMainLine);
     final translationSize =
         _effectiveTranslationFontSize(lyricFontSize, isMainLine: isMainLine);
-    final verticalPad = (lyricFontSize * 0.35).clamp(10.0, 18.0);
+    final verticalPad = (lyricFontSize *
+            0.35 *
+            (1.0 + ((fontWeight - 600).clamp(0, 300) / 300) * 0.10))
+        .clamp(10.0, 20.0);
 
     if (!isMainLine) {
       if (syncLine.words.isEmpty) {
@@ -267,7 +290,7 @@ class _SyncLineContent extends StatelessWidget {
         ),
       ];
       if (showTranslation && syncLine.translation != null) {
-        contents.add(SizedBox(height: isMainLine ? 6.0 : 4.0));
+        contents.add(SizedBox(height: (isMainLine ? 6.0 : 4.0) + gapBoost));
         contents.add(buildSecondaryText(
           syncLine.translation!,
           scheme,
@@ -295,7 +318,10 @@ class _SyncLineContent extends StatelessWidget {
         stream: PlayService.instance.playbackService.positionStream,
         builder: (context, snapshot) {
           final posInMs = (snapshot.data ?? 0) * 1000;
-          final strut = StrutStyle(fontSize: primarySize, height: 1.5);
+          final strut = StrutStyle(
+            fontSize: primarySize,
+            height: _primaryLineHeight(fontWeight),
+          );
           return Wrap(
             alignment: switch (alignment) {
               LyricTextAlign.left => WrapAlignment.start,
@@ -320,7 +346,7 @@ class _SyncLineContent extends StatelessWidget {
                       color: Colors.white.withValues(alpha: 0.22),
                       fontSize: primarySize,
                       weight: fontWeight,
-                      height: 1.5,
+                      height: _primaryLineHeight(fontWeight),
                     ),
                   ),
                   if (progress > 0.0)
@@ -344,7 +370,7 @@ class _SyncLineContent extends StatelessWidget {
                           color: Colors.white,
                           fontSize: primarySize,
                           weight: fontWeight,
-                          height: 1.5,
+                          height: _primaryLineHeight(fontWeight),
                         ),
                       ),
                     ),
@@ -356,7 +382,7 @@ class _SyncLineContent extends StatelessWidget {
       )
     ];
     if (showTranslation && syncLine.translation != null) {
-      contents.add(SizedBox(height: isMainLine ? 8.0 : 4.0));
+      contents.add(SizedBox(height: (isMainLine ? 8.0 : 4.0) + gapBoost));
       contents.add(buildSecondaryText(
         syncLine.translation!,
         scheme,
@@ -398,7 +424,7 @@ class _SyncLineContent extends StatelessWidget {
         color: Colors.white,
         fontSize: fontSize,
         weight: fontWeight,
-        height: 1.5,
+        height: _primaryLineHeight(fontWeight),
       ),
     );
   }
@@ -424,7 +450,7 @@ class _SyncLineContent extends StatelessWidget {
         color: Colors.white.withValues(alpha: 0.70),
         fontSize: fontSize,
         weight: translationWeight,
-        height: 1.10,
+        height: _translationLineHeight(fontWeight),
       ),
     );
   }
@@ -453,12 +479,17 @@ class _LrcLineContent extends StatelessWidget {
     final alignment = lyricViewController.lyricTextAlign;
     final showTranslation = lyricViewController.showLyricTranslation;
     final fontWeight = lyricViewController.lyricFontWeight;
+    final gapBoost =
+        ((fontWeight - 550).clamp(0, 350) / 350) * (isMainLine ? 2.0 : 1.5);
 
     final primarySize =
         _effectiveLyricFontSize(lyricFontSize, isMainLine: isMainLine);
     final translationSize =
         _effectiveTranslationFontSize(lyricFontSize, isMainLine: isMainLine);
-    final verticalPad = (lyricFontSize * 0.32).clamp(10.0, 16.0);
+    final verticalPad = (lyricFontSize *
+            0.32 *
+            (1.0 + ((fontWeight - 600).clamp(0, 300) / 300) * 0.10))
+        .clamp(10.0, 18.0);
 
     final splited = lrcLine.content.split("┃");
     final List<Widget> contents = [
@@ -472,7 +503,9 @@ class _LrcLineContent extends StatelessWidget {
     ];
     if (showTranslation) {
       for (var i = 1; i < splited.length; i++) {
-        contents.add(SizedBox(height: i == 1 ? (isMainLine ? 6.0 : 4.0) : 2.0));
+        contents.add(SizedBox(
+          height: i == 1 ? (isMainLine ? 6.0 : 4.0) + gapBoost : 2.0,
+        ));
         contents.add(buildSecondaryText(
           splited[i],
           scheme,
@@ -516,6 +549,7 @@ class _LrcLineContent extends StatelessWidget {
         color: Colors.white,
         fontSize: fontSize,
         weight: fontWeight,
+        height: _primaryLineHeight(fontWeight),
       ),
     );
   }
@@ -541,6 +575,7 @@ class _LrcLineContent extends StatelessWidget {
         color: Colors.white.withValues(alpha: 0.70),
         fontSize: fontSize,
         weight: translationWeight,
+        height: _translationLineHeight(fontWeight),
       ),
     );
   }
